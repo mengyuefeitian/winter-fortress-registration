@@ -1,0 +1,48 @@
+<!--pages/admin/zone-manage/zone-manage.wxml-->
+<view class="zone-manage-container">
+  <!-- 新建分区 -->
+  <view class="create-section">
+    <view class="section-title">新建分区</view>
+    <view class="form-card">
+      <view class="form-item">
+        <view class="form-label">分区编号</view>
+        <input class="form-input" placeholder="请输入4位数字编号 (0001-9999)" value="{{newZoneCode}}" bindinput="onZoneCodeInput" maxlength="4" type="number" />
+      </view>
+      <view class="form-item">
+        <view class="form-label">分区名称</view>
+        <input class="form-input" placeholder="请输入分区名称" value="{{newZoneName}}" bindinput="onZoneNameInput" maxlength="20" />
+      </view>
+      <button class="create-btn" bindtap="createZone">创建分区</button>
+    </view>
+  </view>
+
+  <!-- 分区列表 -->
+  <view class="list-section">
+    <view class="section-title">分区列表</view>
+    <view wx:if="{{zones.length === 0}}" class="empty-state">
+      <view class="empty-text">暂无分区</view>
+    </view>
+    <view wx:else class="zone-list">
+      <view wx:for="{{zones}}" wx:key="_id" class="zone-card">
+        <view class="zone-header">
+          <view class="zone-code">{{item.zoneCode}}</view>
+          <view class="zone-name">{{item.zoneName}}</view>
+        </view>
+        <view class="zone-info">
+          <view class="info-item">
+            <view class="info-label">创建时间</view>
+            <view class="info-value">{{item.formattedTime}}</view>
+          </view>
+          <view class="info-item">
+            <view class="info-label">联盟数量</view>
+            <view class="info-value">{{item.allianceCount || 0}}个</view>
+          </view>
+        </view>
+        <view class="zone-actions">
+          <button class="action-btn config-btn" bindtap="goToAllianceConfig" data-zone="{{item}}">配置联盟</button>
+          <button class="action-btn delete-btn" bindtap="deleteZone" data-id="{{item._id}}" data-index="{{index}}">删除</button>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

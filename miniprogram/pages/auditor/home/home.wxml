@@ -1,0 +1,36 @@
+<!--pages/auditor/home/home.wxml-->
+<view class="auditor-home-container">
+  <view class="header-section">
+    <view class="header-title">审计员控制台</view>
+    <view class="header-desc">配置时间段和查看数据</view>
+  </view>
+
+  <!-- 绑定的联盟信息 -->
+  <view class="alliance-info-section">
+    <view class="section-title">绑定的联盟</view>
+    <view wx:if="{{myAlliance}}" class="alliance-card">
+      <view class="alliance-header">
+        <view class="alliance-name">{{myAlliance.allianceName}}</view>
+        <view class="alliance-zone">{{myAlliance.zoneName}}</view>
+      </view>
+    </view>
+    <view wx:else class="empty-state">
+      <view class="empty-text">暂未绑定联盟</view>
+    </view>
+  </view>
+
+  <!-- 功能入口 -->
+  <view class="function-grid">
+    <view class="function-card" bindtap="goToConfig">
+      <image class="function-icon" src="/images/icon-time.png"></image>
+      <view class="function-name">时间段配置</view>
+      <view class="function-desc">添加备注信息</view>
+    </view>
+
+    <view class="function-card" bindtap="goToStatistics">
+      <image class="function-icon" src="/images/icon-stats.png"></image>
+      <view class="function-name">数据统计</view>
+      <view class="function-desc">查看联盟统计</view>
+    </view>
+  </view>
+</view>

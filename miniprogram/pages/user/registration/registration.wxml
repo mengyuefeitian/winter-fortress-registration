@@ -1,0 +1,87 @@
+<!--pages/user/registration/registration.wxml-->
+<view class="registration-container">
+  <!-- 分区选择 -->
+  <view class="section">
+    <view class="section-title">选择分区</view>
+    <picker bindchange="onZoneChange" value="{{zoneIndex}}" range="{{zones}}" range-key="zoneName">
+      <view class="picker">
+        <text>{{selectedZone ? selectedZone.zoneName + ' (' + selectedZone.zoneCode + ')' : '请选择分区'}}</text>
+        <image class="picker-arrow" src="/images/icon-arrow-down.png"></image>
+      </view>
+    </picker>
+  </view>
+
+  <!-- 联盟选择 -->
+  <view wx:if="{{selectedZone}}" class="section">
+    <view class="section-title">选择联盟</view>
+    <picker bindchange="onAllianceChange" value="{{allianceIndex}}" range="{{alliances}}" range-key="allianceName">
+      <view class="picker">
+        <text>{{selectedAlliance ? selectedAlliance.allianceName : '请选择联盟'}}</text>
+        <image class="picker-arrow" src="/images/icon-arrow-down.png"></image>
+      </view>
+    </picker>
+  </view>
+
+  <!-- 时间段列表 -->
+  <view wx:if="{{selectedAlliance}}" class="section">
+    <view class="section-title">选择时间段</view>
+    <view class="time-slot-list">
+      <view wx:for="{{timeSlots}}" wx:key="_id" class="time-slot-card {{item.isFull ? 'full' : ''}}" bindtap="selectTimeSlot" data-index="{{index}}">
+        <view class="time-slot-header">
+          <view class="time-slot-time">{{item.displayName}}</view>
+          <view class="time-slot-count {{item.isFull ? 'full' : ''}}">
+            {{item.count}}/{{item.maxCount}}人
+          </view>
+        </view>
+        <view wx:if="{{item.remark}}" class="time-slot-remark">{{item.remark}}</view>
+        <view class="time-slot-progress">
+          <view class="progress-bar">
+            <view class="progress-fill {{item.isFull ? 'full' : ''}}" style="width: {{(item.count / item.maxCount) * 100}}%"></view>
+          </view>
+        </view>
+        <!-- 满员标记 -->
+        <view wx:if="{{item.isFull}}" class="full-badge">已满</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 报名表单 -->
+  <view wx:if="{{selectedTimeSlot && !selectedTimeSlot.isFull}}" class="section form-section">
+    <view class="section-title">报名信息</view>
+
+    <view class="form-item">
+      <view class="form-label">昵称</view>
+      <input class="form-input" placeholder="请输入您的昵称" value="{{nickName}}" bindinput="onNickNameInput" maxlength="20" />
+    </view>
+
+    <view class="form-item">
+      <view class="form-label">位置</view>
+      <view class="position-options">
+        <view class="position-option {{position === 'head' ? 'active' : ''}}" bindtap="selectPosition" data-position="head">
+          <view class="position-icon">🚗</view>
+          <view class="position-name">车头</view>
+        </view>
+        <view class="position-option {{position === 'body' ? 'active' : ''}}" bindtap="selectPosition" data-position="body">
+          <view class="position-icon">🚙</view>
+          <view class="position-name">车身</view>
+        </view>
+      </view>
+    </view>
+
+    <button class="submit-btn" bindtap="submitRegistration">提交报名</button>
+  </view>
+
+  <!-- 已报名人员预览 -->
+  <view wx:if="{{selectedTimeSlot}}" class="section preview-section">
+    <view class="section-title">已报名人员 ({{registrations.length}}人)</view>
+    <view class="registration-list">
+      <view wx:for="{{registrations}}" wx:key="_id" class="registration-item">
+        <view class="registration-order">{{index + 1}}</view>
+        <view class="registration-name">{{item.nickName}}</view>
+        <view class="registration-position {{item.position === 'head' ? 'head' : 'body'}}">
+          {{item.position === 'head' ? '车头' : '车身'}}
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

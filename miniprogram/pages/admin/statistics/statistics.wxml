@@ -1,0 +1,75 @@
+<!--pages/admin/statistics/statistics.wxml-->
+<view class="statistics-container">
+  <!-- 选择分区 -->
+  <view class="section">
+    <view class="section-title">选择分区</view>
+    <picker bindchange="onZoneChange" value="{{zoneIndex}}" range="{{zones}}" range-key="zoneName">
+      <view class="picker">
+        <text>{{selectedZone ? selectedZone.zoneName + ' (' + selectedZone.zoneCode + ')' : '请选择分区'}}</text>
+        <image class="picker-arrow" src="/images/icon-arrow-down.png"></image>
+      </view>
+    </picker>
+  </view>
+
+  <!-- 选择联盟 -->
+  <view wx:if="{{selectedZone}}" class="section">
+    <view class="section-title">选择联盟</view>
+    <picker bindchange="onAllianceChange" value="{{allianceIndex}}" range="{{alliances}}" range-key="allianceName">
+      <view class="picker">
+        <text>{{selectedAlliance ? selectedAlliance.allianceName : '请选择联盟'}}</text>
+        <image class="picker-arrow" src="/images/icon-arrow-down.png"></image>
+      </view>
+    </picker>
+  </view>
+
+  <!-- 联盟统计 -->
+  <view wx:if="{{selectedAlliance}}" class="section">
+    <view class="section-header">
+      <view class="section-title">{{selectedAlliance.allianceName}} 报名统计</view>
+      <view class="header-actions">
+        <button class="clear-btn" bindtap="clearRegistrations">清空数据</button>
+        <button class="save-btn" bindtap="saveScreenshot">保存截图</button>
+      </view>
+    </view>
+
+    <!-- 汇总数据 -->
+    <view class="stats-summary">
+      <view class="summary-item">
+        <view class="summary-value">{{totalRegistrations}}</view>
+        <view class="summary-label">总报名人数</view>
+      </view>
+      <view class="summary-item">
+        <view class="summary-value">{{fullSlots}}</view>
+        <view class="summary-label">已满时间段</view>
+      </view>
+      <view class="summary-item">
+        <view class="summary-value">{{remainingSlots}}</view>
+        <view class="summary-label">剩余名额</view>
+      </view>
+    </view>
+
+    <!-- 时间段详情 -->
+    <view class="time-slot-list">
+      <view wx:for="{{timeSlotStats}}" wx:key="timeSlot._id" class="time-slot-card">
+        <view class="slot-header">
+          <view class="slot-time">{{item.timeSlot.displayName}}</view>
+          <view class="slot-status {{item.isFull ? 'full' : ''}}">
+            {{item.count}}/{{item.timeSlot.maxCount}}人
+          </view>
+        </view>
+        <view wx:if="{{item.timeSlot.remark}}" class="slot-remark">{{item.timeSlot.remark}}</view>
+
+        <!-- 报名人员列表 -->
+        <view wx:if="{{item.registrations.length > 0}}" class="registration-list">
+          <view wx:for="{{item.registrations}}" wx:for-item="reg" wx:key="_id" class="registration-item">
+            <view class="reg-order">{{$index + 1}}</view>
+            <view class="reg-name">{{reg.nickName}}</view>
+            <view class="reg-position {{reg.position === 'head' ? 'head' : 'body'}}">
+              {{reg.position === 'head' ? '车头' : '车身'}}
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

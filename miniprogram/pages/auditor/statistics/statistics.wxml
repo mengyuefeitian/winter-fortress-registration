@@ -1,0 +1,59 @@
+<!--pages/auditor/statistics/statistics.wxml-->
+<view class="auditor-stats-container">
+  <view class="section">
+    <view class="section-header">
+      <view class="section-title">{{allianceName}} 报名统计</view>
+      <view class="header-actions">
+        <button class="clear-btn" bindtap="clearRegistrations">清空数据</button>
+        <button class="save-btn" bindtap="saveScreenshot">保存截图</button>
+      </view>
+    </view>
+
+    <view wx:if="{{stats.length === 0}}" class="empty-state">
+      <view class="empty-text">暂无数据</view>
+    </view>
+
+    <view wx:else>
+      <!-- 汇总数据 -->
+      <view class="stats-summary">
+        <view class="summary-item">
+          <view class="summary-value">{{totalRegistrations}}</view>
+          <view class="summary-label">总报名人数</view>
+        </view>
+        <view class="summary-item">
+          <view class="summary-value">{{fullSlots}}</view>
+          <view class="summary-label">已满时间段</view>
+        </view>
+        <view class="summary-item">
+          <view class="summary-value">{{remainingSlots}}</view>
+          <view class="summary-label">剩余名额</view>
+        </view>
+      </view>
+
+      <!-- 时间段详情 -->
+      <view class="time-slot-list">
+        <view wx:for="{{stats}}" wx:key="timeSlot._id" class="time-slot-card">
+          <view class="slot-header">
+            <view class="slot-time">{{item.timeSlot.displayName}}</view>
+            <view class="slot-status {{item.isFull ? 'full' : ''}}">
+              {{item.count}}/{{item.timeSlot.maxCount}}人
+            </view>
+          </view>
+
+          <view wx:if="{{item.timeSlot.remark}}" class="slot-remark">{{item.timeSlot.remark}}</view>
+
+          <!-- 报名人员列表 -->
+          <view wx:if="{{item.registrations.length > 0}}" class="registration-list">
+            <view wx:for="{{item.registrations}}" wx:for-item="reg" wx:key="_id" class="registration-item">
+              <view class="reg-order">{{$index + 1}}</view>
+              <view class="reg-name">{{reg.nickName}}</view>
+              <view class="reg-position {{reg.position === 'head' ? 'head' : 'body'}}">
+                {{reg.position === 'head' ? '车头' : '车身'}}
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

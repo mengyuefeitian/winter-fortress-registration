@@ -1,0 +1,29 @@
+<!--pages/auditor/config/config.wxml-->
+<view class="auditor-config-container">
+  <view class="section">
+    <view class="section-title">时间段备注配置</view>
+
+    <view wx:if="{{timeSlots.length === 0}}" class="empty-state">
+      <view class="empty-text">暂无时间段</view>
+    </view>
+
+    <view wx:else class="slot-list">
+      <view wx:for="{{timeSlots}}" wx:key="_id" class="slot-card">
+        <view class="slot-header">
+          <view class="slot-time">{{item.displayName}}</view>
+          <view class="slot-count">{{item.currentCount}}/{{item.maxCount}}人</view>
+        </view>
+
+        <view class="slot-remark-section">
+          <view class="remark-label">备注</view>
+          <input class="remark-input" placeholder="输入备注信息" value="{{item.editRemark}}" bindinput="onRemarkInput" data-index="{{index}}" maxlength="50" />
+          <button class="save-btn" bindtap="saveRemark" data-id="{{item._id}}" data-index="{{index}}">保存</button>
+        </view>
+
+        <view wx:if="{{item.remark}}" class="current-remark">
+          当前备注: {{item.remark}}
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

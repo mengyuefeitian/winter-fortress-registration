@@ -1,0 +1,38 @@
+<!--pages/superAdmin/phone-manage/phone-manage.wxml-->
+<view class="phone-manage-container">
+  <!-- 添加超管手机号 -->
+  <view class="section">
+    <view class="section-title">添加超级管理员</view>
+    <view class="form-card">
+      <view class="form-item">
+        <view class="form-label">手机号</view>
+        <input class="form-input" placeholder="请输入手机号" value="{{newPhone}}" bindinput="onPhoneInput" type="number" maxlength="11" />
+      </view>
+      <button class="add-btn" bindtap="addSuperAdminPhone">添加</button>
+    </view>
+  </view>
+
+  <!-- 超管列表 -->
+  <view class="section">
+    <view class="section-title">超级管理员列表</view>
+
+    <view wx:if="{{superAdmins.length === 0}}" class="empty-state">
+      <view class="empty-text">暂无超级管理员</view>
+    </view>
+
+    <view wx:else class="admin-list">
+      <view wx:for="{{superAdmins}}" wx:key="_id" class="admin-card">
+        <view class="admin-header">
+          <view class="admin-phone">{{item.phone}}</view>
+          <view class="admin-status {{item.userId ? 'bound' : 'unbound'}}">
+            {{item.userId ? '已绑定用户' : '未绑定用户'}}
+          </view>
+        </view>
+        <view wx:if="{{item.nickName}}" class="admin-name">用户: {{item.nickName}}</view>
+        <view class="admin-actions">
+          <button class="delete-btn" bindtap="deleteSuperAdmin" data-id="{{item._id}}" data-index="{{index}}">删除</button>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

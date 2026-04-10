@@ -1,0 +1,129 @@
+/* pages/superAdmin/alliance-manage/alliance-manage.wxss */
+
+.alliance-manage-container {
+  padding: 20px;
+  background-color: #F5F7FA;
+  min-height: 100vh;
+}
+
+.section {
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333333;
+  margin-bottom: 16px;
+}
+
+.picker {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #F5F7FA;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.picker-arrow {
+  width: 16px;
+  height: 16px;
+}
+
+.alliance-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.alliance-card {
+  background-color: #F5F7FA;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.alliance-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.alliance-index {
+  background-color: #4A90D9;
+  color: #FFFFFF;
+  font-size: 14px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  margin-right: 12px;
+}
+
+.alliance-name {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333333;
+}
+
+.alliance-edit {
+  display: flex;
+  margin-bottom: 12px;
+}
+
+.edit-input {
+  flex: 1;
+  height: 36px;
+  background-color: #FFFFFF;
+  border: 1px solid #E8E8E8;
+  border-radius: 6px;
+  padding: 0 12px;
+  font-size: 14px;
+  margin-right: 8px;
+}
+
+.save-btn {
+  background-color: #6BB3F0;
+  color: #FFFFFF;
+  font-size: 12px;
+  padding: 0 16px;
+  height: 36px;
+  line-height: 36px;
+  border-radius: 6px;
+}
+
+.auditor-section {
+  display: flex;
+  align-items: center;
+}
+
+.auditor-label {
+  font-size: 12px;
+  color: #999999;
+  width: 60px;
+}
+
+.auditor-picker {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #FFFFFF;
+  border: 1px solid #E8E8E8;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  margin-right: 8px;
+}
+
+.bind-btn {
+  background-color: #4A90D9;
+  color: #FFFFFF;
+  font-size: 12px;
+  padding: 0 16px;
+  height: 36px;
+  line-height: 36px;
+  border-radius: 6px;
+}

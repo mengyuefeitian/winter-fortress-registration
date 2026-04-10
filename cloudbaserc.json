@@ -1,0 +1,163 @@
+{
+  "env_id": "cloud1-9gip4qyf7e753868",
+  "version": "2.0",
+  "function_root": "./cloudfunctions",
+  "functions": [
+    {
+      "name": "login",
+      "handler": "index.main",
+      "runtime": "Nodejs12.16"
+    },
+    {
+      "name": "register",
+      "handler": "index.main",
+      "runtime": "Nodejs12.16"
+    },
+    {
+      "name": "getStatistics",
+      "handler": "index.main",
+      "runtime": "Nodejs12.16"
+    },
+    {
+      "name": "manageZone",
+      "handler": "index.main",
+      "runtime": "Nodejs12.16"
+    },
+    {
+      "name": "manageTimeSlot",
+      "handler": "index.main",
+      "runtime": "Nodejs12.16"
+    },
+    {
+      "name": "manageAdmin",
+      "handler": "index.main",
+      "runtime": "Nodejs12.16"
+    },
+    {
+      "name": "clearRegistrations",
+      "handler": "index.main",
+      "runtime": "Nodejs12.16"
+    }
+  ],
+  "collections": [
+    {
+      "collection_name": "users",
+      "index": [
+        {
+          "name": "openid_index",
+          "unique": true,
+          "key": {
+            "openid": 1
+          }
+        },
+        {
+          "name": "phone_index",
+          "unique": false,
+          "key": {
+            "phone": 1
+          }
+        }
+      ]
+    },
+    {
+      "collection_name": "admins",
+      "index": [
+        {
+          "name": "userId_index",
+          "unique": false,
+          "key": {
+            "userId": 1
+          }
+        },
+        {
+          "name": "status_index",
+          "unique": false,
+          "key": {
+            "status": 1
+          }
+        }
+      ]
+    },
+    {
+      "collection_name": "zones",
+      "index": [
+        {
+          "name": "zoneCode_index",
+          "unique": false,
+          "key": {
+            "zoneCode": 1
+          }
+        },
+        {
+          "name": "creatorId_index",
+          "unique": false,
+          "key": {
+            "creatorId": 1
+          }
+        }
+      ]
+    },
+    {
+      "collection_name": "alliances",
+      "index": [
+        {
+          "name": "zoneId_index",
+          "unique": false,
+          "key": {
+            "zoneId": 1
+          }
+        },
+        {
+          "name": "auditorId_index",
+          "unique": false,
+          "key": {
+            "auditorId": 1
+          }
+        }
+      ]
+    },
+    {
+      "collection_name": "timeSlots",
+      "index": [
+        {
+          "name": "allianceId_index",
+          "unique": false,
+          "key": {
+            "allianceId": 1
+          }
+        }
+      ]
+    },
+    {
+      "collection_name": "registrations",
+      "index": [
+        {
+          "name": "timeSlotId_index",
+          "unique": false,
+          "key": {
+            "timeSlotId": 1
+          }
+        },
+        {
+          "name": "userId_index",
+          "unique": false,
+          "key": {
+            "userId": 1
+          }
+        }
+      ]
+    },
+    {
+      "collection_name": "superAdmins",
+      "index": [
+        {
+          "name": "phone_index",
+          "unique": true,
+          "key": {
+            "phone": 1
+          }
+        }
+      ]
+    }
+  ]
+}

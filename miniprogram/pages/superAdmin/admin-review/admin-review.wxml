@@ -1,0 +1,57 @@
+<!--pages/superAdmin/admin-review/admin-review.wxml-->
+<view class="admin-review-container">
+  <view class="section">
+    <view class="section-title">管理员申请审核</view>
+
+    <view wx:if="{{applications.length === 0}}" class="empty-state">
+      <view class="empty-text">暂无待审核申请</view>
+    </view>
+
+    <view wx:else class="application-list">
+      <view wx:for="{{applications}}" wx:key="_id" class="application-card">
+        <view class="application-header">
+          <image class="applicant-avatar" src="{{item.avatarUrl || '/images/default-avatar.png'}}"></image>
+          <view class="applicant-info">
+            <view class="applicant-name">{{item.nickName || '未知用户'}}</view>
+            <view class="applicant-phone">手机号: {{item.phone}}</view>
+          </view>
+        </view>
+
+        <view class="application-time">
+          申请时间: {{item.formattedTime}}
+        </view>
+
+        <view class="application-actions">
+          <button class="approve-btn" bindtap="approveApplication" data-id="{{item._id}}" data-userid="{{item.userId}}" data-index="{{index}}">
+            批准
+          </button>
+          <button class="reject-btn" bindtap="rejectApplication" data-id="{{item._id}}" data-index="{{index}}">
+            拒绝
+          </button>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 已审核列表 -->
+  <view class="section">
+    <view class="section-title">已审核记录</view>
+
+    <view wx:if="{{reviewedApplications.length === 0}}" class="empty-state">
+      <view class="empty-text">暂无已审核记录</view>
+    </view>
+
+    <view wx:else class="reviewed-list">
+      <view wx:for="{{reviewedApplications}}" wx:key="_id" class="reviewed-card">
+        <view class="reviewed-header">
+          <view class="reviewed-name">{{item.nickName || '未知用户'}}</view>
+          <view class="reviewed-status {{item.status === 'approved' ? 'approved' : 'rejected'}}">
+            {{item.status === 'approved' ? '已批准' : '已拒绝'}}
+          </view>
+        </view>
+        <view class="reviewed-phone">手机号: {{item.phone}}</view>
+        <view class="reviewed-time">审核时间: {{item.formattedReviewTime}}</view>
+      </view>
+    </view>
+  </view>
+</view>

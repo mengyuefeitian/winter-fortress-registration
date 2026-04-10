@@ -1,0 +1,189 @@
+/* pages/superAdmin/all-statistics/all-statistics.wxss */
+
+.all-statistics-container {
+  padding: 20px;
+  background-color: #F5F7FA;
+  min-height: 100vh;
+}
+
+.section {
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333333;
+  margin-bottom: 16px;
+}
+
+.section-header .section-title {
+  margin-bottom: 0;
+  flex: 1;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.clear-btn {
+  background-color: #FF6B6B;
+  color: #FFFFFF;
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.save-btn {
+  background-color: #4A90D9;
+  color: #FFFFFF;
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.picker {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #F5F7FA;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.picker-arrow {
+  width: 16px;
+  height: 16px;
+}
+
+.stats-summary {
+  display: flex;
+  justify-content: space-around;
+  padding: 16px;
+  background-color: #F5F7FA;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.summary-value {
+  font-size: 24px;
+  font-weight: 500;
+  color: #4A90D9;
+  margin-bottom: 8px;
+}
+
+.summary-label {
+  font-size: 12px;
+  color: #999999;
+}
+
+.time-slot-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.time-slot-card {
+  background-color: #F5F7FA;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.slot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.slot-time {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333333;
+}
+
+.slot-status {
+  font-size: 14px;
+  color: #666666;
+}
+
+.slot-status.full {
+  color: #FF6B6B;
+}
+
+.slot-remark {
+  font-size: 12px;
+  color: #999999;
+  margin-bottom: 12px;
+}
+
+.registration-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid #E8E8E8;
+  padding-top: 12px;
+  margin-top: 8px;
+}
+
+.registration-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #E8E8E8;
+}
+
+.registration-item:last-child {
+  border-bottom: none;
+}
+
+.reg-order {
+  width: 24px;
+  height: 24px;
+  background-color: #4A90D9;
+  color: #FFFFFF;
+  border-radius: 50%;
+  font-size: 12px;
+  text-align: center;
+  line-height: 24px;
+  margin-right: 12px;
+}
+
+.reg-name {
+  flex: 1;
+  font-size: 14px;
+  color: #333333;
+}
+
+.reg-position {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.reg-position.head {
+  background-color: #FFE8E8;
+  color: #FF6B6B;
+}
+
+.reg-position.body {
+  background-color: #E8FFE8;
+  color: #52C41A;
+}

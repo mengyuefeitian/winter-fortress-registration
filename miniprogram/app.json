@@ -1,0 +1,59 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/login/login",
+    "pages/user/registration/registration",
+    "pages/user/my-registrations/my-registrations",
+    "pages/admin/home/home",
+    "pages/admin/zone-manage/zone-manage",
+    "pages/admin/alliance-config/alliance-config",
+    "pages/admin/time-slot-config/time-slot-config",
+    "pages/admin/statistics/statistics",
+    "pages/auditor/home/home",
+    "pages/auditor/config/config",
+    "pages/auditor/statistics/statistics",
+    "pages/superAdmin/home/home",
+    "pages/superAdmin/admin-review/admin-review",
+    "pages/superAdmin/all-statistics/all-statistics",
+    "pages/superAdmin/phone-manage/phone-manage",
+    "pages/superAdmin/alliance-manage/alliance-manage"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#4A90D9",
+    "navigationBarTitleText": "无尽冬日堡垒分配",
+    "navigationBarTextStyle": "white"
+  },
+  "tabBar": {
+    "color": "#7F7F7F",
+    "selectedColor": "#4A90D9",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "images/tab-home.png",
+        "selectedIconPath": "images/tab-home-active.png"
+      },
+      {
+        "pagePath": "pages/user/my-registrations/my-registrations",
+        "text": "我的",
+        "iconPath": "images/tab-my.png",
+        "selectedIconPath": "images/tab-my-active.png"
+      }
+    ]
+  },
+  "usingComponents": {},
+  "permission": {
+    "scope.userLocation": {
+      "desc": "你的位置信息将用于小程序位置接口的效果展示"
+    }
+  },
+  "requiredPrivateInfos": [
+    "getLocation",
+    "chooseLocation"
+  ],
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

@@ -1,0 +1,60 @@
+<!--pages/admin/home/home.wxml-->
+<view class="admin-home-container">
+  <view class="header-section">
+    <view class="header-title">管理员控制台</view>
+    <view class="header-desc">管理分区和联盟配置</view>
+  </view>
+
+  <view class="function-grid">
+    <!-- 分区管理 -->
+    <view class="function-card" bindtap="goToZoneManage">
+      <image class="function-icon" src="/images/icon-zone.png"></image>
+      <view class="function-name">分区管理</view>
+      <view class="function-desc">创建和管理分区编号</view>
+    </view>
+
+    <!-- 联盟配置 -->
+    <view class="function-card" bindtap="goToAllianceConfig">
+      <image class="function-icon" src="/images/icon-alliance.png"></image>
+      <view class="function-name">联盟配置</view>
+      <view class="function-desc">修改联盟名称</view>
+    </view>
+
+    <!-- 时间段配置 -->
+    <view class="function-card" bindtap="goToTimeSlotConfig">
+      <image class="function-icon" src="/images/icon-time.png"></image>
+      <view class="function-name">时间段配置</view>
+      <view class="function-desc">添加时间段和备注</view>
+    </view>
+
+    <!-- 数据统计 -->
+    <view class="function-card" bindtap="goToStatistics">
+      <image class="function-icon" src="/images/icon-stats.png"></image>
+      <view class="function-name">数据统计</view>
+      <view class="function-desc">按联盟查看统计</view>
+    </view>
+  </view>
+
+  <!-- 快速统计概览 -->
+  <view class="overview-section">
+    <view class="overview-title">快速概览</view>
+    <view class="overview-grid">
+      <view class="overview-item">
+        <view class="overview-value">{{myZones.length}}</view>
+        <view class="overview-label">我的分区</view>
+      </view>
+      <view class="overview-item">
+        <view class="overview-value">{{totalAlliances}}</view>
+        <view class="overview-label">联盟数量</view>
+      </view>
+      <view class="overview-item">
+        <view class="overview-value">{{totalRegistrations}}</view>
+        <view class="overview-label">报名人数</view>
+      </view>
+      <view class="overview-item">
+        <view class="overview-value">{{timeSlotsCount}}</view>
+        <view class="overview-label">时间段数</view>
+      </view>
+    </view>
+  </view>
+</view>

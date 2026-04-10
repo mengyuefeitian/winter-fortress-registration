@@ -1,0 +1,44 @@
+<!--pages/user/my-registrations/my-registrations.wxml-->
+<view class="my-registrations-container">
+  <view wx:if="{{registrations.length === 0}}" class="empty-state">
+    <image class="empty-icon" src="/images/icon-empty.png"></image>
+    <view class="empty-text">暂无报名记录</view>
+    <button class="empty-btn" bindtap="goToRegistration">去报名</button>
+  </view>
+
+  <view wx:else class="registration-list">
+    <view wx:for="{{registrations}}" wx:key="_id" class="registration-card">
+      <view class="card-header">
+        <view class="card-zone">{{item.zoneName}}</view>
+        <view class="card-alliance">{{item.allianceName}}</view>
+      </view>
+
+      <view class="card-body">
+        <view class="info-row">
+          <view class="info-label">时间段：</view>
+          <view class="info-value">{{item.displayName}}</view>
+        </view>
+        <view class="info-row">
+          <view class="info-label">昵称：</view>
+          <view class="info-value">{{item.nickName}}</view>
+        </view>
+        <view class="info-row">
+          <view class="info-label">位置：</view>
+          <view class="info-value position-tag {{item.position === 'head' ? 'head' : 'body'}}">
+            {{item.position === 'head' ? '车头' : '车身'}}
+          </view>
+        </view>
+        <view class="info-row">
+          <view class="info-label">报名时间：</view>
+          <view class="info-value">{{item.formattedTime}}</view>
+        </view>
+      </view>
+
+      <view class="card-footer">
+        <button class="cancel-btn" bindtap="cancelRegistration" data-id="{{item._id}}" data-index="{{index}}">
+          取消报名
+        </button>
+      </view>
+    </view>
+  </view>
+</view>

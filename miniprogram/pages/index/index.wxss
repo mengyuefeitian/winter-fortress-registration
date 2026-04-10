@@ -1,0 +1,187 @@
+/* pages/index/index.wxss */
+
+.index-container {
+  padding: 20px;
+  min-height: 100vh;
+  background-color: #F5F7FA;
+}
+
+/* 头部欢迎区域 */
+.header-section {
+  text-align: center;
+  padding: 40px 20px;
+  background: linear-gradient(135deg, #4A90D9 0%, #6BB3F0 100%);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.header-title {
+  font-size: 24px;
+  font-weight: 500;
+  color: #FFFFFF;
+  margin-bottom: 8px;
+}
+
+.header-desc {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* 用户信息区域 */
+.user-section {
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+}
+
+.user-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: #E8E8E8;
+  margin-right: 16px;
+}
+
+.user-detail {
+  flex: 1;
+}
+
+.user-name {
+  font-size: 18px;
+  font-weight: 500;
+  color: #333333;
+  margin-bottom: 4px;
+}
+
+.user-role-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  background-color: #E8F4FF;
+  color: #4A90D9;
+}
+
+/* 角色选择区域 */
+.role-section {
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333333;
+  margin-bottom: 16px;
+}
+
+.role-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.role-card {
+  width: calc(50% - 8px);
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-right: 16px;
+  transition: all 0.3s ease;
+}
+
+.role-card:nth-child(2n) {
+  margin-right: 0;
+}
+
+.role-card:active {
+  transform: scale(0.98);
+  background-color: #F8F8F8;
+}
+
+.role-card.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.role-icon {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 12px;
+}
+
+.role-name {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333333;
+  margin-bottom: 8px;
+}
+
+.role-desc {
+  font-size: 12px;
+  color: #999999;
+}
+
+/* 功能入口区域 */
+.function-section {
+  margin-bottom: 20px;
+}
+
+.function-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.function-item {
+  width: 25%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 0;
+}
+
+.function-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 8px;
+}
+
+.function-name {
+  font-size: 12px;
+  color: #666666;
+}
+
+/* 底部说明 */
+.footer-section {
+  text-align: center;
+  padding: 20px;
+  color: #999999;
+  font-size: 12px;
+}
+
+/* 登录提示 */
+.login-tip {
+  text-align: center;
+  padding: 40px;
+}
+
+.login-tip-text {
+  font-size: 14px;
+  color: #999999;
+  margin-bottom: 20px;
+}
+
+.login-btn {
+  background-color: #4A90D9;
+  color: #FFFFFF;
+  border-radius: 8px;
+  padding: 12px 40px;
+  font-size: 16px;
+}

@@ -1,0 +1,61 @@
+<!--pages/superAdmin/home/home.wxml-->
+<view class="super-admin-home-container">
+  <view class="header-section">
+    <view class="header-title">超级管理员控制台</view>
+    <view class="header-desc">全局管理和审核权限</view>
+  </view>
+
+  <view class="function-grid">
+    <!-- 管理员审核 -->
+    <view class="function-card" bindtap="goToAdminReview">
+      <image class="function-icon" src="/images/icon-review.png"></image>
+      <view class="function-name">管理员审核</view>
+      <view class="function-desc">审核管理员申请</view>
+      <view wx:if="{{pendingCount > 0}}" class="badge">{{pendingCount}}</view>
+    </view>
+
+    <!-- 数据统计 -->
+    <view class="function-card" bindtap="goToAllStats">
+      <image class="function-icon" src="/images/icon-stats.png"></image>
+      <view class="function-name">数据统计</view>
+      <view class="function-desc">按联盟查看统计</view>
+    </view>
+
+    <!-- 手机号管理 -->
+    <view class="function-card" bindtap="goToPhoneManage">
+      <image class="function-icon" src="/images/icon-phone.png"></image>
+      <view class="function-name">手机号管理</view>
+      <view class="function-desc">设置超管手机号</view>
+    </view>
+
+    <!-- 全局联盟管理 -->
+    <view class="function-card" bindtap="goToAllianceManage">
+      <image class="function-icon" src="/images/icon-alliance.png"></image>
+      <view class="function-name">联盟管理</view>
+      <view class="function-desc">管理所有联盟</view>
+    </view>
+  </view>
+
+  <!-- 快速概览 -->
+  <view class="overview-section">
+    <view class="overview-title">全局概览</view>
+    <view class="overview-grid">
+      <view class="overview-item">
+        <view class="overview-value">{{totalZones}}</view>
+        <view class="overview-label">分区总数</view>
+      </view>
+      <view class="overview-item">
+        <view class="overview-value">{{totalAlliances}}</view>
+        <view class="overview-label">联盟总数</view>
+      </view>
+      <view class="overview-item">
+        <view class="overview-value">{{totalRegistrations}}</view>
+        <view class="overview-label">报名人数</view>
+      </view>
+      <view class="overview-item">
+        <view class="overview-value">{{totalAdmins}}</view>
+        <view class="overview-label">管理员数</view>
+      </view>
+    </view>
+  </view>
+</view>

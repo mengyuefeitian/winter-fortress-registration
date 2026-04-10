@@ -1,0 +1,39 @@
+<!--pages/login/login.wxml-->
+<view class="login-container">
+  <view class="login-header">
+    <image class="logo" src="/images/logo.png"></image>
+    <view class="title">无尽冬日堡垒分配</view>
+    <view class="desc">联盟报名管理系统</view>
+  </view>
+
+  <view class="login-content">
+    <!-- 获取用户信息 -->
+    <view wx:if="{{!userInfo}}" class="auth-section">
+      <view class="auth-tip">请授权登录以使用完整功能</view>
+      <button class="auth-btn" bindtap="getUserProfile">获取头像昵称</button>
+    </view>
+
+    <!-- 已获取用户信息，显示头像昵称 -->
+    <view wx:else class="user-section">
+      <view class="user-info">
+        <image class="user-avatar" src="{{userInfo.avatarUrl}}"></image>
+        <view class="user-name">{{userInfo.nickName}}</view>
+      </view>
+
+      <!-- 手机号绑定 -->
+      <view wx:if="{{!hasPhone}}" class="phone-section">
+        <view class="phone-tip">绑定手机号可识别管理员身份</view>
+        <button class="phone-btn" open-type="getPhoneNumber" bindgetphonenumber="getPhoneNumber">绑定手机号</button>
+      </view>
+
+      <!-- 完成登录 -->
+      <view class="complete-section">
+        <button class="login-btn" bindtap="completeLogin">完成登录</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="login-footer">
+    <view class="footer-text">登录即表示同意相关服务条款</view>
+  </view>
+</view>

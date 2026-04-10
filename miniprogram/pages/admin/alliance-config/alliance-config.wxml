@@ -1,0 +1,44 @@
+<!--pages/admin/alliance-config/alliance-config.wxml-->
+<view class="alliance-config-container">
+  <!-- 选择分区 -->
+  <view class="section">
+    <view class="section-title">选择分区</view>
+    <picker bindchange="onZoneChange" value="{{zoneIndex}}" range="{{zones}}" range-key="zoneName">
+      <view class="picker">
+        <text>{{selectedZone ? selectedZone.zoneName + ' (' + selectedZone.zoneCode + ')' : '请选择分区'}}</text>
+        <image class="picker-arrow" src="/images/icon-arrow-down.png"></image>
+      </view>
+    </picker>
+  </view>
+
+  <!-- 联盟列表 -->
+  <view wx:if="{{selectedZone}}" class="section">
+    <view class="section-title">联盟列表 (共{{alliances.length}}个)</view>
+    <view class="alliance-list">
+      <view wx:for="{{alliances}}" wx:key="_id" class="alliance-card">
+        <view class="alliance-header">
+          <view class="alliance-index">联盟{{item.allianceIndex}}</view>
+          <view class="alliance-name">{{item.allianceName}}</view>
+        </view>
+
+        <view class="alliance-edit">
+          <input class="edit-input" placeholder="修改联盟名称" value="{{item.editName}}" bindinput="onNameInput" data-index="{{index}}" maxlength="20" />
+          <button class="save-btn" bindtap="saveAllianceName" data-id="{{item._id}}" data-index="{{index}}" data-name="{{item.editName}}">
+            保存
+          </button>
+        </view>
+
+        <!-- 绑定审计员 -->
+        <view class="auditor-section">
+          <view class="auditor-label">绑定审计员</view>
+          <picker bindchange="onAuditorChange" value="{{item.auditorIndex}}" range="{{auditors}}" range-key="nickName">
+            <view class="auditor-picker">
+              <text>{{item.auditorName || '未绑定'}}</text>
+              <image class="picker-arrow" src="/images/icon-arrow-down.png"></image>
+            </view>
+          </picker>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
