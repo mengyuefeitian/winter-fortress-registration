@@ -1,0 +1,52 @@
+<!-- pages/user/position-registration/position-registration.wxml -->
+<view class="page">
+  <!-- 用户信息 -->
+  <view class="card mt-16">
+    <view class="card-body flex items-center">
+      <image class="avatar" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill" />
+      <view class="ml-12 flex-1">
+        <text class="text-base font-medium">{{userInfo.nickName || '未设置昵称'}}</text>
+        <text class="text-secondary text-sm mt-4">选择时间段预约官职</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 官职配置信息 -->
+  <view wx:if="{{currentConfig}}" class="section-header mt-16">
+    <text class="section-title">{{currentConfig.positionType}} - {{currentConfig.date}}</text>
+  </view>
+
+  <!-- 官职时间段列表 -->
+  <view class="time-slot-grid">
+    <view wx:for="{{timeSlots}}" wx:key="time" class="time-slot-card {{item.isRegistered && !item.isMyRegistration ? 'full' : ''}}" bindtap="selectTimeSlot" data-slot="{{item}}">
+      <view class="slot-time">{{item.time}}</view>
+      <view class="slot-info">
+        <view class="slot-count {{item.isRegistered && !item.isMyRegistration ? 'full' : ''}}">
+          {{item.isMyRegistration ? '我的预约' : (item.isRegistered ? item.registeredUser : '空闲')}}
+        </view>
+        <view class="slot-status {{item.isRegistered && !item.isMyRegistration ? 'full' : 'available'}}">
+          {{item.isMyRegistration ? '已预约' : (item.isRegistered ? '已占用' : '可预约')}}
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:if="{{!currentConfig && !loading}}" class="empty-state">
+    <image class="empty-icon" src="/images/icon-empty.png" />
+    <text class="empty-text">暂无可预约的官职时间段</text>
+    <view class="empty-action">
+      <button class="btn btn-secondary btn-sm" bindtap="refreshData">刷新数据</button>
+    </view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-container">
+    <text class="loading-text">正在加载...</text>
+  </view>
+
+  <!-- 底部操作 -->
+  <view class="safe-area-bottom p-16">
+    <button class="btn btn-primary btn-full" bindtap="refreshData">刷新时间段</button>
+  </view>
+</view>

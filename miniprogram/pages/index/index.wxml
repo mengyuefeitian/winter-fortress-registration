@@ -1,115 +1,142 @@
 <!--pages/index/index.wxml-->
-<view class="index-container">
+<view class="page">
 
   <!-- 未登录状态 -->
-  <view wx:if="{{!isLoggedIn}}" class="login-tip">
-    <view class="header-section">
-      <view class="header-title">无尽冬日堡垒分配</view>
-      <view class="header-desc">联盟报名管理系统</view>
+  <view wx:if="{{!isLoggedIn}}" class="empty-state">
+    <view class="card p-24 mb-16">
+      <view class="text-center">
+        <text class="text-2xl font-semibold">无尽冬日堡垒分配</text>
+        <text class="text-secondary mt-8">联盟报名管理系统</text>
+      </view>
     </view>
-    <view class="login-tip-text">请先登录以使用完整功能</view>
-    <button class="login-btn" bindtap="handleLogin">登录授权</button>
+    <text class="text-secondary mb-16">请先登录以使用完整功能</text>
+    <button class="btn btn-primary btn-lg" bindtap="handleLogin">登录授权</button>
   </view>
 
   <!-- 已登录状态 -->
-  <view wx:else>
+  <view wx:else class="container">
 
-    <!-- 头部欢迎区域 -->
-    <view class="header-section">
-      <view class="header-title">无尽冬日堡垒分配</view>
-      <view class="header-desc">联盟报名管理系统</view>
-    </view>
-
-    <!-- 用户信息区域 -->
-    <view class="user-section">
-      <view class="user-info">
-        <image class="user-avatar" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
-        <view class="user-detail">
-          <view class="user-name">{{userInfo.nickName || '用户'}}</view>
-          <view class="user-role-tag">{{roleName}}</view>
+    <!-- 用户信息卡片 -->
+    <view class="card mt-16">
+      <view class="card-body flex items-center">
+        <image class="avatar-lg" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill" />
+        <view class="ml-16 flex-1">
+          <text class="text-lg font-semibold">{{userInfo.nickName || '未设置昵称'}}</text>
+          <view class="flex items-center mt-8">
+            <view class="status-dot status-active"></view>
+            <text class="text-secondary">{{roleDisplayName}}</text>
+          </view>
+        </view>
+        <!-- 分区选择器 -->
+        <view wx:if="{{zones.length > 0}}" class="picker">
+          <picker mode="selector" range="{{zones}}" range-key="zoneName" value="{{zoneIndex}}" bindchange="onZoneChange">
+            <view class="flex items-center">
+              <text class="text-sm">{{currentZone.zoneName}}</text>
+              <text class="text-weak ml-4">▼</text>
+            </view>
+          </picker>
         </view>
       </view>
     </view>
 
-    <!-- 角色切换区域 -->
-    <view class="role-section">
-      <view class="section-title">切换身份</view>
-      <view class="role-grid">
-        <!-- 普通用户 -->
-        <view class="role-card {{currentRole === 'user' ? 'active' : ''}}" bindtap="switchRole" data-role="user">
-          <image class="role-icon" src="/images/icon-user.png"></image>
-          <view class="role-name">普通用户</view>
-          <view class="role-desc">报名参加联盟活动</view>
-        </view>
-
-        <!-- 管理员 -->
-        <view class="role-card {{currentRole === 'admin' ? 'active' : ''}} {{canBeAdmin ? '' : 'disabled'}}" bindtap="switchRole" data-role="admin">
-          <image class="role-icon" src="/images/icon-admin.png"></image>
-          <view class="role-name">管理员</view>
-          <view class="role-desc">管理分区和联盟配置</view>
-        </view>
-
-        <!-- 审计员 -->
-        <view class="role-card {{currentRole === 'auditor' ? 'active' : ''}} {{canBeAuditor ? '' : 'disabled'}}" bindtap="switchRole" data-role="auditor">
-          <image class="role-icon" src="/images/icon-auditor.png"></image>
-          <view class="role-name">审计员</view>
-          <view class="role-desc">配置时间段和查看数据</view>
-        </view>
-
-        <!-- 超级管理员 -->
-        <view class="role-card {{currentRole === 'superAdmin' ? 'active' : ''}} {{isSuperAdmin ? '' : 'disabled'}}" bindtap="switchRole" data-role="superAdmin">
-          <image class="role-icon" src="/images/icon-superadmin.png"></image>
-          <view class="role-name">超级管理员</view>
-          <view class="role-desc">全局管理和审核</view>
-        </view>
-      </view>
-
-      <!-- 申请管理员提示 -->
-      <view wx:if="{{!canBeAdmin && currentRole === 'user'}}" class="apply-tip">
-        <button class="btn-outline" bindtap="applyAdmin">申请成为管理员</button>
-      </view>
+    <!-- 功能入口 -->
+    <view class="section-header mt-24">
+      <text class="section-title">功能</text>
     </view>
 
-    <!-- 快捷功能入口 -->
-    <view class="function-section">
-      <view class="section-title">快捷入口</view>
-      <view class="function-grid">
-        <!-- 根据角色显示不同功能 -->
-        <view wx:if="{{currentRole === 'user'}}" class="function-item" bindtap="goToRegistration">
-          <image class="function-icon" src="/images/icon-registration.png"></image>
-          <view class="function-name">报名</view>
+    <view class="function-grid">
+      <!-- 堡垒报名 -->
+      <view class="function-card" bindtap="goToFortressRegistration" wx:if="{{showFortressRegistration}}">
+        <view class="function-icon">
+          <image src="/images/icon-registration.png" style="width: 32px; height: 32px;" />
         </view>
-
-        <view wx:if="{{isAdminOrAbove}}" class="function-item" bindtap="goToStatistics">
-          <image class="function-icon" src="/images/icon-stats.png"></image>
-          <view class="function-name">数据统计</view>
+        <view class="function-content">
+          <text class="function-name">堡垒报名</text>
+          <text class="function-desc">选择时间段报名参加堡垒活动</text>
         </view>
+      </view>
 
-        <view wx:if="{{canManageZone}}" class="function-item" bindtap="goToZoneManage">
-          <image class="function-icon" src="/images/icon-zone.png"></image>
-          <view class="function-name">分区管理</view>
+      <!-- 官职报名 -->
+      <view class="function-card" bindtap="goToPositionRegistration" wx:if="{{showPositionRegistration}}">
+        <view class="function-icon">
+          <image src="/images/icon-alliance.png" style="width: 32px; height: 32px;" />
         </view>
-
-        <view wx:if="{{canConfigTimeSlot}}" class="function-item" bindtap="goToTimeSlotConfig">
-          <image class="function-icon" src="/images/icon-time.png"></image>
-          <view class="function-name">时间配置</view>
+        <view class="function-content">
+          <text class="function-name">官职报名</text>
+          <text class="function-desc">预约官职时间段</text>
         </view>
+      </view>
 
-        <view wx:if="{{canReviewAdmin}}" class="function-item" bindtap="goToAdminReview">
-          <image class="function-icon" src="/images/icon-review.png"></image>
-          <view class="function-name">审核申请</view>
+      <!-- 我的报名 -->
+      <view class="function-card" bindtap="goToMyRegistrations" wx:if="{{showMyRegistrations}}">
+        <view class="function-icon">
+          <image src="/images/icon-review.png" style="width: 32px; height: 32px;" />
         </view>
+        <view class="function-content">
+          <text class="function-name">我的报名</text>
+          <text class="function-desc">查看报名记录和状态</text>
+        </view>
+      </view>
 
-        <view wx:if="{{isSuperAdmin}}" class="function-item" bindtap="goToPhoneManage">
-          <image class="function-icon" src="/images/icon-phone.png"></image>
-          <view class="function-name">超管管理</view>
+      <!-- 申请盟管 -->
+      <view class="function-card" bindtap="applyAllianceManager" wx:if="{{showApplyAllianceManager}}">
+        <view class="function-icon">
+          <image src="/images/icon-auditor.png" style="width: 32px; height: 32px;" />
+        </view>
+        <view class="function-content">
+          <text class="function-name">申请盟管</text>
+          <text class="function-desc">申请成为盟管管理官职</text>
+        </view>
+      </view>
+
+      <!-- 申请区管 -->
+      <view class="function-card" bindtap="applyZoneManager" wx:if="{{showApplyZoneManager}}">
+        <view class="function-icon">
+          <image src="/images/icon-admin.png" style="width: 32px; height: 32px;" />
+        </view>
+        <view class="function-content">
+          <text class="function-name">申请区管</text>
+          <text class="function-desc">申请成为区管管理分区</text>
+        </view>
+      </view>
+
+      <!-- 区管控制台 -->
+      <view class="function-card" bindtap="goToAdminConsole" wx:if="{{showAdminConsole}}">
+        <view class="function-icon">
+          <image src="/images/icon-zone.png" style="width: 32px; height: 32px;" />
+        </view>
+        <view class="function-content">
+          <text class="function-name">区管控制台</text>
+          <text class="function-desc">管理分区和联盟配置</text>
+        </view>
+      </view>
+
+      <!-- 盟管控制台 -->
+      <view class="function-card" bindtap="goToAuditorConsole" wx:if="{{showAuditorConsole}}">
+        <view class="function-icon">
+          <image src="/images/icon-time.png" style="width: 32px; height: 32px;" />
+        </view>
+        <view class="function-content">
+          <text class="function-name">盟管控制台</text>
+          <text class="function-desc">配置时间段备注</text>
+        </view>
+      </view>
+
+      <!-- 超管控制台 -->
+      <view class="function-card" bindtap="goToSuperAdminConsole" wx:if="{{showSuperAdminConsole}}">
+        <view class="function-icon">
+          <image src="/images/icon-superadmin.png" style="width: 32px; height: 32px;" />
+        </view>
+        <view class="function-content">
+          <text class="function-name">超管控制台</text>
+          <text class="function-desc">全局管理和审核</text>
         </view>
       </view>
     </view>
 
     <!-- 底部说明 -->
-    <view class="footer-section">
-      无尽冬日堡垒分配 v1.0.0
+    <view class="text-center mt-32 mb-16">
+      <text class="text-weak text-xs">无尽冬日堡垒分配 v1.0.0</text>
     </view>
   </view>
 </view>

@@ -1,0 +1,8 @@
+/* pages/user/position-registration/position-registration.wxss */
+
+/* 页面容器 */
+.page {
+  min-height: 100vh;
+  background-color: #fafbfc;
+  padding-bottom: 80px;
+}

@@ -3,6 +3,7 @@
     "pages/index/index",
     "pages/login/login",
     "pages/user/registration/registration",
+    "pages/user/position-registration/position-registration",
     "pages/user/my-registrations/my-registrations",
     "pages/admin/home/home",
     "pages/admin/zone-manage/zone-manage",
