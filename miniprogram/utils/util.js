@@ -231,12 +231,12 @@ function isTimeSlotFull(count, maxCount = 15) {
  */
 function getRoleName(role) {
   const roleMap = {
-    user: '普通用户',
-    admin: '管理员',
-    auditor: '审计员',
-    superAdmin: '超级管理员'
+    'user': '普通用户',
+    'admin': '区管',
+    'auditor': '监管',
+    'superAdmin': '超级管理员'
   }
-  return roleMap[role] || '未知角色'
+  return roleMap[role] || '未知'
 }
 
 /**
