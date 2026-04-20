@@ -6,3 +6,147 @@
   background-color: #fafbfc;
   padding-bottom: 80px;
 }
+
+/* 配置卡片外边距 */
+.mx-16 {
+  margin-left: 16px;
+  margin-right: 16px;
+}
+
+/* Period Tabs 容器 */
+.period-tabs-container {
+  padding: 0;
+}
+
+/* 座位表格样式覆盖 */
+.seat-table {
+  border: 1px solid #e5e7eb;
+}
+
+.seat-row {
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.seat-row:last-child {
+  border-bottom: none;
+}
+
+.seat-time {
+  width: 70px;
+  padding: 12px 12px;
+  font-size: 13px;
+  color: #6b7280;
+  flex-shrink: 0;
+  background-color: #fafbfc;
+  border-right: 1px solid #f3f4f6;
+}
+
+.seat-cell {
+  flex: 1;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 52px;
+}
+
+.seat-name {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+/* 空座位 */
+.seat-empty {
+  color: #9ca3af;
+  cursor: pointer;
+}
+
+.seat-empty:active {
+  opacity: 0.8;
+}
+
+/* 已占座位（别人） */
+.seat-filled {
+  color: #16213e;
+  font-weight: 500;
+}
+
+/* 我的座位 */
+.seat-my {
+  background-color: #fef2f2;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.seat-remark {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.seat-action {
+  padding: 8px 12px;
+  flex-shrink: 0;
+}
+
+/* 弹窗样式 */
+.modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 100;
+}
+
+.modal-container {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 280px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  z-index: 101;
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 16px;
+  border-bottom: 1px solid #f3f4f6;
+  text-align: center;
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.modal-time {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.modal-body {
+  padding: 16px;
+}
+
+.modal-footer {
+  display: flex;
+  padding: 12px 16px;
+  border-top: 1px solid #f3f4f6;
+  gap: 8px;
+}
+
+.modal-footer .btn {
+  flex: 1;
+  height: 36px;
+}

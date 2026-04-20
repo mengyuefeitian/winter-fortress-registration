@@ -1,52 +1,122 @@
 <!-- pages/user/position-registration/position-registration.wxml -->
 <view class="page">
-  <!-- 用户信息 -->
-  <view class="card mt-16">
-    <view class="card-body flex items-center">
-      <image class="avatar" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill" />
-      <view class="ml-12 flex-1">
-        <text class="text-base font-medium">{{userInfo.nickName || '未设置昵称'}}</text>
-        <text class="text-secondary text-sm mt-4">选择时间段预约官职</text>
-      </view>
+  <!-- 配置信息卡片 -->
+  <view class="card mt-16 mx-16">
+    <view class="card-header flex items-center justify-between">
+      <text class="card-title">{{config.positionType}}</text>
+      <view class="tag">{{config.date}}</view>
+    </view>
+    <view class="card-body">
+      <text class="text-secondary text-sm">起始时间：{{config.startTime}}</text>
     </view>
   </view>
 
-  <!-- 官职配置信息 -->
-  <view wx:if="{{currentConfig}}" class="section-header mt-16">
-    <text class="section-title">{{currentConfig.positionType}} - {{currentConfig.date}}</text>
+  <!-- 上午/下午切换 -->
+  <view class="period-tabs-container mt-16 mx-16">
+    <view class="period-tabs">
+      <view class="period-tab {{currentPeriod === 'morning' ? 'active' : ''}}"
+            bindtap="switchPeriod" data-period="morning">上午</view>
+      <view class="period-tab {{currentPeriod === 'afternoon' ? 'active' : ''}}"
+            bindtap="switchPeriod" data-period="afternoon">下午</view>
+    </view>
   </view>
 
-  <!-- 官职时间段列表 -->
-  <view class="time-slot-grid">
-    <view wx:for="{{timeSlots}}" wx:key="time" class="time-slot-card {{item.isRegistered && !item.isMyRegistration ? 'full' : ''}}" bindtap="selectTimeSlot" data-slot="{{item}}">
-      <view class="slot-time">{{item.time}}</view>
-      <view class="slot-info">
-        <view class="slot-count {{item.isRegistered && !item.isMyRegistration ? 'full' : ''}}">
-          {{item.isMyRegistration ? '我的预约' : (item.isRegistered ? item.registeredUser : '空闲')}}
+  <!-- 加载状态 -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 座位表格 -->
+  <view class="seat-table mt-16 mx-16" wx:if="{{!loading && filteredSlots.length > 0}}">
+    <view class="seat-row" wx:for="{{filteredSlots}}" wx:key="time">
+      <text class="seat-time">{{item.time}}</text>
+      <view class="seat-cell">
+        <!-- 空座位 -->
+        <view class="seat-name seat-empty" wx:if="{{!item.registration}}"
+              bindtap="selectSeat" data-time="{{item.time}}">
+          <text class="text-weak">选择座位</text>
         </view>
-        <view class="slot-status {{item.isRegistered && !item.isMyRegistration ? 'full' : 'available'}}">
-          {{item.isMyRegistration ? '已预约' : (item.isRegistered ? '已占用' : '可预约')}}
+
+        <!-- 已占座位（自己） -->
+        <view class="seat-name seat-my" wx:elif="{{item.registration && item.registration.userId === currentUserId}}"
+              bindtap="editMySeat" data-reg="{{item.registration}}">
+          <text class="text-highlight font-semibold">{{item.registration.nickName}}</text>
+          <text class="seat-remark" wx:if="{{item.registration.remark}}">{{item.registration.remark}}</text>
         </view>
+
+        <!-- 已占座位（别人） -->
+        <view class="seat-name seat-filled" wx:elif="{{item.registration}}"
+              bindtap="viewOtherSeat" data-reg="{{item.registration}}">
+          <text>{{item.registration.nickName}}</text>
+          <text class="seat-remark" wx:if="{{item.registration.remark}}">{{item.registration.remark}}</text>
+        </view>
+      </view>
+      <!-- 区管可以删除任意座位 -->
+      <view class="seat-action" wx:if="{{isAdmin && item.registration}}"
+            bindtap="deleteSeat" data-reg="{{item.registration}}">
+        <text class="text-danger">删除</text>
       </view>
     </view>
   </view>
 
   <!-- 空状态 -->
-  <view wx:if="{{!currentConfig && !loading}}" class="empty-state">
-    <image class="empty-icon" src="/images/icon-empty.png" />
-    <text class="empty-text">暂无可预约的官职时间段</text>
-    <view class="empty-action">
-      <button class="btn btn-secondary btn-sm" bindtap="refreshData">刷新数据</button>
-    </view>
-  </view>
-
-  <!-- 加载状态 -->
-  <view wx:if="{{loading}}" class="loading-container">
-    <text class="loading-text">正在加载...</text>
+  <view class="empty-state" wx:if="{{!loading && filteredSlots.length === 0}}">
+    <text class="empty-text">{{currentPeriod === 'morning' ? '暂无上午时间段' : '暂无下午时间段'}}</text>
   </view>
 
   <!-- 底部操作 -->
   <view class="safe-area-bottom p-16">
-    <button class="btn btn-primary btn-full" bindtap="refreshData">刷新时间段</button>
+    <button class="btn btn-secondary btn-full" bindtap="refreshData">刷新数据</button>
+  </view>
+
+  <!-- 选择座位弹窗 -->
+  <view class="modal-mask" wx:if="{{showModal}}" bindtap="closeModal"></view>
+  <view class="modal-container" wx:if="{{showModal}}">
+    <view class="modal-header">
+      <text class="modal-title">选择座位</text>
+      <text class="modal-time">{{selectedTime}}</text>
+    </view>
+    <view class="modal-body">
+      <view class="form-group">
+        <text class="form-label">游戏昵称</text>
+        <input class="input" placeholder="请输入游戏昵称" value="{{inputNickName}}"
+               bindinput="onNickNameInput" maxlength="20" />
+      </view>
+      <view class="form-group">
+        <text class="form-label">备注（可选）</text>
+        <input class="input" placeholder="火晶数量或加速天数" value="{{inputRemark}}"
+               bindinput="onRemarkInput" maxlength="30" />
+      </view>
+    </view>
+    <view class="modal-footer">
+      <button class="btn btn-secondary" bindtap="closeModal">取消</button>
+      <button class="btn btn-primary" bindtap="confirmSeat">确认</button>
+    </view>
+  </view>
+
+  <!-- 编辑座位弹窗 -->
+  <view class="modal-mask" wx:if="{{showEditModal}}" bindtap="closeEditModal"></view>
+  <view class="modal-container" wx:if="{{showEditModal}}">
+    <view class="modal-header">
+      <text class="modal-title">我的座位</text>
+      <text class="modal-time">{{editingReg.timeSlot}}</text>
+    </view>
+    <view class="modal-body">
+      <view class="form-group">
+        <text class="form-label">游戏昵称</text>
+        <input class="input" placeholder="请输入游戏昵称" value="{{editNickName}}"
+               bindinput="onEditNickNameInput" maxlength="20" />
+      </view>
+      <view class="form-group">
+        <text class="form-label">备注（可选）</text>
+        <input class="input" placeholder="火晶数量或加速天数" value="{{editRemark}}"
+               bindinput="onEditRemarkInput" maxlength="30" />
+      </view>
+    </view>
+    <view class="modal-footer">
+      <button class="btn btn-danger" bindtap="deleteMySeat">删除</button>
+      <button class="btn btn-secondary" bindtap="closeEditModal">取消</button>
+      <button class="btn btn-primary" bindtap="updateMySeat">保存</button>
+    </view>
   </view>
 </view>

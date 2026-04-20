@@ -217,7 +217,7 @@ Page({
   // 官职报名
   goToPositionRegistration: function () {
     wx.navigateTo({
-      url: '/pages/user/position-registration/position-registration'
+      url: '/pages/user/position-list/position-list'
     })
   },
 

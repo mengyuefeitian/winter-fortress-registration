@@ -1,0 +1,21 @@
+/* pages/user/position-list/position-list.wxss */
+
+/* 页面容器 */
+.page {
+  min-height: 100vh;
+  background-color: #fafbfc;
+  padding-bottom: 80px;
+}
+
+/* 配置列表使用单列布局 */
+.function-grid {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 12px;
+}
+
+/* 卡片样式覆盖 */
+.card {
+  width: 100%;
+}

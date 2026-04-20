@@ -5,248 +5,417 @@ const db = require('../../utils/db')
 
 Page({
   data: {
-    userInfo: null,
-    currentZone: null,
-    positionConfigs: [],
-    currentConfig: null,
-    timeSlots: [],
+    configId: null,
+    config: null,
     loading: false,
-    POSITION_TYPES: ['副执行官', '教育部长']
+    currentUserId: null,
+    isAdmin: false,
+
+    // 时间段
+    allSlots: [],
+    filteredSlots: [],
+    currentPeriod: 'morning', // 'morning' 或 'afternoon'
+
+    // 弹窗状态
+    showModal: false,
+    selectedTime: '',
+    inputNickName: '',
+    inputRemark: '',
+
+    // 编辑弹窗状态
+    showEditModal: false,
+    editingReg: null,
+    editNickName: '',
+    editRemark: ''
   },
 
-  onLoad: function () {
-    this.checkLoginAndLoadData()
+  onLoad: function (options) {
+    const configId = options.configId
+    if (configId) {
+      this.setData({ configId })
+      this.loadConfigData(configId)
+    } else {
+      // 如果没有传入 configId，尝试获取今天的配置
+      this.loadTodayConfig()
+    }
   },
 
   onShow: function () {
-    this.checkLoginAndLoadData()
-  },
-
-  // 检查登录并加载数据
-  checkLoginAndLoadData: function () {
-    const userInfo = app.globalData.userInfo
-    const openid = app.globalData.openid
-
-    if (userInfo && openid) {
-      this.setData({
-        userInfo: userInfo,
-        currentZone: app.globalData.currentZone
-      })
-      this.loadPositionConfigs()
-    } else {
-      util.showInfo('请先登录')
-      wx.navigateTo({
-        url: '/pages/login/login'
-      })
+    // 刷新数据
+    if (this.data.configId) {
+      this.loadRegistrations()
     }
   },
 
-  // 加载官职配置
-  loadPositionConfigs: async function () {
+  // 加载今天的配置（如果没有传入 configId）
+  loadTodayConfig: async function () {
+    try {
+      this.setData({ loading: true })
+      const today = util.formatDate(new Date())
+      const configs = await db.getPositionConfigs({ date: today })
+
+      if (configs.length > 0) {
+        const configId = configs[0]._id
+        this.setData({ configId })
+        this.loadConfigData(configId)
+      } else {
+        util.showInfo('暂无可报名的官职配置')
+        this.setData({ loading: false })
+      }
+    } catch (err) {
+      console.error('加载配置失败:', err)
+      util.showError('加载失败')
+      this.setData({ loading: false })
+    }
+  },
+
+  // 加载配置数据
+  loadConfigData: async function (configId) {
     try {
       this.setData({ loading: true })
 
-      // 获取今天的日期
-      const today = util.formatDate(new Date())
+      // 获取当前用户信息
+      const userInfo = app.globalData.userInfo
+      const openid = app.globalData.openid
+      const currentUserId = userInfo ? userInfo._id : openid
 
-      // 获取今天的官职配置
-      const configs = await db.getPositionConfigs({ date: today })
+      // 检查是否为区管
+      const isAdmin = userInfo && userInfo.role === 'admin'
 
-      if (configs.length === 0) {
-        this.setData({
-          positionConfigs: [],
-          currentConfig: null,
-          timeSlots: [],
-          loading: false
-        })
+      // 获取配置详情
+      const config = await db.getPositionConfigById(configId)
+
+      if (!config) {
+        util.showError('配置不存在')
+        this.setData({ loading: false })
         return
       }
 
-      // 默认选择第一个配置
-      const currentConfig = configs[0]
+      this.setData({
+        config,
+        currentUserId,
+        isAdmin
+      })
 
       // 生成时间段并加载报名情况
-      await this.loadTimeSlotsWithRegistrations(currentConfig)
+      await this.loadRegistrations()
 
     } catch (err) {
-      console.error('加载官职配置失败:', err)
+      console.error('加载配置失败:', err)
       util.showError('加载失败')
-      this.setData({
-        positionConfigs: [],
-        currentConfig: null,
-        timeSlots: [],
-        loading: false
-      })
+      this.setData({ loading: false })
     }
   },
 
-  // 加载时间段和报名情况
-  loadTimeSlotsWithRegistrations: async function (config) {
+  // 加载报名记录
+  loadRegistrations: async function () {
     try {
+      this.setData({ loading: true })
+
       // 生成时间段列表
-      const slots = db.generatePositionTimeSlots(config.startTime)
+      const slots = db.generatePositionTimeSlots(this.data.config.startTime)
 
       // 获取该配置的所有报名记录
-      const registrations = await db.getPositionRegistrationsByConfig(config._id)
+      const registrations = await db.getPositionRegistrationsByConfig(this.data.configId)
+
+      // 创建报名记录的映射
+      const regMap = {}
+      for (const reg of registrations) {
+        regMap[reg.timeSlot] = reg
+      }
 
       // 处理每个时间段的报名情况
       const processedSlots = slots.map(slot => {
-        const registration = registrations.find(r => r.timeSlot === slot.time)
+        const registration = regMap[slot.time]
         return {
-          ...slot,
-          configId: config._id,
-          positionType: config.positionType,
-          isRegistered: !!registration,
-          registeredUser: registration ? registration.nickName : null,
-          isMyRegistration: registration && registration.userId === (app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid)
+          time: slot.time,
+          period: slot.period,
+          registration: registration || null
         }
       })
 
+      // 根据当前时段筛选
+      const filteredSlots = processedSlots.filter(
+        slot => slot.period === this.data.currentPeriod
+      )
+
       this.setData({
-        currentConfig: config,
-        timeSlots: processedSlots,
+        allSlots: processedSlots,
+        filteredSlots,
         loading: false
       })
 
     } catch (err) {
-      console.error('加载时间段失败:', err)
-      this.setData({
-        timeSlots: [],
-        loading: false
-      })
+      console.error('加载报名记录失败:', err)
+      util.showError('加载失败')
+      this.setData({ loading: false })
     }
   },
 
-  // 切换官职配置
-  onConfigChange: function (e) {
-    const index = e.detail.value
-    const config = this.data.positionConfigs[index]
-    if (config) {
-      this.loadTimeSlotsWithRegistrations(config)
+  // 切换上午/下午
+  switchPeriod: function (e) {
+    const period = e.currentTarget.dataset.period
+    if (period === this.data.currentPeriod) return
+
+    const filteredSlots = this.data.allSlots.filter(
+      slot => slot.period === period
+    )
+
+    this.setData({
+      currentPeriod: period,
+      filteredSlots
+    })
+  },
+
+  // 选择空座位
+  selectSeat: function (e) {
+    const time = e.currentTarget.dataset.time
+
+    // 检查用户是否已在该配置中有其他座位
+    const mySlots = this.data.allSlots.filter(
+      slot => slot.registration && slot.registration.userId === this.data.currentUserId
+    )
+
+    if (mySlots.length > 0 && !this.data.isAdmin) {
+      util.showInfo('您已选择了其他座位，请先取消后再重新选择')
+      return
+    }
+
+    // 获取用户昵称作为默认值
+    const userInfo = app.globalData.userInfo
+    const defaultNickName = userInfo ? userInfo.nickName : ''
+
+    this.setData({
+      showModal: true,
+      selectedTime: time,
+      inputNickName: defaultNickName,
+      inputRemark: ''
+    })
+  },
+
+  // 输入昵称
+  onNickNameInput: function (e) {
+    this.setData({ inputNickName: e.detail.value })
+  },
+
+  // 输入备注
+  onRemarkInput: function (e) {
+    this.setData({ inputRemark: e.detail.value })
+  },
+
+  // 关闭选择弹窗
+  closeModal: function () {
+    this.setData({
+      showModal: false,
+      selectedTime: '',
+      inputNickName: '',
+      inputRemark: ''
+    })
+  },
+
+  // 确认选择座位
+  confirmSeat: async function () {
+    const { selectedTime, inputNickName, inputRemark, configId, currentUserId } = this.data
+
+    // 验证昵称
+    if (!inputNickName || inputNickName.trim() === '') {
+      util.showInfo('请输入游戏昵称')
+      return
+    }
+
+    const nickName = inputNickName.trim()
+    const remark = inputRemark.trim()
+
+    try {
+      util.showLoading('正在提交...')
+
+      // 检查座位是否已被占用（并发检测）
+      const existingReg = await db.getPositionRegistrationByTimeSlot(configId, selectedTime)
+      if (existingReg && existingReg.userId !== currentUserId) {
+        util.hideLoading()
+        util.showInfo('该座位已被其他人选择，请刷新后重新选择')
+        this.closeModal()
+        this.loadRegistrations()
+        return
+      }
+
+      // 检查昵称是否重复
+      const registrations = await db.getPositionRegistrationsByConfig(configId)
+      const duplicateNick = registrations.find(
+        r => r.nickName === nickName && r.userId !== currentUserId
+      )
+      if (duplicateNick) {
+        util.hideLoading()
+        util.showInfo(`昵称 "${nickName}" 已被其他人使用`)
+        return
+      }
+
+      // 创建报名
+      await db.createPositionRegistration({
+        configId: configId,
+        timeSlot: selectedTime,
+        userId: currentUserId,
+        nickName: nickName,
+        remark: remark
+      })
+
+      util.hideLoading()
+      util.showSuccess('选择成功')
+
+      this.closeModal()
+      this.loadRegistrations()
+
+    } catch (err) {
+      util.hideLoading()
+      console.error('提交失败:', err)
+      util.showError('提交失败：' + (err.message || '未知错误'))
     }
   },
 
-  // 选择时间段
-  selectTimeSlot: async function (e) {
-    const slot = e.currentTarget.dataset.slot
+  // 编辑自己的座位
+  editMySeat: function (e) {
+    const reg = e.currentTarget.dataset.reg
 
-    // 检查是否已被占用
-    if (slot.isRegistered && !slot.isMyRegistration) {
-      util.showInfo('该时间段已被 ' + slot.registeredUser + ' 占用')
+    this.setData({
+      showEditModal: true,
+      editingReg: reg,
+      editNickName: reg.nickName,
+      editRemark: reg.remark || ''
+    })
+  },
+
+  // 输入编辑昵称
+  onEditNickNameInput: function (e) {
+    this.setData({ editNickName: e.detail.value })
+  },
+
+  // 输入编辑备注
+  onEditRemarkInput: function (e) {
+    this.setData({ editRemark: e.detail.value })
+  },
+
+  // 关闭编辑弹窗
+  closeEditModal: function () {
+    this.setData({
+      showEditModal: false,
+      editingReg: null,
+      editNickName: '',
+      editRemark: ''
+    })
+  },
+
+  // 更新自己的座位
+  updateMySeat: async function () {
+    const { editingReg, editNickName, editRemark, configId, currentUserId } = this.data
+
+    // 验证昵称
+    if (!editNickName || editNickName.trim() === '') {
+      util.showInfo('请输入游戏昵称')
       return
     }
 
-    // 如果是用户自己的报名，询问是否取消
-    if (slot.isMyRegistration) {
-      wx.showModal({
-        title: '取消预约',
-        content: '确认取消该时间段的预约？',
-        success: (res) => {
-          if (res.confirm) {
-            this.cancelRegistration(slot)
-          }
-        }
+    const nickName = editNickName.trim()
+    const remark = editRemark.trim()
+
+    try {
+      util.showLoading('正在保存...')
+
+      // 检查昵称是否与其他记录重复
+      const registrations = await db.getPositionRegistrationsByConfig(configId)
+      const duplicateNick = registrations.find(
+        r => r.nickName === nickName && r.userId !== currentUserId
+      )
+      if (duplicateNick) {
+        util.hideLoading()
+        util.showInfo(`昵称 "${nickName}" 已被其他人使用`)
+        return
+      }
+
+      // 更新报名
+      await db.updatePositionRegistration(editingReg._id, {
+        nickName: nickName,
+        remark: remark
       })
-      return
-    }
 
-    // 弹出输入框让用户输入游戏昵称
+      util.hideLoading()
+      util.showSuccess('保存成功')
+
+      this.closeEditModal()
+      this.loadRegistrations()
+
+    } catch (err) {
+      util.hideLoading()
+      console.error('保存失败:', err)
+      util.showError('保存失败：' + (err.message || '未知错误'))
+    }
+  },
+
+  // 删除自己的座位
+  deleteMySeat: async function () {
+    const { editingReg } = this.data
+
     wx.showModal({
-      title: '预约官职',
-      content: `确认预约 ${slot.time} 的 ${this.data.currentConfig.positionType}？`,
-      editable: true,
-      placeholderText: '请输入游戏昵称',
-      success: (res) => {
+      title: '确认删除',
+      content: '确定要删除这个座位吗？',
+      success: async (res) => {
         if (res.confirm) {
-          const nickName = res.content ? res.content.trim() : ''
-          if (!nickName) {
-            util.showInfo('请输入游戏昵称')
-            return
+          try {
+            util.showLoading('正在删除...')
+            await db.cancelPositionRegistration(editingReg._id)
+            util.hideLoading()
+            util.showSuccess('删除成功')
+
+            this.closeEditModal()
+            this.loadRegistrations()
+
+          } catch (err) {
+            util.hideLoading()
+            console.error('删除失败:', err)
+            util.showError('删除失败')
           }
-          this.registerPosition(slot, nickName)
         }
       }
     })
   },
 
-  // 预约官职
-  registerPosition: async function (slot, nickName) {
-    try {
-      util.showLoading('正在预约...')
-
-      const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
-
-      if (!userId) {
-        util.hideLoading()
-        util.showInfo('数据不完整，请重试')
-        return
-      }
-
-      // 检查用户是否已在该配置中有其他报名
-      const existingRegistrations = await db.getPositionRegistrationsByUser(userId)
-      const existingInConfig = existingRegistrations.find(r => r.configId === this.data.currentConfig._id)
-
-      if (existingInConfig && existingInConfig.timeSlot !== slot.time) {
-        util.hideLoading()
-        util.showInfo('您已预约了其他时间段，请先取消再重新预约')
-        return
-      }
-
-      // 创建预约
-      await db.createPositionRegistration({
-        configId: this.data.currentConfig._id,
-        timeSlot: slot.time,
-        userId: userId,
-        nickName: nickName,
-        remark: ''
-      })
-
-      util.hideLoading()
-      util.showSuccess('预约成功')
-
-      // 刷新数据
-      this.loadTimeSlotsWithRegistrations(this.data.currentConfig)
-
-    } catch (err) {
-      util.hideLoading()
-      util.showError('预约失败：' + (err.message || '未知错误'))
-    }
+  // 查看别人的座位信息
+  viewOtherSeat: function (e) {
+    const reg = e.currentTarget.dataset.reg
+    util.showInfo(`${reg.nickName}${reg.remark ? ' - ' + reg.remark : ''}`)
   },
 
-  // 取消预约
-  cancelRegistration: async function (slot) {
-    try {
-      util.showLoading('正在取消...')
+  // 区管删除任意座位
+  deleteSeat: async function (e) {
+    const reg = e.currentTarget.dataset.reg
 
-      const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+    wx.showModal({
+      title: '确认删除',
+      content: `确定要删除 ${reg.nickName} 的座位吗？`,
+      success: async (res) => {
+        if (res.confirm) {
+          try {
+            util.showLoading('正在删除...')
+            await db.deletePositionRegistration(reg._id)
+            util.hideLoading()
+            util.showSuccess('删除成功')
+            this.loadRegistrations()
 
-      // 获取用户的报名记录
-      const registrations = await db.getPositionRegistrationsByUser(userId)
-      const targetReg = registrations.find(r => r.configId === this.data.currentConfig._id && r.timeSlot === slot.time)
-
-      if (!targetReg) {
-        util.hideLoading()
-        util.showInfo('未找到您的预约记录')
-        return
+          } catch (err) {
+            util.hideLoading()
+            console.error('删除失败:', err)
+            util.showError('删除失败')
+          }
+        }
       }
-
-      // 取消报名
-      await db.cancelPositionRegistration(targetReg._id)
-
-      util.hideLoading()
-      util.showSuccess('取消成功')
-
-      // 刷新数据
-      this.loadTimeSlotsWithRegistrations(this.data.currentConfig)
-
-    } catch (err) {
-      util.hideLoading()
-      util.showError('取消失败：' + (err.message || '未知错误'))
-    }
+    })
   },
 
   // 刷新数据
   refreshData: function () {
-    this.loadPositionConfigs()
+    if (this.data.configId) {
+      this.loadRegistrations()
+    } else {
+      this.loadTodayConfig()
+    }
   }
 })
