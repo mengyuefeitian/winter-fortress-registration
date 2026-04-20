@@ -324,8 +324,9 @@ Page({
         app.globalData.userInfo.phone = phone
       }
 
-      // 创建管理员申请
-      await db.createAdminApplication(userId, phone)
+      // 创建管理员申请（根据目标角色确定申请类型）
+      const applyType = targetRole === 'admin' ? 'zoneManager' : 'allianceManager'
+      await db.createAdminApplication(userId, phone, applyType)
 
       util.hideLoading()
       util.showSuccess('申请已提交，等待审核')

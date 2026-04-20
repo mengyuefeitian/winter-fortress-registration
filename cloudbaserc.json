@@ -37,6 +37,16 @@
       "name": "clearRegistrations",
       "handler": "index.main",
       "runtime": "Nodejs12.16"
+    },
+    {
+      "name": "managePosition",
+      "handler": "index.main",
+      "runtime": "Nodejs12.16"
+    },
+    {
+      "name": "clearExpiredData",
+      "handler": "index.main",
+      "runtime": "Nodejs12.16"
     }
   ],
   "collections": [
