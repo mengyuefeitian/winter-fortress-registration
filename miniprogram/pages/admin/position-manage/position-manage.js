@@ -153,7 +153,10 @@ Page({
   onZoneChange: function (e) {
     const index = parseInt(e.detail.value)
     const currentZone = this.data.zones[index]
+    // 同步到全局和本地存储
     wx.setStorageSync('lastPositionZoneId', currentZone._id)
+    wx.setStorageSync('lastZoneId', currentZone._id)
+    app.globalData.currentZone = currentZone
     this.setData({
       zoneIndex: index,
       currentZone: currentZone,

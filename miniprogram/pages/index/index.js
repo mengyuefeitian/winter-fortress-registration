@@ -148,20 +148,32 @@ Page({
         return
       }
 
-      // 从本地存储读取上次选择的区域
-      const lastZoneId = wx.getStorageSync('lastZoneId')
+      // 优先级：全局分区 > 本地存储 > 默认第一个
       let currentZone = null
       let zoneIndex = 0
 
-      if (lastZoneId) {
-        const foundIndex = zones.findIndex(z => z._id === lastZoneId)
+      // 1. 优先读取全局分区
+      if (app.globalData.currentZone) {
+        const foundIndex = zones.findIndex(z => z._id === app.globalData.currentZone._id)
         if (foundIndex !== -1) {
           currentZone = zones[foundIndex]
           zoneIndex = foundIndex
         }
       }
 
-      // 如果没找到上次的区域，默认选择第一个
+      // 2. 如果全局分区不在列表中，尝试本地存储
+      if (!currentZone) {
+        const lastZoneId = wx.getStorageSync('lastZoneId')
+        if (lastZoneId) {
+          const foundIndex = zones.findIndex(z => z._id === lastZoneId)
+          if (foundIndex !== -1) {
+            currentZone = zones[foundIndex]
+            zoneIndex = foundIndex
+          }
+        }
+      }
+
+      // 3. 如果都没找到，默认选择第一个
       if (!currentZone && zones.length > 0) {
         currentZone = zones[0]
         zoneIndex = 0
@@ -170,6 +182,7 @@ Page({
       // 保存到全局
       if (currentZone) {
         app.globalData.currentZone = currentZone
+        wx.setStorageSync('lastZoneId', currentZone._id)
       }
 
       this.setData({

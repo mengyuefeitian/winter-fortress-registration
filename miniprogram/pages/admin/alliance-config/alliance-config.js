@@ -42,18 +42,39 @@ Page({
         zones = await db.getZonesByCreator(userId)
       }
 
-      this.setData({
-        zones: zones || [],
-        zoneIndex: 0
-      })
-
       if (zones && zones.length > 0) {
+        // 优先读取全局分区
+        let selectedZone = zones[0]
+        let zoneIndex = 0
+
+        if (app.globalData.currentZone) {
+          const foundIndex = zones.findIndex(z => z._id === app.globalData.currentZone._id)
+          if (foundIndex >= 0) {
+            selectedZone = zones[foundIndex]
+            zoneIndex = foundIndex
+          }
+        } else {
+          // 尝试本地存储
+          const lastZoneId = wx.getStorageSync('lastZoneId')
+          if (lastZoneId) {
+            const foundIndex = zones.findIndex(z => z._id === lastZoneId)
+            if (foundIndex >= 0) {
+              selectedZone = zones[foundIndex]
+              zoneIndex = foundIndex
+            }
+          }
+        }
+
         this.setData({
-          selectedZone: zones[0]
+          zones: zones,
+          zoneIndex: zoneIndex,
+          selectedZone: selectedZone
         })
-        this.loadAlliances(zones[0]._id)
+        this.loadAlliances(selectedZone._id)
       } else {
         this.setData({
+          zones: [],
+          zoneIndex: 0,
           selectedZone: null,
           alliances: []
         })

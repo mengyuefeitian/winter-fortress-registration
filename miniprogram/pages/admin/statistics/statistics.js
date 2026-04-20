@@ -36,23 +36,59 @@ Page({
       util.showLoading('加载分区...')
 
       const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
-      const zones = await db.getZonesByCreator(userId)
+      const role = app.globalData.role
 
-      this.setData({
-        zones: zones
-      })
+      // 超级管理员可以看到所有分区，管理员只能看到自己创建的
+      let zones
+      if (role === 'superAdmin') {
+        zones = await db.getAllZones()
+      } else {
+        zones = await db.getZonesByCreator(userId)
+      }
 
-      if (zones.length > 0) {
+      if (zones && zones.length > 0) {
+        // 优先读取全局分区
+        let selectedZone = zones[0]
+        let zoneIndex = 0
+
+        if (app.globalData.currentZone) {
+          const foundIndex = zones.findIndex(z => z._id === app.globalData.currentZone._id)
+          if (foundIndex >= 0) {
+            selectedZone = zones[foundIndex]
+            zoneIndex = foundIndex
+          }
+        } else {
+          // 尝试本地存储
+          const lastZoneId = wx.getStorageSync('lastZoneId')
+          if (lastZoneId) {
+            const foundIndex = zones.findIndex(z => z._id === lastZoneId)
+            if (foundIndex >= 0) {
+              selectedZone = zones[foundIndex]
+              zoneIndex = foundIndex
+            }
+          }
+        }
+
         this.setData({
-          selectedZone: zones[0]
+          zones: zones,
+          zoneIndex: zoneIndex,
+          selectedZone: selectedZone
         })
-        this.loadAlliances(zones[0]._id)
+        this.loadAlliances(selectedZone._id)
       } else {
         util.hideLoading()
+        this.setData({
+          zones: [],
+          zoneIndex: 0,
+          selectedZone: null,
+          alliances: [],
+          selectedAlliance: null
+        })
       }
 
     } catch (err) {
       util.hideLoading()
+      console.error('加载分区失败:', err)
       util.showError('加载分区失败')
     }
   },
