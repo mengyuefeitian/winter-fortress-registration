@@ -1,42 +1,27 @@
 {
-  "env_id": "cloud1-9gip4qyf7e753868",
+  "envId": "cloud1-9gip4qyf7e753868",
   "version": "2.0",
-  "function_root": "./cloudfunctions",
+  "functionRoot": "miniprogram/cloudfunctions",
   "functions": [
     {
       "name": "login",
       "handler": "index.main",
-      "runtime": "Nodejs12.16"
-    },
-    {
-      "name": "register",
-      "handler": "index.main",
-      "runtime": "Nodejs12.16"
-    },
-    {
-      "name": "getStatistics",
-      "handler": "index.main",
-      "runtime": "Nodejs12.16"
-    },
-    {
-      "name": "manageZone",
-      "handler": "index.main",
-      "runtime": "Nodejs12.16"
-    },
-    {
-      "name": "manageTimeSlot",
-      "handler": "index.main",
-      "runtime": "Nodejs12.16"
-    },
-    {
-      "name": "manageAdmin",
-      "handler": "index.main",
-      "runtime": "Nodejs12.16"
+      "config": {
+        "timeout": 10,
+        "envVariables": {}
+      },
+      "triggers": [],
+      "handlerType": "event"
     },
     {
       "name": "clearRegistrations",
       "handler": "index.main",
-      "runtime": "Nodejs12.16"
+      "config": {
+        "timeout": 60,
+        "envVariables": {}
+      },
+      "triggers": [],
+      "handlerType": "event"
     }
   ],
   "collections": [
