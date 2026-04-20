@@ -35,4 +35,50 @@
       </view>
     </view>
   </view>
+
+  <!-- 用户身份重置 -->
+  <view class="section">
+    <view class="section-title">用户身份管理</view>
+    <view class="section-desc">重置用户身份将清空其绑定的手机号，用户需要重新登录并绑定手机号</view>
+
+    <!-- 按手机号查找 -->
+    <view class="search-box">
+      <input class="search-input" placeholder="输入手机号查找用户" value="{{searchPhone}}" bindinput="onSearchPhoneInput" type="number" maxlength="11" />
+      <button class="search-btn" bindtap="searchByPhone">查找</button>
+    </view>
+
+    <view wx:if="{{searchResult}}" class="search-result">
+      <view class="result-card">
+        <view class="result-info">
+          <text class="result-label">找到用户：</text>
+          <text class="result-name">{{searchResult.nickName}}</text>
+        </view>
+        <view class="result-detail">
+          <text>手机号：{{searchResult.phone}}</text>
+        </view>
+        <view class="result-detail">
+          <text>微信ID：{{searchResult.openid}}</text>
+        </view>
+        <button class="reset-btn" bindtap="resetSearchUser" data-id="{{searchResult._id}}">清空此用户手机号绑定</button>
+      </view>
+    </view>
+
+    <view wx:if="{{users.length === 0 && !searchResult}}" class="empty-state">
+      <view class="empty-text">暂无绑定手机号的用户</view>
+    </view>
+
+    <view wx:if="{{users.length > 0 && !searchResult}}" class="user-list">
+      <view wx:for="{{users}}" wx:key="_id" class="user-card">
+        <view class="user-info">
+          <image class="user-avatar" src="{{item.avatarUrl || '/images/default-avatar.png'}}"></image>
+          <view class="user-details">
+            <view class="user-name">{{item.nickName}}</view>
+            <view class="user-phone">手机号: {{item.phone}}</view>
+            <view class="user-role">角色: {{item.role === 'superAdmin' ? '超级管理员' : (item.role === 'admin' ? '管理员' : (item.role === 'auditor' ? '审计员' : '普通用户'))}}</view>
+          </view>
+        </view>
+        <button class="reset-btn" bindtap="resetUserIdentity" data-id="{{item._id}}" data-index="{{index}}">重置身份</button>
+      </view>
+    </view>
+  </view>
 </view>

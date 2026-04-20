@@ -1,7 +1,7 @@
 // pages/admin/alliance-config/alliance-config.js
 const app = getApp()
-const util = require('../../utils/util')
-const db = require('../../utils/db')
+const util = require('../../../utils/util')
+const db = require('../../../utils/db')
 
 Page({
   data: {
@@ -31,26 +31,36 @@ Page({
   // 加载分区列表
   loadZones: async function () {
     try {
-      util.showLoading('加载分区...')
-
       const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
-      const zones = await db.getZonesByCreator(userId)
+      const role = app.globalData.role
+
+      // 超级管理员可以看到所有分区，管理员只能看到自己创建的
+      let zones
+      if (role === 'superAdmin') {
+        zones = await db.getAllZones()
+      } else {
+        zones = await db.getZonesByCreator(userId)
+      }
 
       this.setData({
-        zones: zones
+        zones: zones || [],
+        zoneIndex: 0
       })
 
-      if (zones.length > 0) {
+      if (zones && zones.length > 0) {
         this.setData({
           selectedZone: zones[0]
         })
         this.loadAlliances(zones[0]._id)
+      } else {
+        this.setData({
+          selectedZone: null,
+          alliances: []
+        })
       }
 
-      util.hideLoading()
-
     } catch (err) {
-      util.hideLoading()
+      console.error('加载分区失败:', err)
       util.showError('加载分区失败')
     }
   },
@@ -76,12 +86,10 @@ Page({
   // 加载联盟列表
   loadAlliances: async function (zoneId) {
     try {
-      util.showLoading('加载联盟...')
-
       const alliances = await db.getAlliancesByZone(zoneId)
 
       // 为每个联盟添加编辑名称和审计员信息
-      const processedAlliances = alliances.map(alliance => ({
+      const processedAlliances = (alliances || []).map(alliance => ({
         ...alliance,
         editName: alliance.allianceName,
         auditorName: alliance.auditorId ? '已绑定' : '未绑定',
@@ -92,10 +100,8 @@ Page({
         alliances: processedAlliances
       })
 
-      util.hideLoading()
-
     } catch (err) {
-      util.hideLoading()
+      console.error('加载联盟失败:', err)
       util.showError('加载联盟失败')
     }
   },
@@ -122,7 +128,7 @@ Page({
 
   // 分区选择变化
   onZoneChange: function (e) {
-    const index = e.detail.value
+    const index = parseInt(e.detail.value)
     const zone = this.data.zones[index]
 
     this.setData({

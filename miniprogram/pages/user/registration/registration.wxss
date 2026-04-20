@@ -1,24 +1,24 @@
 /* pages/user/registration/registration.wxss */
 
 .registration-container {
-  padding: 20px;
+  padding: 16px;
   background-color: #F5F7FA;
   min-height: 100vh;
 }
 
 .section {
   background-color: #FFFFFF;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
 .section-title {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
   color: #333333;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 /* 选择器样式 */
@@ -27,130 +27,143 @@
   justify-content: space-between;
   align-items: center;
   background-color: #F5F7FA;
-  border-radius: 8px;
-  padding: 12px 16px;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 14px;
 }
 
 .picker-arrow {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
-/* 时间段卡片 */
-.time-slot-list {
-  display: flex;
-  flex-direction: column;
+.empty-picker {
+  background-color: #F5F7FA;
+  border-radius: 6px;
+  padding: 10px 12px;
+  text-align: center;
+  color: #999999;
+  font-size: 13px;
+}
+
+.empty-tip {
+  text-align: center;
+  padding: 16px;
+  color: #999999;
+  font-size: 13px;
+}
+
+/* 登录提示 */
+.login-tip-section {
+  background-color: #FFF3E0;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.tip-text {
+  font-size: 14px;
+  color: #E65100;
+  margin-bottom: 12px;
+}
+
+.login-tip-section .login-btn {
+  background-color: #FF9800;
+  color: #FFFFFF;
+  border-radius: 8px;
+  padding: 10px 24px;
+  font-size: 14px;
+}
+
+/* 时间段卡片 - 每行2个 */
+.time-slot-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 
 .time-slot-card {
-  background-color: #FFFFFF;
+  background-color: #F5F7FA;
   border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
-  border: 1px solid #E8E8E8;
-  transition: all 0.3s ease;
+  padding: 10px;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+  position: relative;
+  text-align: center;
 }
 
 .time-slot-card:active {
-  background-color: #F0F7FF;
+  background-color: #E8F4FF;
 }
 
 .time-slot-card.full {
   background-color: #F5F5F5;
   opacity: 0.6;
-  pointer-events: none;
 }
 
 .time-slot-card.selected {
   border-color: #4A90D9;
-  background-color: #F0F7FF;
+  background-color: #E8F4FF;
 }
 
-.time-slot-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.time-slot-time {
-  font-size: 18px;
+.slot-time {
+  font-size: 14px;
   font-weight: 500;
   color: #333333;
+  margin-bottom: 4px;
 }
 
-.time-slot-count {
-  font-size: 14px;
+.slot-count {
+  font-size: 12px;
   color: #666666;
 }
 
-.time-slot-count.full {
+.slot-count.full {
   color: #FF6B6B;
 }
 
-.time-slot-remark {
-  font-size: 12px;
+.slot-remark {
+  font-size: 10px;
   color: #999999;
-  margin-top: 8px;
-}
-
-.time-slot-progress {
-  margin-top: 12px;
-}
-
-.progress-bar {
-  height: 6px;
-  background-color: #E8E8E8;
-  border-radius: 3px;
+  margin-top: 4px;
   overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background-color: #4A90D9;
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-
-.progress-fill.full {
-  background-color: #FF6B6B;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .full-badge {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 4px;
+  right: 4px;
   background-color: #FF6B6B;
   color: #FFFFFF;
-  font-size: 12px;
-  padding: 2px 8px;
+  font-size: 10px;
+  padding: 1px 4px;
   border-radius: 4px;
-}
-
-.time-slot-card {
-  position: relative;
 }
 
 /* 表单样式 */
 .form-section {
-  padding: 20px 16px;
+  padding: 12px;
 }
 
 .form-item {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .form-label {
-  font-size: 14px;
+  font-size: 13px;
   color: #666666;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .form-input {
   width: 100%;
-  height: 40px;
+  height: 36px;
   background-color: #F5F7FA;
-  border-radius: 8px;
-  padding: 0 12px;
+  border-radius: 6px;
+  padding: 0 10px;
   font-size: 14px;
 }
 
@@ -158,6 +171,7 @@
 .position-options {
   display: flex;
   justify-content: space-around;
+  gap: 10px;
 }
 
 .position-option {
@@ -165,24 +179,25 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 16px;
+  padding: 12px;
   background-color: #F5F7FA;
   border-radius: 8px;
-  margin: 0 8px;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
 }
 
 .position-option.active {
   background-color: #4A90D9;
+  border-color: #4A90D9;
 }
 
 .position-icon {
-  font-size: 24px;
-  margin-bottom: 8px;
+  font-size: 20px;
+  margin-bottom: 4px;
 }
 
 .position-name {
-  font-size: 14px;
+  font-size: 13px;
   color: #666666;
 }
 
@@ -194,10 +209,10 @@
   background-color: #4A90D9;
   color: #FFFFFF;
   border-radius: 8px;
-  padding: 12px 24px;
-  font-size: 16px;
+  padding: 10px 24px;
+  font-size: 15px;
   width: 100%;
-  margin-top: 24px;
+  margin-top: 16px;
 }
 
 .submit-btn:active {
@@ -217,7 +232,7 @@
 .registration-item {
   display: flex;
   align-items: center;
-  padding: 12px 0;
+  padding: 8px 0;
   border-bottom: 1px solid #E8E8E8;
 }
 
@@ -226,26 +241,26 @@
 }
 
 .registration-order {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   background-color: #4A90D9;
   color: #FFFFFF;
   border-radius: 50%;
-  font-size: 12px;
+  font-size: 11px;
   text-align: center;
-  line-height: 24px;
-  margin-right: 12px;
+  line-height: 20px;
+  margin-right: 10px;
 }
 
 .registration-name {
   flex: 1;
-  font-size: 14px;
+  font-size: 13px;
   color: #333333;
 }
 
 .registration-position {
-  font-size: 12px;
-  padding: 4px 8px;
+  font-size: 11px;
+  padding: 2px 6px;
   border-radius: 4px;
 }
 

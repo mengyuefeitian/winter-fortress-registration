@@ -2,7 +2,7 @@
 const cloud = require('wx-server-sdk')
 
 cloud.init({
-  env: cloud.DYNAMIC_CURRENT_ENV
+  env: 'cloud1-9gip4qyf7e753868'  // 指定具体环境ID
 })
 
 const db = cloud.database()

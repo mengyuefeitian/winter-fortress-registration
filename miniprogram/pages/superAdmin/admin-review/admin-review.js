@@ -1,7 +1,7 @@
 // pages/superAdmin/admin-review/admin-review.js
 const app = getApp()
-const util = require('../../utils/util')
-const db = require('../../utils/db')
+const util = require('../../../utils/util')
+const db = require('../../../utils/db')
 
 Page({
   data: {
@@ -23,38 +23,88 @@ Page({
       util.showLoading('加载申请列表...')
 
       const wxdb = wx.cloud.database()
+      const _ = wxdb.command
 
       // 获取待审核申请
-      const pendingRes = await wxdb.collection('admins').where({
-        status: 'pending'
-      }).orderBy('createTime', 'desc').get()
+      let pendingRes
+      try {
+        pendingRes = await wxdb.collection('admins').where({
+          status: 'pending'
+        }).orderBy('createTime', 'desc').get()
+      } catch (err) {
+        console.error('查询待审核申请失败:', err)
+        pendingRes = { data: [] }
+      }
 
       // 加载申请人信息
       const applications = []
       for (const application of pendingRes.data) {
-        const userRes = await wxdb.collection('users').doc(application.userId).get()
-        applications.push({
-          ...application,
-          nickName: userRes.data ? userRes.data.nickName : '未知用户',
-          avatarUrl: userRes.data ? userRes.data.avatarUrl : null,
-          formattedTime: util.formatDate(application.createTime, 'YYYY-MM-DD HH:mm')
-        })
+        try {
+          let nickName = '未知用户'
+          let avatarUrl = null
+
+          if (application.userId) {
+            const userRes = await wxdb.collection('users').doc(application.userId).get()
+            if (userRes.data) {
+              nickName = userRes.data.nickName || '未知用户'
+              avatarUrl = userRes.data.avatarUrl
+            }
+          }
+
+          applications.push({
+            ...application,
+            nickName: nickName,
+            avatarUrl: avatarUrl,
+            formattedTime: application.createTime ? util.formatDate(application.createTime, 'YYYY-MM-DD HH:mm') : ''
+          })
+        } catch (err) {
+          console.error('获取用户信息失败:', err)
+          applications.push({
+            ...application,
+            nickName: '未知用户',
+            avatarUrl: null,
+            formattedTime: application.createTime ? util.formatDate(application.createTime, 'YYYY-MM-DD HH:mm') : ''
+          })
+        }
       }
 
       // 获取已审核申请
-      const reviewedRes = await wxdb.collection('admins').where({
-        status: wxdb.command.in(['approved', 'rejected'])
-      }).orderBy('reviewTime', 'desc').limit(20).get()
+      let reviewedRes
+      try {
+        reviewedRes = await wxdb.collection('admins').where({
+          status: _.in(['approved', 'rejected'])
+        }).orderBy('reviewTime', 'desc').limit(20).get()
+      } catch (err) {
+        console.error('查询已审核申请失败:', err)
+        reviewedRes = { data: [] }
+      }
 
       // 加载申请人信息
       const reviewedApplications = []
       for (const application of reviewedRes.data) {
-        const userRes = await wxdb.collection('users').doc(application.userId).get()
-        reviewedApplications.push({
-          ...application,
-          nickName: userRes.data ? userRes.data.nickName : '未知用户',
-          formattedReviewTime: util.formatDate(application.reviewTime, 'YYYY-MM-DD HH:mm')
-        })
+        try {
+          let nickName = '未知用户'
+
+          if (application.userId) {
+            const userRes = await wxdb.collection('users').doc(application.userId).get()
+            if (userRes.data) {
+              nickName = userRes.data.nickName || '未知用户'
+            }
+          }
+
+          reviewedApplications.push({
+            ...application,
+            nickName: nickName,
+            formattedReviewTime: application.reviewTime ? util.formatDate(application.reviewTime, 'YYYY-MM-DD HH:mm') : ''
+          })
+        } catch (err) {
+          console.error('获取用户信息失败:', err)
+          reviewedApplications.push({
+            ...application,
+            nickName: '未知用户',
+            formattedReviewTime: application.reviewTime ? util.formatDate(application.reviewTime, 'YYYY-MM-DD HH:mm') : ''
+          })
+        }
       }
 
       this.setData({
@@ -65,8 +115,9 @@ Page({
       util.hideLoading()
 
     } catch (err) {
+      console.error('加载申请列表失败:', err)
       util.hideLoading()
-      util.showError('加载申请列表失败')
+      util.showError('加载申请列表失败: ' + (err.message || '未知错误'))
     }
   },
 

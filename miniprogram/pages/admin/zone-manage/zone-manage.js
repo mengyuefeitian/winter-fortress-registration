@@ -1,31 +1,47 @@
 // pages/admin/zone-manage/zone-manage.js
 const app = getApp()
-const util = require('../../utils/util')
-const db = require('../../utils/db')
+const util = require('../../../utils/util')
+const db = require('../../../utils/db')
 
 Page({
   data: {
     newZoneCode: '',
     newZoneName: '',
-    zones: []
+    zones: [],
+    isSuperAdmin: false,
+    showEditModal: false,
+    editZoneId: '',
+    editZoneCode: '',
+    editZoneName: ''
   },
 
   onLoad: function () {
+    this.setData({
+      isSuperAdmin: app.globalData.role === 'superAdmin'
+    })
     this.loadZones()
   },
 
   onShow: function () {
+    this.setData({
+      isSuperAdmin: app.globalData.role === 'superAdmin'
+    })
     this.loadZones()
   },
 
   // 加载分区列表
   loadZones: async function () {
     try {
-      util.showLoading('加载分区...')
-
       const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+      const role = app.globalData.role
 
-      const zones = await db.getZonesByCreator(userId)
+      // 超级管理员可以看到所有分区，管理员只能看到自己创建的
+      let zones
+      if (role === 'superAdmin') {
+        zones = await db.getAllZones()
+      } else {
+        zones = await db.getZonesByCreator(userId)
+      }
 
       // 处理时间格式
       const processedZones = zones.map(zone => ({
@@ -40,28 +56,21 @@ Page({
       }
 
       this.setData({
-        zones: processedZones
+        zones: processedZones,
+        isSuperAdmin: role === 'superAdmin'
       })
 
-      util.hideLoading()
-
     } catch (err) {
-      util.hideLoading()
-      util.showError('加载分区失败')
+      console.error('加载分区失败:', err)
     }
   },
 
   // 输入分区编号
   onZoneCodeInput: function (e) {
-    let value = e.detail.value
-
-    // 格式化为4位数字
-    if (value.length > 0) {
-      value = value.padStart(4, '0')
-    }
-
+    let value = e.detail.value.replace(/\D/g, '')
+    value = value.slice(0, 4)
     this.setData({
-      newZoneCode: value.slice(0, 4)
+      newZoneCode: value
     })
   },
 
@@ -75,9 +84,17 @@ Page({
   // 创建分区
   createZone: async function () {
     try {
-      // 验证分区编号
-      if (!util.validateZoneCode(this.data.newZoneCode)) {
-        util.showInfo('分区编号格式不正确，请输入4位数字 (0001-9999)')
+      let zoneCode = this.data.newZoneCode
+
+      if (!zoneCode || zoneCode.length < 1 || zoneCode.length > 4) {
+        util.showInfo('请输入1-4位数字')
+        return
+      }
+
+      zoneCode = zoneCode.padStart(4, '0')
+
+      if (!util.validateZoneCode(zoneCode)) {
+        util.showInfo('分区编号格式不正确，请输入有效数字 (0001-9999)')
         return
       }
 
@@ -90,27 +107,116 @@ Page({
 
       const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
 
-      // 创建分区
-      const result = await db.createZone(this.data.newZoneCode, this.data.newZoneName, userId)
-
-      // 初始化12个联盟
+      const result = await db.createZone(zoneCode, this.data.newZoneName, userId)
       await db.initAlliances(result._id)
 
       util.hideLoading()
       util.showSuccess('分区创建成功')
 
-      // 重置表单
       this.setData({
         newZoneCode: '',
         newZoneName: ''
       })
 
-      // 重新加载分区列表
       this.loadZones()
 
     } catch (err) {
       util.hideLoading()
       util.showError(err.message || '创建分区失败')
+    }
+  },
+
+  // 编辑分区
+  editZone: function (e) {
+    const zone = e.currentTarget.dataset.zone
+    this.setData({
+      showEditModal: true,
+      editZoneId: zone._id,
+      editZoneCode: zone.zoneCode,
+      editZoneName: zone.zoneName
+    })
+  },
+
+  // 关闭编辑弹窗
+  closeEditModal: function () {
+    this.setData({
+      showEditModal: false
+    })
+  },
+
+  // 编辑分区编号输入
+  onEditZoneCodeInput: function (e) {
+    let value = e.detail.value.replace(/\D/g, '')
+    value = value.slice(0, 4)
+    this.setData({
+      editZoneCode: value
+    })
+  },
+
+  // 编辑分区名称输入
+  onEditZoneNameInput: function (e) {
+    this.setData({
+      editZoneName: e.detail.value
+    })
+  },
+
+  // 保存编辑
+  saveEditZone: async function () {
+    try {
+      let zoneCode = this.data.editZoneCode
+
+      if (!zoneCode || zoneCode.length < 1 || zoneCode.length > 4) {
+        util.showInfo('请输入1-4位数字')
+        return
+      }
+
+      zoneCode = zoneCode.padStart(4, '0')
+
+      if (!util.validateZoneCode(zoneCode)) {
+        util.showInfo('分区编号格式不正确')
+        return
+      }
+
+      if (!this.data.editZoneName) {
+        util.showInfo('请输入分区名称')
+        return
+      }
+
+      // 检查分区编号是否重复（排除自己）
+      const wxdb = wx.cloud.database()
+      const existingRes = await wxdb.collection('zones').where({
+        zoneCode: zoneCode,
+        status: 'active',
+        _id: wxdb.command.neq(this.data.editZoneId)
+      }).count()
+
+      if (existingRes.total > 0) {
+        util.showInfo('分区编号已存在，请使用其他编号')
+        return
+      }
+
+      util.showLoading('正在保存...')
+
+      await wxdb.collection('zones').doc(this.data.editZoneId).update({
+        data: {
+          zoneCode: zoneCode,
+          zoneName: this.data.editZoneName,
+          updateTime: wxdb.serverDate()
+        }
+      })
+
+      util.hideLoading()
+      util.showSuccess('修改成功')
+
+      this.setData({
+        showEditModal: false
+      })
+
+      this.loadZones()
+
+    } catch (err) {
+      util.hideLoading()
+      util.showError('修改失败')
     }
   },
 
@@ -126,16 +232,14 @@ Page({
     try {
       util.showLoading('正在删除...')
 
-      // 删除分区
-      const db = wx.cloud.database()
-      await db.collection('zones').doc(zoneId).update({
+      const wxdb = wx.cloud.database()
+      await wxdb.collection('zones').doc(zoneId).update({
         data: {
           status: 'inactive',
-          updateTime: db.serverDate()
+          updateTime: wxdb.serverDate()
         }
       })
 
-      // 从列表中移除
       const zones = this.data.zones
       zones.splice(index, 1)
 

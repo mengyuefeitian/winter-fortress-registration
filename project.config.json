@@ -1,5 +1,6 @@
 {
   "description": "无尽冬日堡垒分配小程序",
+  "miniprogramRoot": "miniprogram/",
   "packOptions": {
     "ignore": [],
     "include": []
@@ -59,6 +60,5 @@
     "tabSize": 2
   },
   "cloudfunctionRoot": "miniprogram/cloudfunctions/",
-  "cloudbaseRoot": "cloudbaserc.json/",
   "simulatorPluginLibVersion": {}
 }

@@ -123,18 +123,21 @@
 .zone-actions {
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .action-btn {
   font-size: 12px;
-  padding: 8px 16px;
+  padding: 8px 12px;
   border-radius: 6px;
   flex: 1;
-  margin-right: 8px;
+  min-width: 80px;
 }
 
-.action-btn:last-child {
-  margin-right: 0;
+.edit-btn {
+  background-color: #52C41A;
+  color: #FFFFFF;
 }
 
 .config-btn {
@@ -146,4 +149,60 @@
   background-color: transparent;
   color: #FF6B6B;
   border: 1px solid #FF6B6B;
+}
+
+/* 编辑弹窗 */
+.modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  width: 80%;
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333333;
+  padding: 16px;
+  text-align: center;
+  border-bottom: 1px solid #E8E8E8;
+}
+
+.modal-body {
+  padding: 16px;
+}
+
+.modal-footer {
+  display: flex;
+  border-top: 1px solid #E8E8E8;
+}
+
+.modal-btn {
+  flex: 1;
+  padding: 14px;
+  font-size: 15px;
+  border-radius: 0;
+  background-color: #FFFFFF;
+}
+
+.modal-btn.cancel {
+  color: #666666;
+  border-right: 1px solid #E8E8E8;
+}
+
+.modal-btn.confirm {
+  color: #4A90D9;
 }

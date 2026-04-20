@@ -1,7 +1,7 @@
 // pages/admin/time-slot-config/time-slot-config.js
 const app = getApp()
-const util = require('../../utils/util')
-const db = require('../../utils/db')
+const util = require('../../../utils/util')
+const db = require('../../../utils/db')
 
 Page({
   data: {
@@ -32,7 +32,10 @@ Page({
   },
 
   onShow: function () {
-    if (this.data.selectedAlliance) {
+    // 每次显示时重新检查
+    if (this.data.zones.length === 0) {
+      this.loadZones()
+    } else if (this.data.selectedAlliance) {
       this.loadTimeSlots()
     }
   },
@@ -40,26 +43,40 @@ Page({
   // 加载分区列表
   loadZones: async function () {
     try {
-      util.showLoading('加载分区...')
-
       const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
-      const zones = await db.getZonesByCreator(userId)
+      const role = app.globalData.role
+
+      // 超级管理员可以看到所有分区，管理员只能看到自己创建的
+      let zones
+      if (role === 'superAdmin') {
+        zones = await db.getAllZones()
+      } else {
+        zones = await db.getZonesByCreator(userId)
+      }
+
+      console.log('加载分区:', zones)
 
       this.setData({
-        zones: zones
+        zones: zones || [],
+        zoneIndex: 0
       })
 
-      if (zones.length > 0) {
+      if (zones && zones.length > 0) {
         this.setData({
           selectedZone: zones[0]
         })
         this.loadAlliances(zones[0]._id)
+      } else {
+        this.setData({
+          selectedZone: null,
+          selectedAlliance: null,
+          alliances: [],
+          timeSlots: []
+        })
       }
 
-      util.hideLoading()
-
     } catch (err) {
-      util.hideLoading()
+      console.error('加载分区失败:', err)
       util.showError('加载分区失败')
     }
   },
@@ -67,25 +84,27 @@ Page({
   // 加载联盟列表
   loadAlliances: async function (zoneId) {
     try {
-      util.showLoading('加载联盟...')
-
       const alliances = await db.getAlliancesByZone(zoneId)
 
       this.setData({
-        alliances: alliances
+        alliances: alliances || [],
+        allianceIndex: 0
       })
 
-      if (alliances.length > 0) {
+      if (alliances && alliances.length > 0) {
         this.setData({
           selectedAlliance: alliances[0]
         })
         this.loadTimeSlots()
+      } else {
+        this.setData({
+          selectedAlliance: null,
+          timeSlots: []
+        })
       }
 
-      util.hideLoading()
-
     } catch (err) {
-      util.hideLoading()
+      console.error('加载联盟失败:', err)
       util.showError('加载联盟失败')
     }
   },
@@ -94,8 +113,6 @@ Page({
   loadTimeSlots: async function () {
     try {
       if (!this.data.selectedAlliance) return
-
-      util.showLoading('加载时间段...')
 
       const allianceId = this.data.selectedAlliance._id
       const timeSlots = await db.getTimeSlotsByAlliance(allianceId)
@@ -116,22 +133,21 @@ Page({
         timeSlots: processedSlots
       })
 
-      util.hideLoading()
-
     } catch (err) {
-      util.hideLoading()
+      console.error('加载时间段失败:', err)
       util.showError('加载时间段失败')
     }
   },
 
   // 分区选择变化
   onZoneChange: function (e) {
-    const index = e.detail.value
+    const index = parseInt(e.detail.value)
     const zone = this.data.zones[index]
 
     this.setData({
       zoneIndex: index,
       selectedZone: zone,
+      allianceIndex: 0,
       selectedAlliance: null,
       timeSlots: []
     })
@@ -141,7 +157,7 @@ Page({
 
   // 联盟选择变化
   onAllianceChange: function (e) {
-    const index = e.detail.value
+    const index = parseInt(e.detail.value)
     const alliance = this.data.alliances[index]
 
     this.setData({

@@ -18,6 +18,12 @@
   font-size: 16px;
   font-weight: 500;
   color: #333333;
+  margin-bottom: 8px;
+}
+
+.section-desc {
+  font-size: 12px;
+  color: #999999;
   margin-bottom: 16px;
 }
 
@@ -125,4 +131,125 @@
   font-size: 12px;
   padding: 8px 16px;
   border-radius: 6px;
+}
+
+/* 用户身份管理样式 */
+.user-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-card {
+  background-color: #F5F7FA;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #E8E8E8;
+  margin-right: 12px;
+}
+
+.user-details {
+  flex: 1;
+}
+
+.user-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: #333333;
+  margin-bottom: 4px;
+}
+
+.user-phone {
+  font-size: 12px;
+  color: #666666;
+  margin-bottom: 2px;
+}
+
+.user-role {
+  font-size: 12px;
+  color: #999999;
+}
+
+.reset-btn {
+  background-color: #FF6B6B;
+  color: #FFFFFF;
+  font-size: 13px;
+  padding: 10px 20px;
+  border-radius: 6px;
+  width: 100%;
+}
+
+/* 搜索框样式 */
+.search-box {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.search-input {
+  flex: 1;
+  height: 40px;
+  background-color: #FFFFFF;
+  border: 1px solid #E8E8E8;
+  border-radius: 6px;
+  padding: 0 12px;
+  font-size: 14px;
+}
+
+.search-btn {
+  background-color: #4A90D9;
+  color: #FFFFFF;
+  font-size: 14px;
+  padding: 0 16px;
+  height: 40px;
+  line-height: 40px;
+  border-radius: 6px;
+}
+
+.search-result {
+  margin-bottom: 16px;
+}
+
+.result-card {
+  background-color: #FFF7E6;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #FFB366;
+}
+
+.result-info {
+  margin-bottom: 8px;
+}
+
+.result-label {
+  font-size: 12px;
+  color: #999999;
+}
+
+.result-name {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333333;
+}
+
+.result-detail {
+  font-size: 12px;
+  color: #666666;
+  margin-bottom: 4px;
+}
+
+.result-detail text {
+  word-break: break-all;
 }

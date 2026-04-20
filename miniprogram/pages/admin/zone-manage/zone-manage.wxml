@@ -1,12 +1,12 @@
 <!--pages/admin/zone-manage/zone-manage.wxml-->
 <view class="zone-manage-container">
   <!-- 新建分区 -->
-  <view class="create-section">
+  <view class="section">
     <view class="section-title">新建分区</view>
     <view class="form-card">
       <view class="form-item">
         <view class="form-label">分区编号</view>
-        <input class="form-input" placeholder="请输入4位数字编号 (0001-9999)" value="{{newZoneCode}}" bindinput="onZoneCodeInput" maxlength="4" type="number" />
+        <input class="form-input" placeholder="请输入1-4位数字" value="{{newZoneCode}}" bindinput="onZoneCodeInput" maxlength="4" type="number" />
       </view>
       <view class="form-item">
         <view class="form-label">分区名称</view>
@@ -39,9 +39,31 @@
           </view>
         </view>
         <view class="zone-actions">
+          <button class="action-btn edit-btn" bindtap="editZone" data-zone="{{item}}" wx:if="{{isSuperAdmin}}">修改编号</button>
           <button class="action-btn config-btn" bindtap="goToAllianceConfig" data-zone="{{item}}">配置联盟</button>
           <button class="action-btn delete-btn" bindtap="deleteZone" data-id="{{item._id}}" data-index="{{index}}">删除</button>
         </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 编辑分区弹窗 -->
+  <view wx:if="{{showEditModal}}" class="modal-mask" bindtap="closeEditModal">
+    <view class="modal-content" catchtap>
+      <view class="modal-title">修改分区编号</view>
+      <view class="modal-body">
+        <view class="form-item">
+          <view class="form-label">分区编号</view>
+          <input class="form-input" placeholder="请输入1-4位数字" value="{{editZoneCode}}" bindinput="onEditZoneCodeInput" maxlength="4" type="number" />
+        </view>
+        <view class="form-item">
+          <view class="form-label">分区名称</view>
+          <input class="form-input" placeholder="请输入分区名称" value="{{editZoneName}}" bindinput="onEditZoneNameInput" maxlength="20" />
+        </view>
+      </view>
+      <view class="modal-footer">
+        <button class="modal-btn cancel" bindtap="closeEditModal">取消</button>
+        <button class="modal-btn confirm" bindtap="saveEditZone">保存</button>
       </view>
     </view>
   </view>

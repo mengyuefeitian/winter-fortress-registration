@@ -1,35 +1,45 @@
 <!--pages/login/login.wxml-->
 <view class="login-container">
   <view class="login-header">
-    <image class="logo" src="/images/logo.png"></image>
     <view class="title">无尽冬日堡垒分配</view>
     <view class="desc">联盟报名管理系统</view>
   </view>
 
   <view class="login-content">
-    <!-- 获取用户信息 -->
-    <view wx:if="{{!userInfo}}" class="auth-section">
-      <view class="auth-tip">请授权登录以使用完整功能</view>
-      <button class="auth-btn" bindtap="getUserProfile">获取头像昵称</button>
+    <!-- 身份信息设置 -->
+    <view class="auth-section">
+      <view class="auth-title">设置身份信息</view>
+
+      <!-- 头像和昵称并排显示 -->
+      <view class="auth-buttons">
+        <!-- 头像按钮 -->
+        <button class="avatar-btn {{tempAvatarUrl ? 'completed' : ''}}" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+          <image class="avatar-img" src="{{tempAvatarUrl || '/images/default-avatar.png'}}"></image>
+          <view class="btn-status">{{tempAvatarUrl ? '✓' : '1'}}</view>
+          <view class="btn-label">{{tempAvatarUrl ? '已设置头像' : '点击选择头像'}}</view>
+        </button>
+
+        <!-- 游戏昵称输入 -->
+        <view class="nickname-box {{tempNickName ? 'completed' : ''}}">
+          <view class="btn-status">{{tempNickName ? '✓' : '2'}}</view>
+          <input class="nickname-input" placeholder="输入游戏昵称" value="{{tempNickName}}" bindinput="onNicknameInputing" maxlength="12" />
+          <view class="btn-label">{{tempNickName ? '已设置昵称' : '输入游戏昵称'}}</view>
+        </view>
+      </view>
+
+      <!-- 使用微信昵称快捷按钮 -->
+      <view class="quick-nickname">
+        <view class="wx-nickname-box">
+          <input class="wx-nickname-input" type="nickname" placeholder="" value="" bindinput="onUseWxNicknameInput" />
+          <view class="wx-nickname-cover">使用微信昵称</view>
+        </view>
+      </view>
     </view>
 
-    <!-- 已获取用户信息，显示头像昵称 -->
-    <view wx:else class="user-section">
-      <view class="user-info">
-        <image class="user-avatar" src="{{userInfo.avatarUrl}}"></image>
-        <view class="user-name">{{userInfo.nickName}}</view>
-      </view>
-
-      <!-- 手机号绑定 -->
-      <view wx:if="{{!hasPhone}}" class="phone-section">
-        <view class="phone-tip">绑定手机号可识别管理员身份</view>
-        <button class="phone-btn" open-type="getPhoneNumber" bindgetphonenumber="getPhoneNumber">绑定手机号</button>
-      </view>
-
-      <!-- 完成登录 -->
-      <view class="complete-section">
-        <button class="login-btn" bindtap="completeLogin">完成登录</button>
-      </view>
+    <!-- 完成登录 -->
+    <view class="complete-section">
+      <button class="login-btn {{!tempAvatarUrl || !tempNickName ? 'disabled' : ''}}" bindtap="completeLogin" disabled="{{!tempAvatarUrl || !tempNickName}}">立即登录</button>
+      <view class="login-tip">登录后可在「我的」页面申请管理员</view>
     </view>
   </view>
 

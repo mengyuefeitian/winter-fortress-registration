@@ -1,7 +1,7 @@
 // pages/user/registration/registration.js
 const app = getApp()
-const util = require('../../utils/util')
-const db = require('../../utils/db')
+const util = require('../../../utils/util')
+const db = require('../../../utils/db')
 
 Page({
   data: {
@@ -19,29 +19,49 @@ Page({
     registrations: [],
 
     nickName: '',
-    position: 'head' // 默认车头
+    position: 'head',
+    loading: true,
+    isLoggedIn: false
   },
 
   onLoad: function () {
-    this.loadZones()
+    this.checkLoginAndLoadData()
   },
 
   onShow: function () {
-    // 每次显示时重新加载数据，确保状态最新
-    if (this.data.selectedAlliance) {
-      this.loadTimeSlots()
+    this.checkLoginAndLoadData()
+  },
+
+  // 检查登录并加载数据
+  checkLoginAndLoadData: function () {
+    const userInfo = app.globalData.userInfo
+
+    if (userInfo && userInfo.nickName) {
+      // 已登录，自动填充昵称
+      this.setData({
+        isLoggedIn: true,
+        nickName: userInfo.nickName
+      })
+    } else {
+      this.setData({
+        isLoggedIn: false,
+        nickName: ''
+      })
     }
+
+    this.loadZones()
   },
 
   // 加载分区列表
   loadZones: async function () {
     try {
-      util.showLoading('加载分区...')
+      this.setData({ loading: true })
 
       const zones = await db.getAllZones()
 
       this.setData({
-        zones: zones
+        zones: zones,
+        loading: false
       })
 
       if (zones.length > 0) {
@@ -51,19 +71,15 @@ Page({
         this.loadAlliances(zones[0]._id)
       }
 
-      util.hideLoading()
-
     } catch (err) {
-      util.hideLoading()
-      util.showError('加载分区失败')
+      console.error('加载分区失败:', err)
+      this.setData({ loading: false })
     }
   },
 
   // 加载联盟列表
   loadAlliances: async function (zoneId) {
     try {
-      util.showLoading('加载联盟...')
-
       const alliances = await db.getAlliancesByZone(zoneId)
 
       this.setData({
@@ -77,11 +93,8 @@ Page({
         this.loadTimeSlots()
       }
 
-      util.hideLoading()
-
     } catch (err) {
-      util.hideLoading()
-      util.showError('加载联盟失败')
+      console.error('加载联盟失败:', err)
     }
   },
 
@@ -90,12 +103,9 @@ Page({
     try {
       if (!this.data.selectedAlliance) return
 
-      util.showLoading('加载时间段...')
-
       const allianceId = this.data.selectedAlliance._id
       const timeSlots = await db.getTimeSlotsByAlliance(allianceId)
 
-      // 计算每个时间段的报名人数和是否已满
       const processedSlots = []
       for (const slot of timeSlots) {
         const count = await db.getRegistrationCount(slot._id)
@@ -111,11 +121,8 @@ Page({
         timeSlots: processedSlots
       })
 
-      util.hideLoading()
-
     } catch (err) {
-      util.hideLoading()
-      util.showError('加载时间段失败')
+      console.error('加载时间段失败:', err)
     }
   },
 
@@ -161,7 +168,6 @@ Page({
       return
     }
 
-    // 加载已报名人员
     await this.loadRegistrations(timeSlot._id)
 
     this.setData({
@@ -179,7 +185,7 @@ Page({
       })
 
     } catch (err) {
-      util.showError('加载报名列表失败')
+      console.error('加载报名列表失败:', err)
     }
   },
 
@@ -202,6 +208,23 @@ Page({
   // 提交报名
   submitRegistration: async function () {
     try {
+      // 检查登录
+      if (!this.data.isLoggedIn) {
+        wx.showModal({
+          title: '提示',
+          content: '请先登录后再报名',
+          confirmText: '去登录',
+          success: (res) => {
+            if (res.confirm) {
+              wx.navigateTo({
+                url: '/pages/login/login'
+              })
+            }
+          }
+        })
+        return
+      }
+
       // 验证数据
       if (!this.data.nickName) {
         util.showInfo('请输入昵称')
@@ -213,7 +236,6 @@ Page({
         return
       }
 
-      // 检查是否已满
       if (this.data.selectedTimeSlot.isFull) {
         util.showInfo('该时间段报名人数已满')
         return
@@ -223,7 +245,6 @@ Page({
 
       const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
 
-      // 创建报名记录
       await db.createRegistration({
         zoneId: this.data.selectedZone._id,
         allianceId: this.data.selectedAlliance._id,
@@ -236,19 +257,23 @@ Page({
       util.hideLoading()
       util.showSuccess('报名成功')
 
-      // 重置表单
       this.setData({
-        nickName: '',
         selectedTimeSlot: null,
         registrations: []
       })
 
-      // 重新加载时间段数据
       this.loadTimeSlots()
 
     } catch (err) {
       util.hideLoading()
       util.showError(err.message || '报名失败')
     }
+  },
+
+  // 去登录
+  goToLogin: function () {
+    wx.navigateTo({
+      url: '/pages/login/login'
+    })
   }
 })

@@ -5,5 +5,8 @@
   "main": "index.js",
   "dependencies": {
     "wx-server-sdk": "~2.6.3"
+  },
+  "permissions": {
+    "openapi": []
   }
 }

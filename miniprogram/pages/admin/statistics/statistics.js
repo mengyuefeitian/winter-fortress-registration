@@ -1,8 +1,8 @@
 // pages/admin/statistics/statistics.js
 const app = getApp()
-const util = require('../../utils/util')
-const auth = require('../../utils/auth')
-const db = require('../../utils/db')
+const util = require('../../../utils/util')
+const auth = require('../../../utils/auth')
+const db = require('../../../utils/db')
 
 Page({
   data: {

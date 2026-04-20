@@ -3,11 +3,13 @@ App({
   globalData: {
     userInfo: null,
     openid: null,
-    role: 'user', // user, admin, auditor, superAdmin
+    role: 'user',
     phone: null,
     currentZone: null,
     currentAlliance: null,
-    dbReady: false
+    dbReady: false,
+    roleReady: false,
+    firstLaunch: true
   },
 
   onLaunch: function () {
@@ -16,7 +18,7 @@ App({
       console.error('请使用 2.2.3 或以上的基础库以使用云能力')
     } else {
       wx.cloud.init({
-        env: 'cloud1-9gip4qyf7e753868', // 替换为您的云开发环境ID
+        env: 'cloud1-9gip4qyf7e753868',
         traceUser: true,
       })
     }
@@ -25,71 +27,129 @@ App({
     this.globalData.db = wx.cloud.database()
     this.globalData.dbReady = true
 
-    // 检查登录状态
-    this.checkLoginStatus()
+    // 检查是否首次启动
+    const hasLaunched = wx.getStorageSync('hasLaunched')
+    this.globalData.firstLaunch = !hasLaunched
+
+    // 自动登录
+    this.autoLogin()
+  },
+
+  // 自动登录
+  autoLogin: async function () {
+    try {
+      // 从本地缓存读取用户信息
+      const cachedUserInfo = wx.getStorageSync('userInfo')
+      const cachedOpenid = wx.getStorageSync('openid')
+
+      if (cachedUserInfo && cachedOpenid) {
+        console.log('使用缓存自动登录')
+        this.globalData.userInfo = cachedUserInfo
+        this.globalData.openid = cachedOpenid
+        this.globalData.phone = cachedUserInfo.phone
+        this.globalData.role = cachedUserInfo.role || 'user'
+
+        // 检查超管身份
+        if (cachedUserInfo.phone) {
+          await this.checkSuperAdmin(cachedUserInfo.phone)
+        } else {
+          this.globalData.roleReady = true
+        }
+        return
+      }
+
+      // 没有缓存，尝试云函数登录
+      this.checkLoginStatus()
+    } catch (err) {
+      console.error('自动登录失败:', err)
+      this.globalData.roleReady = true
+    }
   },
 
   // 检查登录状态
   checkLoginStatus: function () {
     const that = this
+
     wx.cloud.callFunction({
       name: 'login',
+      config: {
+        env: 'cloud1-9gip4qyf7e753868'
+      },
       data: {},
       success: res => {
+        console.log('云函数调用成功:', res)
         that.globalData.openid = res.result.openid
+        wx.setStorageSync('openid', res.result.openid)
         that.getUserInfo(res.result.openid)
       },
       fail: err => {
-        console.error('登录失败:', err)
-        // 如果云函数失败，使用本地缓存
-        const userInfo = wx.getStorageSync('userInfo')
-        if (userInfo) {
-          that.globalData.userInfo = userInfo
-          that.globalData.role = userInfo.role || 'user'
-        }
+        console.error('云函数调用失败:', err)
+        that.globalData.roleReady = true
       }
     })
   },
 
   // 获取用户信息
-  getUserInfo: function (openid) {
+  getUserInfo: async function (openid) {
     const that = this
     const db = wx.cloud.database()
 
-    db.collection('users').where({
-      openid: openid
-    }).get().then(res => {
+    try {
+      const res = await db.collection('users').where({
+        openid: openid
+      }).get()
+
       if (res.data.length > 0) {
         const userData = res.data[0]
         that.globalData.userInfo = userData
         that.globalData.role = userData.role || 'user'
         that.globalData.phone = userData.phone
 
+        // 缓存用户信息
+        wx.setStorageSync('userInfo', userData)
+
         // 检查是否为超管
-        that.checkSuperAdmin(userData.phone)
+        await that.checkSuperAdmin(userData.phone)
       } else {
-        // 新用户，默认为普通用户
         that.globalData.role = 'user'
+        that.globalData.roleReady = true
       }
-    }).catch(err => {
+    } catch (err) {
       console.error('获取用户信息失败:', err)
-    })
+      that.globalData.roleReady = true
+    }
   },
 
   // 检查超管身份
-  checkSuperAdmin: function (phone) {
-    if (!phone) return
+  checkSuperAdmin: async function (phone) {
+    console.log('检查超管身份, phone:', phone)
+    if (!phone) {
+      console.log('没有phone，跳过超管检查')
+      this.globalData.roleReady = true
+      return
+    }
 
     const db = wx.cloud.database()
-    db.collection('superAdmins').where({
-      phone: phone
-    }).get().then(res => {
-      if (res.data.length > 0) {
+    try {
+      const resStr = await db.collection('superAdmins').where({
+        phone: phone
+      }).get()
+      console.log('字符串查询结果:', resStr.data)
+
+      const resNum = await db.collection('superAdmins').where({
+        phone: parseInt(phone, 10)
+      }).get()
+      console.log('数字查询结果:', resNum.data)
+
+      if (resStr.data.length > 0 || resNum.data.length > 0) {
         this.globalData.role = 'superAdmin'
+        console.log('检测到超管身份')
       }
-    }).catch(err => {
+      this.globalData.roleReady = true
+    } catch (err) {
       console.error('检查超管身份失败:', err)
-    })
+      this.globalData.roleReady = true
+    }
   },
 
   // 更新用户角色
@@ -99,6 +159,12 @@ App({
       this.globalData.userInfo.role = role
       wx.setStorageSync('userInfo', this.globalData.userInfo)
     }
+  },
+
+  // 设置已启动标记
+  setHasLaunched: function () {
+    wx.setStorageSync('hasLaunched', true)
+    this.globalData.firstLaunch = false
   },
 
   // 设置当前分区

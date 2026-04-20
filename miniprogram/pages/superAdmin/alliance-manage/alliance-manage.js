@@ -1,7 +1,7 @@
 // pages/superAdmin/alliance-manage/alliance-manage.js
 const app = getApp()
-const util = require('../../utils/util')
-const db = require('../../utils/db')
+const util = require('../../../utils/util')
+const db = require('../../../utils/db')
 
 Page({
   data: {

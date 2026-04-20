@@ -3,16 +3,19 @@
   <!-- 选择分区 -->
   <view class="section">
     <view class="section-title">选择分区</view>
-    <picker bindchange="onZoneChange" value="{{zoneIndex}}" range="{{zones}}" range-key="zoneName">
+    <picker wx:if="{{zones.length > 0}}" bindchange="onZoneChange" value="{{zoneIndex}}" range="{{zones}}" range-key="zoneName">
       <view class="picker">
-        <text>{{selectedZone ? selectedZone.zoneName : '请选择分区'}}</text>
+        <text>{{selectedZone ? selectedZone.zoneName + ' (' + selectedZone.zoneCode + ')' : '请选择分区'}}</text>
         <image class="picker-arrow" src="/images/icon-arrow-down.png"></image>
       </view>
     </picker>
+    <view wx:else class="empty-picker">
+      <text>暂无分区，请先创建分区</text>
+    </view>
   </view>
 
   <!-- 选择联盟 -->
-  <view wx:if="{{selectedZone}}" class="section">
+  <view wx:if="{{selectedZone && alliances.length > 0}}" class="section">
     <view class="section-title">选择联盟</view>
     <picker bindchange="onAllianceChange" value="{{allianceIndex}}" range="{{alliances}}" range-key="allianceName">
       <view class="picker">
@@ -20,6 +23,11 @@
         <image class="picker-arrow" src="/images/icon-arrow-down.png"></image>
       </view>
     </picker>
+  </view>
+
+  <!-- 无联盟提示 -->
+  <view wx:if="{{selectedZone && alliances.length === 0}}" class="section">
+    <view class="empty-tip">该分区暂无联盟数据，请检查分区是否创建成功</view>
   </view>
 
   <!-- 时间段配置 -->
@@ -56,6 +64,8 @@
 
     <!-- 时间段列表 -->
     <view class="slot-list">
+      <view wx:if="{{timeSlots.length === 0}}" class="empty-tip">暂无时间段，请添加</view>
+
       <view wx:for="{{timeSlots}}" wx:key="_id" class="slot-card">
         <view class="slot-header">
           <view class="slot-time">{{item.displayName}}</view>
