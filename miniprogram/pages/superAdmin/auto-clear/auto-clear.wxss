@@ -1,0 +1,153 @@
+/* pages/superAdmin/auto-clear/auto-clear.wxss */
+
+.auto-clear-container {
+  padding: 16px;
+  background-color: #F5F7FA;
+  min-height: 100vh;
+}
+
+/* 说明区域 */
+.info-section {
+  background-color: #E8F4FF;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.info-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #4A90D9;
+  margin-bottom: 8px;
+}
+
+.info-content {
+  font-size: 13px;
+  color: #666666;
+  line-height: 1.5;
+}
+
+.info-warning {
+  font-size: 12px;
+  color: #FA8C16;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(74, 144, 217, 0.2);
+}
+
+/* 开关区域 */
+.switch-section {
+  background-color: #FFFFFF;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.switch-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.switch-label {
+  font-size: 15px;
+  color: #333333;
+}
+
+/* 配置区域 */
+.config-section {
+  background-color: #FFFFFF;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333333;
+  margin-bottom: 12px;
+}
+
+.picker-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #F0F0F0;
+}
+
+.picker-row:last-child {
+  border-bottom: none;
+}
+
+.picker-label {
+  font-size: 14px;
+  color: #666666;
+}
+
+.picker-value {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #333333;
+}
+
+.picker-arrow {
+  font-size: 10px;
+  color: #999999;
+  margin-left: 6px;
+}
+
+/* 预览区域 */
+.preview-section {
+  background-color: #FFF7E6;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.preview-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #FA8C16;
+  margin-bottom: 8px;
+}
+
+.preview-content {
+  font-size: 13px;
+  color: #666666;
+}
+
+/* 手动清空 */
+.manual-section {
+  background-color: #FFFFFF;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.manual-desc {
+  font-size: 12px;
+  color: #999999;
+  margin-bottom: 12px;
+}
+
+.manual-clear-btn {
+  background-color: #FF6B6B;
+  color: #FFFFFF;
+  font-size: 14px;
+  border-radius: 8px;
+}
+
+/* 保存按钮 */
+.save-section {
+  margin-top: 20px;
+}
+
+.save-btn {
+  background-color: #4A90D9;
+  color: #FFFFFF;
+  font-size: 16px;
+  border-radius: 8px;
+}

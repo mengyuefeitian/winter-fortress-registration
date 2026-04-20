@@ -1,0 +1,168 @@
+// pages/superAdmin/auto-clear/auto-clear.js
+const app = getApp()
+const util = require('../../../utils/util')
+
+Page({
+  data: {
+    enabled: false,
+    dayIndex: 0,
+    hourIndex: 0,
+    dayOptions: [
+      { value: 1, name: '周一' },
+      { value: 2, name: '周二' },
+      { value: 3, name: '周三' },
+      { value: 4, name: '周四' },
+      { value: 5, name: '周五' },
+      { value: 6, name: '周六' },
+      { value: 7, name: '周日' }
+    ],
+    hourOptions: []
+  },
+
+  onLoad: function () {
+    this.initHourOptions()
+    this.loadConfig()
+  },
+
+  // 初始化小时选项
+  initHourOptions: function () {
+    const hours = []
+    for (let i = 0; i <= 24; i++) {
+      hours.push(i.toString().padStart(2, '0'))
+    }
+    this.setData({ hourOptions: hours })
+  },
+
+  // 加载配置
+  loadConfig: async function () {
+    try {
+      const wxdb = wx.cloud.database()
+      const res = await wxdb.collection('settings').where({
+        _id: 'autoClear'
+      }).get()
+
+      if (res.data && res.data.length > 0) {
+        const config = res.data[0]
+        this.setData({
+          enabled: config.enabled || false,
+          dayIndex: (config.day || 1) - 1,
+          hourIndex: config.hour || 0
+        })
+      }
+    } catch (err) {
+      console.log('暂无配置，使用默认值')
+    }
+  },
+
+  // 开关变化
+  onSwitchChange: function (e) {
+    this.setData({
+      enabled: e.detail.value
+    })
+  },
+
+  // 日期变化
+  onDayChange: function (e) {
+    this.setData({
+      dayIndex: parseInt(e.detail.value)
+    })
+  },
+
+  // 小时变化
+  onHourChange: function (e) {
+    this.setData({
+      hourIndex: parseInt(e.detail.value)
+    })
+  },
+
+  // 保存配置
+  saveConfig: async function () {
+    try {
+      util.showLoading('保存中...')
+
+      const wxdb = wx.cloud.database()
+      const config = {
+        _id: 'autoClear',
+        enabled: this.data.enabled,
+        day: this.data.dayOptions[this.data.dayIndex].value,
+        hour: this.data.hourIndex,
+        updateTime: new Date()
+      }
+
+      // 先尝试查询是否存在
+      let exists = false
+      try {
+        const checkRes = await wxdb.collection('settings').doc('autoClear').get()
+        exists = true
+      } catch (err) {
+        exists = false
+      }
+
+      if (exists) {
+        // 更新
+        await wxdb.collection('settings').doc('autoClear').update({
+          data: {
+            enabled: config.enabled,
+            day: config.day,
+            hour: config.hour,
+            updateTime: new Date()
+          }
+        })
+      } else {
+        // 新增
+        await wxdb.collection('settings').add({
+          data: config
+        })
+      }
+
+      util.hideLoading()
+      util.showSuccess('保存成功')
+
+      // 提示需要配置定时触发器
+      if (this.data.enabled) {
+        const dayName = this.data.dayOptions[this.data.dayIndex].name
+        const hourStr = this.data.hourOptions[this.data.hourIndex]
+        wx.showModal({
+          title: '配置已保存',
+          content: `自动清空配置已保存（${dayName} ${hourStr}:00 执行）。\n\n请注意：自动清空功能需要在云开发控制台中为 clearRegistrations 云函数配置定时触发器才能生效。\n\n配置方法：\n1. 登录微信云开发控制台\n2. 找到云函数 clearRegistrations\n3. 添加定时触发器\n4. 触发周期设置为定时触发\n5. Cron表达式根据配置设置（如：0 ${hourStr} ? * ${this.data.dayOptions[this.data.dayIndex].value}）`,
+          showCancel: false,
+          confirmText: '我知道了'
+        })
+      }
+
+    } catch (err) {
+      console.error('保存失败:', err)
+      util.hideLoading()
+      util.showError('保存失败: ' + (err.message || '请检查数据库权限'))
+    }
+  },
+
+  // 手动清空
+  manualClear: function () {
+    wx.showModal({
+      title: '确认清空',
+      content: '确定要清空所有报名数据吗？此操作不可恢复！',
+      confirmText: '确认清空',
+      confirmColor: '#FF6B6B',
+      success: async (res) => {
+        if (res.confirm) {
+          try {
+            util.showLoading('正在清空...')
+
+            await wx.cloud.callFunction({
+              name: 'clearRegistrations',
+              data: { clearAll: true }
+            })
+
+            util.hideLoading()
+            util.showSuccess('清空成功')
+
+          } catch (err) {
+            util.hideLoading()
+            util.showError('清空失败')
+          }
+        }
+      }
+    })
+  }
+})

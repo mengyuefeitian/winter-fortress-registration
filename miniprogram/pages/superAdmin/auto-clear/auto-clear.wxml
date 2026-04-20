@@ -1,0 +1,68 @@
+<!--pages/superAdmin/auto-clear/auto-clear.wxml-->
+<view class="auto-clear-container">
+  <!-- 配置说明 -->
+  <view class="info-section">
+    <view class="info-title">自动清空说明</view>
+    <view class="info-content">
+      开启后，系统将在设定时间自动清空所有报名数据。适用于每周重置报名情况。
+    </view>
+    <view class="info-warning">
+      ⚠️ 注意：保存配置后，需在云开发控制台为 clearRegistrations 云函数配置定时触发器才能生效。
+    </view>
+  </view>
+
+  <!-- 开关 -->
+  <view class="switch-section">
+    <view class="switch-row">
+      <text class="switch-label">启用自动清空</text>
+      <switch checked="{{enabled}}" bindchange="onSwitchChange" color="#4A90D9" />
+    </view>
+  </view>
+
+  <!-- 时间选择 -->
+  <view wx:if="{{enabled}}" class="config-section">
+    <view class="section-title">清空时间设置</view>
+
+    <!-- 星期选择 -->
+    <view class="picker-row">
+      <text class="picker-label">清空日期</text>
+      <picker mode="selector" range="{{dayOptions}}" range-key="name" value="{{dayIndex}}" bindchange="onDayChange">
+        <view class="picker-value">
+          <text>{{dayOptions[dayIndex].name}}</text>
+          <text class="picker-arrow">▼</text>
+        </view>
+      </picker>
+    </view>
+
+    <!-- 小时选择 -->
+    <view class="picker-row">
+      <text class="picker-label">清空时间</text>
+      <picker mode="selector" range="{{hourOptions}}" value="{{hourIndex}}" bindchange="onHourChange">
+        <view class="picker-value">
+          <text>{{hourOptions[hourIndex]}}:00</text>
+          <text class="picker-arrow">▼</text>
+        </view>
+      </picker>
+    </view>
+  </view>
+
+  <!-- 预览 -->
+  <view wx:if="{{enabled}}" class="preview-section">
+    <view class="preview-title">清空时间预览</view>
+    <view class="preview-content">
+      每周{{dayOptions[dayIndex].name}} {{hourOptions[hourIndex]}}:00 自动清空所有报名数据
+    </view>
+  </view>
+
+  <!-- 手动清空 -->
+  <view class="manual-section">
+    <view class="section-title">手动清空</view>
+    <view class="manual-desc">立即清空当前所有报名数据（不可恢复）</view>
+    <button class="manual-clear-btn" bindtap="manualClear">立即清空报名数据</button>
+  </view>
+
+  <!-- 保存按钮 -->
+  <view class="save-section">
+    <button class="save-btn" bindtap="saveConfig">保存配置</button>
+  </view>
+</view>
