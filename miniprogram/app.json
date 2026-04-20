@@ -16,19 +16,21 @@
     "pages/superAdmin/admin-review/admin-review",
     "pages/superAdmin/all-statistics/all-statistics",
     "pages/superAdmin/phone-manage/phone-manage",
-    "pages/superAdmin/alliance-manage/alliance-manage"
+    "pages/superAdmin/alliance-manage/alliance-manage",
+    "pages/superAdmin/auto-clear/auto-clear"
   ],
   "window": {
-    "backgroundTextStyle": "light",
-    "navigationBarBackgroundColor": "#4A90D9",
-    "navigationBarTitleText": "无尽冬日堡垒分配",
-    "navigationBarTextStyle": "white"
+    "navigationBarBackgroundColor": "#1a1a2e",
+    "navigationBarTitleText": "冬日堡垒",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#fafbfc",
+    "backgroundTextStyle": "dark"
   },
   "tabBar": {
-    "color": "#7F7F7F",
-    "selectedColor": "#4A90D9",
-    "backgroundColor": "#FFFFFF",
-    "borderStyle": "black",
+    "color": "#9ca3af",
+    "selectedColor": "#1a1a2e",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
     "list": [
       {
         "pagePath": "pages/index/index",
