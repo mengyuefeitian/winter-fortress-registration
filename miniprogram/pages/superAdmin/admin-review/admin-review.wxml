@@ -1,56 +1,67 @@
 <!--pages/superAdmin/admin-review/admin-review.wxml-->
-<view class="admin-review-container">
-  <view class="section">
-    <view class="section-title">管理员申请审核</view>
+<view class="page">
+  <view class="section-header">
+    <text class="section-title">待审核申请</text>
+  </view>
 
-    <view wx:if="{{applications.length === 0}}" class="empty-state">
-      <view class="empty-text">暂无待审核申请</view>
-    </view>
+  <view wx:if="{{applications.length === 0}}" class="empty-state">
+    <text class="empty-text">暂无待审核申请</text>
+  </view>
 
-    <view wx:else class="application-list">
-      <view wx:for="{{applications}}" wx:key="_id" class="application-card">
-        <view class="application-header">
-          <image class="applicant-avatar" src="{{item.avatarUrl || '/images/default-avatar.png'}}"></image>
-          <view class="applicant-info">
-            <view class="applicant-name">{{item.nickName || '未知用户'}}</view>
-            <view class="applicant-phone">手机号: {{item.phone}}</view>
+  <view wx:else class="function-grid">
+    <view wx:for="{{applications}}" wx:key="_id" class="card">
+      <view class="card-body">
+        <view class="flex items-center">
+          <image class="avatar" src="{{item.avatarUrl || '/images/default-avatar.png'}}"></image>
+          <view class="ml-12 flex-1">
+            <text class="text-base font-medium">{{item.nickName || '未知用户'}}</text>
+            <text class="text-secondary text-sm mt-4">手机号: {{item.phone}}</text>
+            <view class="mt-8">
+              <view class="tag tag-default">
+                {{item.applyType === 'zoneManager' ? '区管申请' : '盟管申请'}}
+              </view>
+            </view>
           </view>
         </view>
-
-        <view class="application-time">
-          申请时间: {{item.formattedTime}}
+        <view class="mt-12">
+          <text class="text-weak text-xs">申请时间: {{item.formattedTime}}</text>
         </view>
-
-        <view class="application-actions">
-          <button class="approve-btn" bindtap="approveApplication" data-id="{{item._id}}" data-userid="{{item.userId}}" data-index="{{index}}">
-            批准
-          </button>
-          <button class="reject-btn" bindtap="rejectApplication" data-id="{{item._id}}" data-index="{{index}}">
-            拒绝
-          </button>
-        </view>
+      </view>
+      <view class="card-footer">
+        <button class="btn btn-success btn-sm" bindtap="approveApplication"
+                data-id="{{item._id}}" data-userid="{{item.userId}}" data-applytype="{{item.applyType}}" data-index="{{index}}">
+          批准
+        </button>
+        <button class="btn btn-danger btn-sm" bindtap="rejectApplication"
+                data-id="{{item._id}}" data-index="{{index}}">
+          拒绝
+        </button>
       </view>
     </view>
   </view>
 
   <!-- 已审核列表 -->
-  <view class="section">
-    <view class="section-title">已审核记录</view>
+  <view class="section-header mt-32">
+    <text class="section-title">已审核记录</text>
+  </view>
 
-    <view wx:if="{{reviewedApplications.length === 0}}" class="empty-state">
-      <view class="empty-text">暂无已审核记录</view>
-    </view>
+  <view wx:if="{{reviewedApplications.length === 0}}" class="empty-state">
+    <text class="empty-text">暂无已审核记录</text>
+  </view>
 
-    <view wx:else class="reviewed-list">
-      <view wx:for="{{reviewedApplications}}" wx:key="_id" class="reviewed-card">
-        <view class="reviewed-header">
-          <view class="reviewed-name">{{item.nickName || '未知用户'}}</view>
-          <view class="reviewed-status {{item.status === 'approved' ? 'approved' : 'rejected'}}">
+  <view wx:else class="function-grid">
+    <view wx:for="{{reviewedApplications}}" wx:key="_id" class="card">
+      <view class="card-body">
+        <text class="text-base font-medium">{{item.nickName || '未知用户'}}</text>
+        <text class="text-secondary text-sm mt-4">手机号: {{item.phone}}</text>
+        <view class="flex items-center mt-8 gap-8">
+          <view class="tag {{item.status === 'approved' ? 'tag-success' : 'tag-danger'}}">
             {{item.status === 'approved' ? '已批准' : '已拒绝'}}
           </view>
+          <view wx:if="{{item.approvedRole === 'admin'}}" class="tag tag-primary">区管</view>
+          <view wx:if="{{item.approvedRole === 'auditor'}}" class="tag tag-primary">盟管</view>
         </view>
-        <view class="reviewed-phone">手机号: {{item.phone}}</view>
-        <view class="reviewed-time">审核时间: {{item.formattedReviewTime}}</view>
+        <text class="text-weak text-xs mt-8">审核时间: {{item.formattedReviewTime}}</text>
       </view>
     </view>
   </view>

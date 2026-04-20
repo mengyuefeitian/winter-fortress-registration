@@ -59,16 +59,35 @@ Page({
 
       const zones = await db.getAllZones()
 
-      this.setData({
-        zones: zones,
-        loading: false
-      })
-
       if (zones.length > 0) {
+        // 从本地存储读取上次选择的分区
+        const lastZoneId = wx.getStorageSync('lastZoneId')
+        let selectedZone = zones[0]
+        let zoneIndex = 0
+
+        if (lastZoneId) {
+          const foundIndex = zones.findIndex(z => z._id === lastZoneId)
+          if (foundIndex >= 0) {
+            selectedZone = zones[foundIndex]
+            zoneIndex = foundIndex
+          }
+        }
+
         this.setData({
-          selectedZone: zones[0]
+          zones: zones,
+          selectedZone: selectedZone,
+          zoneIndex: zoneIndex,
+          loading: false
         })
-        this.loadAlliances(zones[0]._id)
+
+        // 加载联盟并恢复上次选择
+        this.loadAlliances(selectedZone._id)
+      } else {
+        this.setData({
+          zones: [],
+          selectedZone: null,
+          loading: false
+        })
       }
 
     } catch (err) {
@@ -82,15 +101,33 @@ Page({
     try {
       const alliances = await db.getAlliancesByZone(zoneId)
 
-      this.setData({
-        alliances: alliances
-      })
-
       if (alliances.length > 0) {
+        // 从本地存储读取上次选择的联盟
+        const lastAllianceId = wx.getStorageSync('lastAllianceId')
+        let selectedAlliance = alliances[0]
+        let allianceIndex = 0
+
+        if (lastAllianceId) {
+          const foundIndex = alliances.findIndex(a => a._id === lastAllianceId)
+          if (foundIndex >= 0) {
+            selectedAlliance = alliances[foundIndex]
+            allianceIndex = foundIndex
+          }
+        }
+
         this.setData({
-          selectedAlliance: alliances[0]
+          alliances: alliances,
+          selectedAlliance: selectedAlliance,
+          allianceIndex: allianceIndex
         })
+
         this.loadTimeSlots()
+      } else {
+        this.setData({
+          alliances: [],
+          selectedAlliance: null,
+          allianceIndex: 0
+        })
       }
 
     } catch (err) {
@@ -131,9 +168,13 @@ Page({
     const index = e.detail.value
     const zone = this.data.zones[index]
 
+    // 保存选择的分区到本地存储
+    wx.setStorageSync('lastZoneId', zone._id)
+
     this.setData({
       zoneIndex: index,
       selectedZone: zone,
+      allianceIndex: 0,
       selectedAlliance: null,
       selectedTimeSlot: null,
       timeSlots: [],
@@ -147,6 +188,9 @@ Page({
   onAllianceChange: function (e) {
     const index = e.detail.value
     const alliance = this.data.alliances[index]
+
+    // 保存选择的联盟到本地存储
+    wx.setStorageSync('lastAllianceId', alliance._id)
 
     this.setData({
       allianceIndex: index,

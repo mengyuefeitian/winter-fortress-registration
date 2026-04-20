@@ -1,20 +1,22 @@
 const app = getApp()
 const util = require('../../../utils/util')
+const db = require('../../../utils/db')
 
 Page({
   data: {
     userInfo: null,
-    pendingCount: 0
+    pendingZoneManagerCount: 0,
+    pendingAllianceManagerCount: 0
   },
 
   onLoad: function () {
     this.loadUserInfo()
-    this.loadPendingCount()
+    this.loadPendingCounts()
   },
 
   onShow: function () {
     this.loadUserInfo()
-    this.loadPendingCount()
+    this.loadPendingCounts()
   },
 
   loadUserInfo: function () {
@@ -24,15 +26,34 @@ Page({
     })
   },
 
-  loadPendingCount: async function () {
+  loadPendingCounts: async function () {
     try {
-      const wxdb = wx.cloud.database()
-      const res = await wxdb.collection('admins').where({ status: 'pending' }).count()
+      // 分别获取区管和盟管的待审核数量
+      const zoneManagerCount = await this.getPendingCountByType('zoneManager')
+      const allianceManagerCount = await this.getPendingCountByType('allianceManager')
+
       this.setData({
-        pendingCount: res.total
+        pendingZoneManagerCount: zoneManagerCount,
+        pendingAllianceManagerCount: allianceManagerCount
       })
     } catch (err) {
       console.error('加载待审核数量失败:', err)
+    }
+  },
+
+  getPendingCountByType: async function (applyType) {
+    try {
+      const wxdb = wx.cloud.database()
+      const res = await wxdb.collection('admins')
+        .where({
+          status: 'pending',
+          applyType: applyType
+        })
+        .count()
+      return res.total
+    } catch (err) {
+      console.error('获取待审核数量失败:', err)
+      return 0
     }
   },
 
@@ -44,7 +65,13 @@ Page({
 
   goToAdminReview: function () {
     wx.navigateTo({
-      url: '/pages/superAdmin/admin-review/admin-review'
+      url: '/pages/superAdmin/admin-review/admin-review?applyType=zoneManager'
+    })
+  },
+
+  goToAllianceManagerReview: function () {
+    wx.navigateTo({
+      url: '/pages/superAdmin/admin-review/admin-review?applyType=allianceManager'
     })
   },
 

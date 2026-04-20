@@ -228,7 +228,7 @@ Page({
 
   // 我的报名
   goToMyRegistrations: function () {
-    wx.navigateTo({
+    wx.switchTab({
       url: '/pages/user/my-registrations/my-registrations'
     })
   },

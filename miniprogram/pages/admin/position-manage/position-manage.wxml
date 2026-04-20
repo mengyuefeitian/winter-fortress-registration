@@ -8,7 +8,7 @@
   <view class="card">
     <view class="card-body">
       <!-- 分区选择（超管可见） -->
-      <view class="form-group" wx:if="{{showZonePicker}}">
+      <view class="form-group" wx:if="{{showZonePicker && zones.length > 0}}">
         <text class="form-label">选择分区</text>
         <picker mode="selector" range="{{zones}}" range-key="zoneName" value="{{zoneIndex}}"
                 bindchange="onZoneChange">
@@ -20,6 +20,12 @@
         </picker>
       </view>
 
+      <!-- 超管无分区提示 -->
+      <view class="form-group" wx:if="{{showZonePicker && zones.length === 0}}">
+        <text class="form-label text-danger">当前没有分区</text>
+        <button class="btn btn-outline btn-sm mt-8" bindtap="goToZoneManage">创建分区</button>
+      </view>
+
       <!-- 当前分区显示（区管） -->
       <view class="form-group" wx:if="{{!showZonePicker && currentZone}}">
         <text class="form-label">当前分区</text>
@@ -28,10 +34,10 @@
         </view>
       </view>
 
-      <!-- 无分区提示 -->
+      <!-- 区管无分区提示 -->
       <view class="form-group" wx:if="{{!showZonePicker && zones.length === 0}}">
         <text class="form-label text-danger">您还没有创建分区</text>
-        <button class="btn btn-outline btn-sm" bindtap="goToZoneManage">创建分区</button>
+        <button class="btn btn-outline btn-sm mt-8" bindtap="goToZoneManage">创建分区</button>
       </view>
 
       <!-- 日期选择 -->

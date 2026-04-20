@@ -5,11 +5,23 @@ const db = require('../../../utils/db')
 
 Page({
   data: {
+    applyType: null, // 筛选类型：zoneManager 或 allianceManager，null 表示全部
+    pageTitle: '管理员审核',
     applications: [],
     reviewedApplications: []
   },
 
-  onLoad: function () {
+  onLoad: function (options) {
+    // 从URL参数获取筛选类型
+    if (options.applyType) {
+      this.setData({
+        applyType: options.applyType,
+        pageTitle: options.applyType === 'zoneManager' ? '区管审核' : '盟管审核'
+      })
+      wx.setNavigationBarTitle({
+        title: this.data.pageTitle
+      })
+    }
     this.loadApplications()
   },
 
@@ -25,12 +37,16 @@ Page({
       const wxdb = wx.cloud.database()
       const _ = wxdb.command
 
+      // 构建查询条件
+      const whereCondition = { status: 'pending' }
+      if (this.data.applyType) {
+        whereCondition.applyType = this.data.applyType
+      }
+
       // 获取待审核申请
       let pendingRes
       try {
-        pendingRes = await wxdb.collection('admins').where({
-          status: 'pending'
-        }).orderBy('createTime', 'desc').get()
+        pendingRes = await wxdb.collection('admins').where(whereCondition).orderBy('createTime', 'desc').get()
       } catch (err) {
         console.error('查询待审核申请失败:', err)
         pendingRes = { data: [] }
@@ -125,9 +141,11 @@ Page({
   approveApplication: async function (e) {
     const applicationId = e.currentTarget.dataset.id
     const userId = e.currentTarget.dataset.userid
+    const applyType = e.currentTarget.dataset.applytype
     const index = e.currentTarget.dataset.index
 
-    const confirm = await util.showConfirm('确认批准', '确定要批准该管理员申请吗？')
+    const roleText = applyType === 'zoneManager' ? '区管' : '盟管'
+    const confirm = await util.showConfirm('确认批准', `确定要批准该${roleText}申请吗？`)
 
     if (!confirm) return
 
@@ -136,11 +154,14 @@ Page({
 
       const reviewerId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
 
-      // 更新申请状态
-      await db.reviewAdminApplication(applicationId, 'approved', reviewerId)
+      // 根据申请类型确定批准的角色
+      const approvedRole = applyType === 'zoneManager' ? 'admin' : 'auditor'
+
+      // 更新申请状态（记录批准的角色）
+      await db.reviewAdminApplication(applicationId, 'approved', reviewerId, approvedRole)
 
       // 更新用户角色
-      await db.updateUserRole(userId, 'admin')
+      await db.updateUserRole(userId, approvedRole)
 
       // 从待审核列表移除
       const applications = this.data.applications
@@ -151,6 +172,7 @@ Page({
       reviewedApplications.unshift({
         ...approvedApp,
         status: 'approved',
+        approvedRole: approvedRole,
         formattedReviewTime: util.formatDate(new Date(), 'YYYY-MM-DD HH:mm')
       })
 

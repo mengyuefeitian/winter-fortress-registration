@@ -28,7 +28,14 @@
         <text class="function-name">区管审核</text>
         <text class="function-desc">审核区管申请</text>
       </view>
-      <view wx:if="{{pendingCount > 0}}" class="tag tag-danger" style="position: absolute; top: 8px; right: 8px;">{{pendingCount}}</view>
+      <view wx:if="{{pendingZoneManagerCount > 0}}" class="tag tag-danger" style="position: absolute; top: 8px; right: 8px;">{{pendingZoneManagerCount}}</view>
+    </view>
+    <view class="function-card" bindtap="goToAllianceManagerReview">
+      <view class="function-content">
+        <text class="function-name">盟管审核</text>
+        <text class="function-desc">审核盟管申请</text>
+      </view>
+      <view wx:if="{{pendingAllianceManagerCount > 0}}" class="tag tag-danger" style="position: absolute; top: 8px; right: 8px;">{{pendingAllianceManagerCount}}</view>
     </view>
     <view class="function-card" bindtap="goToPhoneManage">
       <view class="function-content">
