@@ -1086,7 +1086,8 @@ page {
   flex-wrap: wrap;
 }
 
-.grid-2 > * {
+/* Note: wxss does not support * selector, use explicit child classes instead */
+.grid-2-item {
   width: 50%;
   box-sizing: border-box;
 }
@@ -1096,7 +1097,7 @@ page {
   flex-wrap: wrap;
 }
 
-.grid-3 > * {
+.grid-3-item {
   width: 33.33%;
   box-sizing: border-box;
 }
