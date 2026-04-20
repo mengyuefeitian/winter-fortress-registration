@@ -516,9 +516,10 @@ const POSITION_TYPES = ['副执行官', '教育部长']
 async function createPositionConfig(data) {
   const db = getDb()
 
-  // 验证起始时间格式
-  if (!['0:00', '0:30'].includes(data.startTime)) {
-    throw new Error('起始时间格式错误，应为 0:00 或 0:30')
+  // 验证起始时间格式（从0:00到0:30）
+  const startTimePattern = /^0:([0-9]|[0-2][0-9]|30)$/
+  if (!startTimePattern.test(data.startTime)) {
+    throw new Error('起始时间格式错误，应为 0:00 到 0:30')
   }
 
   // 验证职位类型
@@ -531,6 +532,8 @@ async function createPositionConfig(data) {
       positionType: data.positionType,
       date: data.date,
       startTime: data.startTime,
+      zoneId: data.zoneId || null,
+      zoneName: data.zoneName || '',
       creatorId: data.creatorId,
       status: 'active',
       createTime: db.serverDate()

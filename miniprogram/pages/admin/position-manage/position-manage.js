@@ -5,6 +5,16 @@ const db = require('../../../utils/db')
 
 Page({
   data: {
+    // 当前角色
+    role: '',
+    isSuperAdmin: false,
+
+    // 分区选择（超管可见）
+    zones: [],
+    zoneIndex: 0,
+    currentZone: null,
+    showZonePicker: false,
+
     // 日期选择
     selectedDate: '',
     minDate: '',
@@ -14,8 +24,8 @@ Page({
     positionTypes: db.POSITION_TYPES || ['副执行官', '教育部长'],
     positionTypeIndex: 0,
 
-    // 起始时间
-    startTimes: ['0:00', '0:30'],
+    // 起始时间（在onLoad中初始化）
+    startTimes: [],
     startTimeIndex: 0,
 
     // 是否可以创建
@@ -27,7 +37,10 @@ Page({
   },
 
   onLoad: function () {
+    this.initRole()
     this.initDateRange()
+    this.initStartTimes()
+    this.loadZones()
     this.loadConfigs()
   },
 
@@ -50,6 +63,92 @@ Page({
     this.setData({
       minDate: minDate,
       maxDate: maxDate
+    })
+  },
+
+  // 初始化起始时间选项（从0:00到0:30，每分钟一个选项，共31个）
+  initStartTimes: function () {
+    const times = []
+    for (let minute = 0; minute <= 30; minute++) {
+      times.push(`0:${String(minute).padStart(2, '0')}`)
+    }
+    this.setData({
+      startTimes: times
+    })
+  },
+
+  // 初始化角色信息
+  initRole: function () {
+    const role = app.globalData.role || 'admin'
+    const isSuperAdmin = role === 'superAdmin'
+    this.setData({
+      role: role,
+      isSuperAdmin: isSuperAdmin,
+      showZonePicker: isSuperAdmin
+    })
+  },
+
+  // 加载分区列表
+  loadZones: async function () {
+    try {
+      const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+      const role = this.data.role
+
+      let zones
+      if (role === 'superAdmin') {
+        // 超管可以看到所有分区
+        zones = await db.getAllZones()
+      } else {
+        // 区管只能看到自己创建的分区
+        zones = await db.getZonesByCreator(userId)
+      }
+
+      if (zones && zones.length > 0) {
+        // 从本地存储读取上次选择的分区
+        const lastZoneId = wx.getStorageSync('lastPositionZoneId')
+        let currentZone = zones[0]
+        let zoneIndex = 0
+
+        if (lastZoneId) {
+          const foundIndex = zones.findIndex(z => z._id === lastZoneId)
+          if (foundIndex >= 0) {
+            currentZone = zones[foundIndex]
+            zoneIndex = foundIndex
+          }
+        }
+
+        this.setData({
+          zones: zones,
+          currentZone: currentZone,
+          zoneIndex: zoneIndex,
+          canCreate: this.checkCanCreate()
+        })
+      } else {
+        // 没有分区时，区管无法创建配置
+        this.setData({
+          zones: [],
+          currentZone: null,
+          canCreate: false
+        })
+        if (!this.data.isSuperAdmin) {
+          util.showInfo('您还没有创建分区，请先创建分区')
+        }
+      }
+    } catch (err) {
+      console.error('加载分区失败:', err)
+      util.showError('加载分区失败')
+    }
+  },
+
+  // 分区选择变化
+  onZoneChange: function (e) {
+    const index = parseInt(e.detail.value)
+    const currentZone = this.data.zones[index]
+    wx.setStorageSync('lastPositionZoneId', currentZone._id)
+    this.setData({
+      zoneIndex: index,
+      currentZone: currentZone,
+      canCreate: this.checkCanCreate()
     })
   },
 
@@ -86,16 +185,22 @@ Page({
     })
   },
 
-  // 检查是否可以创建
+  // 检查是否可以创建（需要选择日期和分区）
   checkCanCreate: function () {
-    return this.data.selectedDate !== ''
+    const hasDate = this.data.selectedDate !== ''
+    const hasZone = this.data.currentZone !== null
+    return hasDate && hasZone
   },
 
   // 创建配置
   createConfig: async function () {
     try {
       if (!this.data.canCreate) {
-        util.showInfo('请选择日期')
+        if (!this.data.selectedDate) {
+          util.showInfo('请选择日期')
+        } else if (!this.data.currentZone) {
+          util.showInfo('请选择分区')
+        }
         return
       }
 
@@ -107,6 +212,8 @@ Page({
         positionType: this.data.positionTypes[this.data.positionTypeIndex],
         date: this.data.selectedDate,
         startTime: this.data.startTimes[this.data.startTimeIndex],
+        zoneId: this.data.currentZone._id,
+        zoneName: this.data.currentZone.zoneName,
         creatorId: userId
       }
 
@@ -115,10 +222,10 @@ Page({
       util.hideLoading()
       util.showSuccess('创建成功')
 
-      // 重置表单
+      // 重置表单（保留分区选择）
       this.setData({
         selectedDate: '',
-        canCreate: false
+        canCreate: this.checkCanCreate()
       })
 
       // 重新加载配置列表
@@ -227,5 +334,12 @@ Page({
       console.error('删除配置失败:', err)
       util.showError('删除失败')
     }
+  },
+
+  // 跳转到分区管理
+  goToZoneManage: function () {
+    wx.navigateTo({
+      url: '/pages/admin/zone-manage/zone-manage'
+    })
   }
 })

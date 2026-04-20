@@ -94,26 +94,31 @@ Page({
     }
 
     // 根据角色设置功能入口显示
+    // 权限层级: user < auditor < admin < superAdmin
+    // 超管拥有所有角色的权限，应该显示所有功能入口
     const isUser = role === 'user'
     const isAdmin = role === 'admin'
     const isAuditor = role === 'auditor'
     const isSuperAdmin = role === 'superAdmin'
+    const isAdminOrAbove = isAdmin || isAuditor || isSuperAdmin
+    const isSuperAdminOrAdmin = isSuperAdmin || isAdmin
 
     this.setData({
       userInfo: userInfo || this.data.userInfo,
       currentRole: role,
       roleDisplayName: roleDisplayName,
-      // 普通用户功能
-      showFortressRegistration: isUser,
-      showPositionRegistration: isUser,
-      showMyRegistrations: isUser,
+      // 普通用户功能（所有角色都可见）
+      showFortressRegistration: true,
+      showPositionRegistration: true,
+      showMyRegistrations: true,
+      // 申请功能仅普通用户可见
       showApplyAllianceManager: isUser,
       showApplyZoneManager: isUser,
-      // 管理员功能
-      showAdminConsole: isAdmin,
-      // 盟管功能
-      showAuditorConsole: isAuditor,
-      // 超管功能
+      // 区管控制台（区管和超管可见）
+      showAdminConsole: isSuperAdminOrAdmin,
+      // 盟管控制台（盟管、区管和超管可见）
+      showAuditorConsole: isAdminOrAbove,
+      // 超管控制台（仅超管可见）
       showSuperAdminConsole: isSuperAdmin
     })
   },
