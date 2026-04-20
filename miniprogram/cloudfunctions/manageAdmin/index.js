@@ -16,7 +16,7 @@ exports.main = async (event, context) => {
       case 'createApplication':
         return await createAdminApplication(data)
       case 'getPending':
-        return await getPendingApplications()
+        return await getPendingApplications(data)
       case 'review':
         return await reviewApplication(data)
       case 'updateRole':
@@ -35,10 +35,13 @@ exports.main = async (event, context) => {
 
 // 创建管理员申请
 async function createAdminApplication(data) {
+  const applyType = data.applyType || 'allianceManager' // 默认为盟管申请
+
   const result = await db.collection('admins').add({
     data: {
       userId: data.userId,
       phone: data.phone,
+      applyType: applyType, // 'zoneManager' 或 'allianceManager'
       status: 'pending',
       createTime: db.serverDate()
     }
@@ -51,10 +54,17 @@ async function createAdminApplication(data) {
 }
 
 // 获取待审核申请
-async function getPendingApplications() {
-  const res = await db.collection('admins').where({
+async function getPendingApplications(data) {
+  const query = {
     status: 'pending'
-  }).orderBy('createTime', 'desc').get()
+  }
+
+  // 如果传入 applyType，按类型筛选
+  if (data && data.applyType) {
+    query.applyType = data.applyType
+  }
+
+  const res = await db.collection('admins').where(query).orderBy('createTime', 'desc').get()
 
   return {
     data: res.data
@@ -63,12 +73,19 @@ async function getPendingApplications() {
 
 // 审核申请
 async function reviewApplication(data) {
+  const updateData = {
+    status: data.status,
+    reviewedBy: data.reviewedBy,
+    reviewTime: db.serverDate()
+  }
+
+  // status 为 'approved' 时，记录 approvedRole
+  if (data.status === 'approved' && data.approvedRole) {
+    updateData.approvedRole = data.approvedRole // 'admin'(区管) 或 'auditor'(盟管)
+  }
+
   await db.collection('admins').doc(data.applicationId).update({
-    data: {
-      status: data.status,
-      reviewedBy: data.reviewedBy,
-      reviewTime: db.serverDate()
-    }
+    data: updateData
   })
 
   return {
