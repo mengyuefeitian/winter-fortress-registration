@@ -1,153 +1,81 @@
-<!--pages/user/my-registrations/my-registrations.wxml-->
-<view class="my-registrations-container">
-
-  <!-- 用户信息区域 -->
-  <view class="user-info-section">
-    <view class="user-card">
-      <image class="user-avatar" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
-      <view class="user-detail">
-        <view class="user-name">{{userInfo.nickName || '未登录'}}</view>
-        <view class="user-role">{{roleName}}</view>
-        <view wx:if="{{userInfo.phone}}" class="user-phone">手机: {{userInfo.phone}}</view>
+<view class="page">
+  <!-- 用户信息 -->
+  <view class="card mt-16">
+    <view class="card-body flex items-center">
+      <image class="avatar-lg" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill" />
+      <view class="ml-16 flex-1">
+        <text class="text-lg font-semibold">{{userInfo.nickName || '未登录'}}</text>
+        <view class="flex items-center mt-8">
+          <view class="status-dot {{isLoggedIn ? 'status-active' : 'status-inactive'}}"></view>
+          <text class="text-secondary">{{roleName}}</text>
+        </view>
       </view>
     </view>
-
-    <!-- 已登录显示退出按钮 -->
-    <view wx:if="{{isLoggedIn}}" class="user-actions">
-      <button class="logout-btn" bindtap="logout">退出登录</button>
-    </view>
-
-    <!-- 未登录显示登录按钮 -->
-    <view wx:else>
-      <button class="login-btn" bindtap="goToLogin">登录</button>
+    <view class="card-footer">
+      <button wx:if="{{isLoggedIn}}" class="btn btn-danger btn-full" bindtap="logout">退出登录</button>
+      <button wx:else class="btn btn-primary btn-full" bindtap="goToLogin">登录</button>
     </view>
   </view>
 
-  <!-- 本周报名情况 -->
-  <view class="weekly-section">
-    <view class="section-title">本周报名 ({{weeklyRegistrations.length}}次)</view>
+  <!-- 堡垒报名记录 -->
+  <view class="section-header">
+    <text class="section-title">堡垒报名记录</text>
+  </view>
 
-    <view wx:if="{{weeklyRegistrations.length === 0}}" class="weekly-empty">
-      <view class="empty-text">本周暂无报名记录</view>
-      <button class="empty-btn" bindtap="goToRegistration">去报名</button>
-    </view>
-
-    <view wx:else class="weekly-list">
-      <view wx:for="{{weeklyRegistrations}}" wx:key="_id" class="weekly-card">
-        <view class="weekly-header">
-          <view class="weekly-zone">{{item.zoneCode}} - {{item.zoneName}}</view>
-          <view class="weekly-alliance">{{item.allianceName}}</view>
-        </view>
-        <view class="weekly-body">
-          <view class="weekly-time">
-            <view class="time-label">时间段</view>
-            <view class="time-value">{{item.displayName}}</view>
-          </view>
-          <view wx:if="{{item.timeRemark}}" class="weekly-remark">
-            <view class="remark-label">备注</view>
-            <view class="remark-value">{{item.timeRemark}}</view>
-          </view>
-          <view class="weekly-position">
-            <view class="position-label">位置</view>
-            <view class="position-value {{item.position === 'head' ? 'head' : 'body'}}">
-              {{item.position === 'head' ? '车头' : '车身'}}
-            </view>
-          </view>
-        </view>
+  <view wx:if="{{registrations.length === 0}}" class="card">
+    <view class="empty-state">
+      <text class="empty-text">暂无报名记录</text>
+      <view class="empty-action">
+        <button class="btn btn-primary" bindtap="goToRegistration">去报名</button>
       </view>
     </view>
   </view>
 
-  <!-- 全部报名记录 -->
-  <view class="all-section">
-    <view class="section-title">全部报名记录</view>
-
-    <view wx:if="{{registrations.length === 0}}" class="empty-state">
-      <image class="empty-icon" src="/images/icon-empty.png"></image>
-      <view class="empty-text">暂无报名记录</view>
-      <button class="empty-btn" bindtap="goToRegistration">去报名</button>
+  <view wx:else class="table">
+    <view class="table-header">
+      <view class="table-cell table-cell-header" style="width: 80px;">时间</view>
+      <view class="table-cell table-cell-header">联盟</view>
+      <view class="table-cell table-cell-header" style="width: 60px;">状态</view>
+      <view class="table-cell table-cell-header" style="width: 80px;">操作</view>
     </view>
-
-    <view wx:else class="registration-list">
-      <view wx:for="{{registrations}}" wx:key="_id" class="registration-card">
-        <view class="card-header">
-          <view class="card-zone">{{item.zoneCode}} - {{item.zoneName}}</view>
-          <view class="card-alliance">{{item.allianceName}}</view>
-        </view>
-
-        <view class="card-body">
-          <view class="info-row">
-            <view class="info-label">时间段：</view>
-            <view class="info-value">{{item.displayName}}</view>
-          </view>
-          <view wx:if="{{item.timeRemark}}" class="info-row">
-            <view class="info-label">备注：</view>
-            <view class="info-value remark-text">{{item.timeRemark}}</view>
-          </view>
-          <view class="info-row">
-            <view class="info-label">昵称：</view>
-            <view class="info-value">{{item.nickName}}</view>
-          </view>
-          <view class="info-row">
-            <view class="info-label">位置：</view>
-            <view class="info-value position-tag {{item.position === 'head' ? 'head' : 'body'}}">
-              {{item.position === 'head' ? '车头' : '车身'}}
-            </view>
-          </view>
-          <view class="info-row">
-            <view class="info-label">报名时间：</view>
-            <view class="info-value">{{item.formattedTime}}</view>
-          </view>
-        </view>
-
-        <view class="card-footer">
-          <button class="cancel-btn" bindtap="cancelRegistration" data-id="{{item._id}}" data-index="{{index}}">
-            取消报名
-          </button>
-        </view>
+    <view wx:for="{{registrations}}" wx:key="_id" class="table-row">
+      <view class="table-cell table-cell-time" style="width: 80px;">{{item.displayName}}</view>
+      <view class="table-cell table-cell-name">{{item.allianceName}}</view>
+      <view class="table-cell" style="width: 60px;">
+        <text class="tag tag-success">有效</text>
+      </view>
+      <view class="table-cell" style="width: 80px;">
+        <button class="btn btn-sm btn-ghost" bindtap="cancelRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</button>
       </view>
     </view>
   </view>
 
   <!-- 官职报名记录 -->
-  <view class="position-section">
-    <view class="section-title">官职报名记录</view>
+  <view class="section-header mt-24">
+    <text class="section-title">官职报名记录</text>
+  </view>
 
-    <view wx:if="{{positionRegistrations.length === 0}}" class="empty-state">
-      <view class="empty-text">暂无官职报名记录</view>
+  <view wx:if="{{positionRegistrations.length === 0}}" class="card">
+    <view class="empty-state">
+      <text class="empty-text">暂无官职报名记录</text>
     </view>
+  </view>
 
-    <view wx:else class="registration-list">
-      <view wx:for="{{positionRegistrations}}" wx:key="_id" class="registration-card position-card">
-        <view class="card-header">
-          <view class="card-position-type">{{item.configInfo.positionType}}</view>
-          <view class="card-date">{{item.configInfo.date}}</view>
-        </view>
-
-        <view class="card-body">
-          <view class="info-row">
-            <view class="info-label">时间段：</view>
-            <view class="info-value">{{item.timeSlot}}</view>
-          </view>
-          <view class="info-row">
-            <view class="info-label">昵称：</view>
-            <view class="info-value">{{item.nickName}}</view>
-          </view>
-          <view wx:if="{{item.remark}}" class="info-row">
-            <view class="info-label">备注：</view>
-            <view class="info-value remark-text">{{item.remark}}</view>
-          </view>
-          <view class="info-row">
-            <view class="info-label">报名时间：</view>
-            <view class="info-value">{{item.formattedTime}}</view>
-          </view>
-        </view>
-
-        <view class="card-footer">
-          <button class="cancel-btn" bindtap="cancelPositionRegistration" data-id="{{item._id}}" data-index="{{index}}">
-            取消报名
-          </button>
-        </view>
+  <view wx:else class="table">
+    <view class="table-header">
+      <view class="table-cell table-cell-header" style="width: 80px;">时间</view>
+      <view class="table-cell table-cell-header">官职类型</view>
+      <view class="table-cell table-cell-header" style="width: 60px;">状态</view>
+      <view class="table-cell table-cell-header" style="width: 80px;">操作</view>
+    </view>
+    <view wx:for="{{positionRegistrations}}" wx:key="_id" class="table-row">
+      <view class="table-cell table-cell-time" style="width: 80px;">{{item.timeSlot}}</view>
+      <view class="table-cell table-cell-name">{{item.configInfo.positionType}}</view>
+      <view class="table-cell" style="width: 60px;">
+        <text class="tag tag-success">有效</text>
+      </view>
+      <view class="table-cell" style="width: 80px;">
+        <button class="btn btn-sm btn-ghost" bindtap="cancelPositionRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</button>
       </view>
     </view>
   </view>

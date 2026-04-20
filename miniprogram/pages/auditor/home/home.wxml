@@ -1,36 +1,77 @@
-<!--pages/auditor/home/home.wxml-->
-<view class="auditor-home-container">
-  <view class="header-section">
-    <view class="header-title">审计员控制台</view>
-    <view class="header-desc">配置时间段和查看数据</view>
-  </view>
-
-  <!-- 绑定的联盟信息 -->
-  <view class="alliance-info-section">
-    <view class="section-title">绑定的联盟</view>
-    <view wx:if="{{myAlliance}}" class="alliance-card">
-      <view class="alliance-header">
-        <view class="alliance-name">{{myAlliance.allianceName}}</view>
-        <view class="alliance-zone">{{myAlliance.zoneName}}</view>
+<view class="page">
+  <view class="card mt-16">
+    <view class="card-body flex items-center">
+      <image class="avatar-lg" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill" />
+      <view class="ml-16 flex-1">
+        <text class="text-lg font-semibold">{{userInfo.nickName || '未登录'}}</text>
+        <view class="flex items-center mt-8">
+          <view class="status-dot status-active"></view>
+          <text class="text-secondary">监管</text>
+        </view>
       </view>
     </view>
-    <view wx:else class="empty-state">
-      <view class="empty-text">暂未绑定联盟</view>
+  </view>
+
+  <!-- 超管模式：选择分区和联盟 -->
+  <view wx:if="{{isSuperAdmin}}" class="card mt-16">
+    <view class="card-body">
+      <view class="form-group">
+        <text class="form-label">选择分区</text>
+        <picker bindchange="onZoneChange" value="{{zoneIndex}}" range="{{zones}}" range-key="zoneName">
+          <view class="picker">
+            <text>{{selectedZone ? selectedZone.zoneName : '请选择分区'}}</text>
+            <text class="text-weak">></text>
+          </view>
+        </picker>
+      </view>
+      <view wx:if="{{selectedZone}}" class="form-group">
+        <text class="form-label">选择联盟</text>
+        <picker bindchange="onAllianceChange" value="{{allianceIndex}}" range="{{alliances}}" range-key="allianceName">
+          <view class="picker">
+            <text>{{selectedAlliance ? selectedAlliance.allianceName : '请选择联盟'}}</text>
+            <text class="text-weak">></text>
+          </view>
+        </picker>
+      </view>
     </view>
   </view>
 
-  <!-- 功能入口 -->
+  <!-- 普通监管：绑定联盟信息 -->
+  <view wx:else class="card mt-16">
+    <view class="card-body">
+      <text class="text-secondary text-sm">绑定联盟</text>
+      <view wx:if="{{myAlliance}}" class="mt-8">
+        <text class="text-lg font-semibold">{{myAlliance.allianceName}}</text>
+        <text class="text-weak text-sm ml-8">{{myAlliance.zoneName}}</text>
+      </view>
+      <view wx:else class="mt-8">
+        <text class="text-weak">暂未绑定联盟</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-header">
+    <text class="section-title">功能</text>
+  </view>
+
   <view class="function-grid">
     <view class="function-card" bindtap="goToConfig">
-      <image class="function-icon" src="/images/icon-time.png"></image>
-      <view class="function-name">时间段配置</view>
-      <view class="function-desc">添加备注信息</view>
+      <view class="function-content">
+        <text class="function-name">时间段配置</text>
+        <text class="function-desc">添加备注信息</text>
+      </view>
     </view>
-
     <view class="function-card" bindtap="goToStatistics">
-      <image class="function-icon" src="/images/icon-stats.png"></image>
-      <view class="function-name">数据统计</view>
-      <view class="function-desc">查看联盟统计</view>
+      <view class="function-content">
+        <text class="function-name">数据统计</text>
+        <text class="function-desc">查看联盟统计</text>
+      </view>
+    </view>
+    <view class="function-card" bindtap="goToClearData">
+      <view class="function-content">
+        <text class="function-name">清空数据</text>
+        <text class="function-desc">清空报名记录</text>
+      </view>
     </view>
   </view>
 </view>

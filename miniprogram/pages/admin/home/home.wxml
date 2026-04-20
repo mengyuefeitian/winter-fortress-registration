@@ -1,59 +1,56 @@
-<!--pages/admin/home/home.wxml-->
-<view class="admin-home-container">
-  <view class="header-section">
-    <view class="header-title">管理员控制台</view>
-    <view class="header-desc">管理分区和联盟配置</view>
+<view class="page">
+  <view class="card mt-16">
+    <view class="card-body flex items-center">
+      <image class="avatar-lg" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill" />
+      <view class="ml-16 flex-1">
+        <text class="text-lg font-semibold">{{userInfo.nickName || '未登录'}}</text>
+        <view class="flex items-center mt-8">
+          <view class="status-dot status-active"></view>
+          <text class="text-secondary">区管</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-header">
+    <text class="section-title">功能</text>
   </view>
 
   <view class="function-grid">
-    <!-- 分区管理 -->
-    <view class="function-card" bindtap="goToZoneManage">
-      <image class="function-icon" src="/images/icon-zone.png"></image>
-      <view class="function-name">分区管理</view>
-      <view class="function-desc">创建和管理分区编号</view>
-    </view>
-
-    <!-- 联盟配置 -->
     <view class="function-card" bindtap="goToAllianceConfig">
-      <image class="function-icon" src="/images/icon-alliance.png"></image>
-      <view class="function-name">联盟配置</view>
-      <view class="function-desc">修改联盟名称</view>
+      <view class="function-content">
+        <text class="function-name">联盟配置</text>
+        <text class="function-desc">修改联盟名称、绑定盟管</text>
+      </view>
     </view>
-
-    <!-- 时间段配置 -->
     <view class="function-card" bindtap="goToTimeSlotConfig">
-      <image class="function-icon" src="/images/icon-time.png"></image>
-      <view class="function-name">时间段配置</view>
-      <view class="function-desc">添加时间段和备注</view>
+      <view class="function-content">
+        <text class="function-name">时间段配置</text>
+        <text class="function-desc">配置堡垒活动时间</text>
+      </view>
     </view>
-
-    <!-- 数据统计 -->
     <view class="function-card" bindtap="goToStatistics">
-      <image class="function-icon" src="/images/icon-stats.png"></image>
-      <view class="function-name">数据统计</view>
-      <view class="function-desc">按联盟查看统计</view>
+      <view class="function-content">
+        <text class="function-name">数据统计</text>
+        <text class="function-desc">查看报名统计</text>
+      </view>
     </view>
-  </view>
-
-  <!-- 快速统计概览 -->
-  <view class="overview-section">
-    <view class="overview-title">快速概览</view>
-    <view class="overview-grid">
-      <view class="overview-item">
-        <view class="overview-value">{{myZones.length}}</view>
-        <view class="overview-label">我的分区</view>
+    <view class="function-card" bindtap="goToPositionManage">
+      <view class="function-content">
+        <text class="function-name">官职管理</text>
+        <text class="function-desc">创建官职报名配置</text>
       </view>
-      <view class="overview-item">
-        <view class="overview-value">{{totalAlliances}}</view>
-        <view class="overview-label">联盟数量</view>
+    </view>
+    <view class="function-card" bindtap="goToReviewManager">
+      <view class="function-content">
+        <text class="function-name">盟管审核</text>
+        <text class="function-desc">审核盟管申请</text>
       </view>
-      <view class="overview-item">
-        <view class="overview-value">{{totalRegistrations}}</view>
-        <view class="overview-label">报名人数</view>
-      </view>
-      <view class="overview-item">
-        <view class="overview-value">{{timeSlotsCount}}</view>
-        <view class="overview-label">时间段数</view>
+    </view>
+    <view class="function-card" bindtap="goToClearData">
+      <view class="function-content">
+        <text class="function-name">清空数据</text>
+        <text class="function-desc">清空报名记录</text>
       </view>
     </view>
   </view>
