@@ -1,0 +1,85 @@
+<!-- pages/admin/position-manage/position-manage.wxml -->
+<view class="page">
+  <!-- 创建配置区域 -->
+  <view class="section-header">
+    <text class="section-title">创建官职报名</text>
+  </view>
+
+  <view class="card">
+    <view class="card-body">
+      <!-- 日期选择 -->
+      <view class="form-group">
+        <text class="form-label">选择日期</text>
+        <picker mode="date" value="{{selectedDate}}" start="{{minDate}}" end="{{maxDate}}"
+                bindchange="onDateChange">
+          <view class="picker">
+            <text wx:if="{{selectedDate}}">{{selectedDate}}</text>
+            <text class="picker-placeholder" wx:else>请选择日期</text>
+            <image class="picker-arrow" src="/images/icon-arrow-down.png"></image>
+          </view>
+        </picker>
+      </view>
+
+      <!-- 职位类型选择 -->
+      <view class="form-group">
+        <text class="form-label">职位类型</text>
+        <picker mode="selector" range="{{positionTypes}}" value="{{positionTypeIndex}}"
+                bindchange="onPositionTypeChange">
+          <view class="picker">
+            <text>{{positionTypes[positionTypeIndex]}}</text>
+            <image class="picker-arrow" src="/images/icon-arrow-down.png"></image>
+          </view>
+        </picker>
+      </view>
+
+      <!-- 起始时间选择 -->
+      <view class="form-group">
+        <text class="form-label">起始时间</text>
+        <picker mode="selector" range="{{startTimes}}" value="{{startTimeIndex}}"
+                bindchange="onStartTimeChange">
+          <view class="picker">
+            <text>{{startTimes[startTimeIndex]}}</text>
+            <image class="picker-arrow" src="/images/icon-arrow-down.png"></image>
+          </view>
+        </picker>
+      </view>
+
+      <!-- 创建按钮 -->
+      <button class="btn btn-primary btn-full mt-24" bindtap="createConfig" disabled="{{!canCreate}}">
+        创建配置
+      </button>
+    </view>
+  </view>
+
+  <!-- 已创建配置列表 -->
+  <view class="section-header mt-32">
+    <text class="section-title">已创建配置</text>
+  </view>
+
+  <view class="loading-container" wx:if="{{loading}}">
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <view class="empty-state" wx:if="{{!loading && configs.length === 0}}">
+    <text class="empty-text">暂无配置</text>
+  </view>
+
+  <view class="function-grid">
+    <view class="card" wx:for="{{configs}}" wx:key="_id">
+      <view class="card-header">
+        <text class="card-title">{{item.positionType}}</text>
+        <view class="tag">{{item.date}}</view>
+      </view>
+      <view class="card-body">
+        <text class="text-secondary">起始：{{item.startTime}}</text>
+        <text class="text-weak text-sm mt-8">已报名：{{item.registrationCount || 0}}人</text>
+      </view>
+      <view class="card-footer">
+        <button class="btn btn-danger btn-sm" bindtap="clearData"
+                data-config-id="{{item._id}}" data-config-info="{{item.positionType}} - {{item.date}}">清空数据</button>
+        <button class="btn btn-ghost btn-sm" bindtap="deleteConfig"
+                data-config-id="{{item._id}}" data-config-info="{{item.positionType}} - {{item.date}}">删除</button>
+      </view>
+    </view>
+  </view>
+</view>

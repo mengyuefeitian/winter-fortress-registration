@@ -10,6 +10,7 @@
     "pages/admin/zone-manage/zone-manage",
     "pages/admin/alliance-config/alliance-config",
     "pages/admin/time-slot-config/time-slot-config",
+    "pages/admin/position-manage/position-manage",
     "pages/admin/statistics/statistics",
     "pages/auditor/home/home",
     "pages/auditor/config/config",

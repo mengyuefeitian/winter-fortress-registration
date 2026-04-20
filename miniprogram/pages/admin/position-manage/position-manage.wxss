@@ -1,0 +1,185 @@
+/* pages/admin/position-manage/position-manage.wxss */
+
+.page {
+  padding: 20px;
+  background-color: #F5F7FA;
+  min-height: 100vh;
+}
+
+.section-header {
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333333;
+}
+
+.mt-32 {
+  margin-top: 32px;
+}
+
+.mt-24 {
+  margin-top: 24px;
+}
+
+.mt-8 {
+  margin-top: 8px;
+}
+
+/* 卡片样式 */
+.card {
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333333;
+}
+
+.card-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #E8E8E8;
+}
+
+/* 表单样式 */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  font-size: 14px;
+  color: #666666;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.picker {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #F5F7FA;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.picker-placeholder {
+  color: #999999;
+}
+
+.picker-arrow {
+  width: 16px;
+  height: 16px;
+}
+
+/* 按钮样式 */
+.btn {
+  font-size: 14px;
+  border-radius: 8px;
+  padding: 10px 20px;
+  border: none;
+}
+
+.btn-primary {
+  background-color: #4A90D9;
+  color: #FFFFFF;
+}
+
+.btn-primary[disabled] {
+  background-color: #CCCCCC;
+  color: #FFFFFF;
+}
+
+.btn-danger {
+  background-color: #FF6B6B;
+  color: #FFFFFF;
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: #666666;
+  border: 1px solid #E8E8E8;
+}
+
+.btn-sm {
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+.btn-full {
+  width: 100%;
+}
+
+/* 文本样式 */
+.text-secondary {
+  font-size: 14px;
+  color: #666666;
+}
+
+.text-weak {
+  color: #999999;
+}
+
+.text-sm {
+  font-size: 12px;
+}
+
+/* 标签样式 */
+.tag {
+  background-color: #4A90D9;
+  color: #FFFFFF;
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 12px;
+}
+
+/* 加载和空状态 */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+.loading-text {
+  color: #999999;
+  font-size: 14px;
+}
+
+.empty-state {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+.empty-text {
+  color: #999999;
+  font-size: 14px;
+}
+
+/* 配置列表 */
+.function-grid {
+  display: flex;
+  flex-direction: column;
+}
