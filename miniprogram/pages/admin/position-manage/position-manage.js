@@ -104,16 +104,26 @@ Page({
       }
 
       if (zones && zones.length > 0) {
-        // 从本地存储读取上次选择的分区
-        const lastZoneId = wx.getStorageSync('lastPositionZoneId')
+        // 优先使用全局分区，其次使用本地存储，最后默认第一个
         let currentZone = zones[0]
         let zoneIndex = 0
 
-        if (lastZoneId) {
-          const foundIndex = zones.findIndex(z => z._id === lastZoneId)
+        // 从全局数据读取当前分区
+        if (app.globalData.currentZone) {
+          const foundIndex = zones.findIndex(z => z._id === app.globalData.currentZone._id)
           if (foundIndex >= 0) {
             currentZone = zones[foundIndex]
             zoneIndex = foundIndex
+          }
+        } else {
+          // 从本地存储读取上次选择的分区
+          const lastZoneId = wx.getStorageSync('lastPositionZoneId')
+          if (lastZoneId) {
+            const foundIndex = zones.findIndex(z => z._id === lastZoneId)
+            if (foundIndex >= 0) {
+              currentZone = zones[foundIndex]
+              zoneIndex = foundIndex
+            }
           }
         }
 
@@ -124,15 +134,14 @@ Page({
           canCreate: this.checkCanCreate()
         })
       } else {
-        // 没有分区时，区管无法创建配置
+        // 没有分区时
         this.setData({
           zones: [],
           currentZone: null,
           canCreate: false
         })
-        if (!this.data.isSuperAdmin) {
-          util.showInfo('您还没有创建分区，请先创建分区')
-        }
+        // 超管提示创建分区，区管提示创建分区
+        util.showInfo('当前没有分区，请先创建分区')
       }
     } catch (err) {
       console.error('加载分区失败:', err)
