@@ -1,7 +1,7 @@
 // pages/user/position-registration/position-registration.js
 const app = getApp()
-const util = require('../../utils/util')
-const db = require('../../utils/db')
+const util = require('../../../utils/util')
+const db = require('../../../utils/db')
 
 Page({
   data: {
@@ -9,7 +9,7 @@ Page({
     config: null,
     loading: false,
     currentUserId: null,
-    isAdmin: false,
+    canDelete: false, // 区管和超管可以删除
 
     // 时间段
     allSlots: [],
@@ -30,20 +30,31 @@ Page({
   },
 
   onLoad: function (options) {
-    const configId = options.configId
-    if (configId) {
-      this.setData({ configId })
-      this.loadConfigData(configId)
-    } else {
-      // 如果没有传入 configId，尝试获取今天的配置
-      this.loadTodayConfig()
-    }
+    this.waitForRoleReady(options)
   },
 
   onShow: function () {
     // 刷新数据
-    if (this.data.configId) {
+    if (app.globalData.roleReady && this.data.configId) {
       this.loadRegistrations()
+    }
+  },
+
+  // 等待角色就绪
+  waitForRoleReady: function (options) {
+    if (app.globalData.roleReady) {
+      const configId = options ? options.configId : null
+      if (configId) {
+        this.setData({ configId })
+        this.loadConfigData(configId)
+      } else {
+        // 如果没有传入 configId，尝试获取今天的配置
+        this.loadTodayConfig()
+      }
+    } else {
+      setTimeout(() => {
+        this.waitForRoleReady(options)
+      }, 100)
     }
   },
 
@@ -51,7 +62,7 @@ Page({
   loadTodayConfig: async function () {
     try {
       this.setData({ loading: true })
-      const today = util.formatDate(new Date())
+      const today = util.formatDate(new Date(), 'YYYY-MM-DD')
       const configs = await db.getPositionConfigs({ date: today })
 
       if (configs.length > 0) {
@@ -79,8 +90,9 @@ Page({
       const openid = app.globalData.openid
       const currentUserId = userInfo ? userInfo._id : openid
 
-      // 检查是否为区管
-      const isAdmin = userInfo && userInfo.role === 'admin'
+      // 检查是否为区管或超管（可以删除）
+      const role = app.globalData.role || 'user'
+      const canDelete = role === 'admin' || role === 'superAdmin'
 
       // 获取配置详情
       const config = await db.getPositionConfigById(configId)
@@ -94,7 +106,7 @@ Page({
       this.setData({
         config,
         currentUserId,
-        isAdmin
+        canDelete
       })
 
       // 生成时间段并加载报名情况
@@ -111,6 +123,12 @@ Page({
   loadRegistrations: async function () {
     try {
       this.setData({ loading: true })
+
+      // 检查config是否已加载
+      if (!this.data.config || !this.data.config.startTime) {
+        this.setData({ loading: false })
+        return
+      }
 
       // 生成时间段列表
       const slots = db.generatePositionTimeSlots(this.data.config.startTime)
@@ -171,16 +189,6 @@ Page({
   selectSeat: function (e) {
     const time = e.currentTarget.dataset.time
 
-    // 检查用户是否已在该配置中有其他座位
-    const mySlots = this.data.allSlots.filter(
-      slot => slot.registration && slot.registration.userId === this.data.currentUserId
-    )
-
-    if (mySlots.length > 0 && !this.data.isAdmin) {
-      util.showInfo('您已选择了其他座位，请先取消后再重新选择')
-      return
-    }
-
     // 获取用户昵称作为默认值
     const userInfo = app.globalData.userInfo
     const defaultNickName = userInfo ? userInfo.nickName : ''
@@ -233,7 +241,7 @@ Page({
       const existingReg = await db.getPositionRegistrationByTimeSlot(configId, selectedTime)
       if (existingReg && existingReg.userId !== currentUserId) {
         util.hideLoading()
-        util.showInfo('该座位已被其他人选择，请刷新后重新选择')
+        util.showErrorLong('该座位已被其他人选择，请刷新后重新选择')
         this.closeModal()
         this.loadRegistrations()
         return
@@ -246,7 +254,7 @@ Page({
       )
       if (duplicateNick) {
         util.hideLoading()
-        util.showInfo(`昵称 "${nickName}" 已被其他人使用`)
+        util.showErrorLong(`昵称 "${nickName}" 已被其他人使用`)
         return
       }
 
@@ -268,7 +276,7 @@ Page({
     } catch (err) {
       util.hideLoading()
       console.error('提交失败:', err)
-      util.showError('提交失败：' + (err.message || '未知错误'))
+      util.showErrorLong('提交失败：' + (err.message || '未知错误'))
     }
   },
 
@@ -327,7 +335,7 @@ Page({
       )
       if (duplicateNick) {
         util.hideLoading()
-        util.showInfo(`昵称 "${nickName}" 已被其他人使用`)
+        util.showErrorLong(`昵称 "${nickName}" 已被其他人使用`)
         return
       }
 
@@ -346,7 +354,7 @@ Page({
     } catch (err) {
       util.hideLoading()
       console.error('保存失败:', err)
-      util.showError('保存失败：' + (err.message || '未知错误'))
+      util.showErrorLong('保存失败：' + (err.message || '未知错误'))
     }
   },
 
@@ -381,7 +389,12 @@ Page({
   // 查看别人的座位信息
   viewOtherSeat: function (e) {
     const reg = e.currentTarget.dataset.reg
-    util.showInfo(`${reg.nickName}${reg.remark ? ' - ' + reg.remark : ''}`)
+    wx.showModal({
+      title: '座位信息',
+      content: `${reg.nickName}${reg.remark ? '\n备注：' + reg.remark : ''}`,
+      showCancel: false,
+      confirmText: '确定'
+    })
   },
 
   // 区管删除任意座位
@@ -416,6 +429,18 @@ Page({
       this.loadRegistrations()
     } else {
       this.loadTodayConfig()
+    }
+  },
+
+  // 分享
+  onShareAppMessage: function () {
+    const config = this.data.config
+    const title = config
+      ? `官职报名 - ${config.positionType} (${config.date})`
+      : '官职报名 - 无尽冬日'
+    return {
+      title: title,
+      path: `/pages/user/position-registration/position-registration?configId=${this.data.configId || ''}`
     }
   }
 })

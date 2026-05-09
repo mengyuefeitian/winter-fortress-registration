@@ -1,0 +1,46 @@
+<view class="zone-selector">
+  <!-- 显示当前选中分区 -->
+  <view wx:if="{{value}}" class="zone-display" bindtap="openPicker">
+    <text class="zone-name">{{value.zoneName}}</text>
+    <text class="zone-arrow">▼</text>
+  </view>
+  <!-- 未选中但已加载 -->
+  <view wx:elif="{{loaded && zones.length > 0}}" class="zone-display zone-display-placeholder" bindtap="openPicker">
+    <text class="zone-name">请选择分区</text>
+    <text class="zone-arrow">▼</text>
+  </view>
+  <!-- 加载中 -->
+  <view wx:elif="{{!loaded}}" class="zone-display zone-display-placeholder">
+    <text class="zone-name">加载中...</text>
+  </view>
+  <!-- 无数据 -->
+  <view wx:else class="zone-display zone-display-placeholder">
+    <text class="zone-name">暂无分区</text>
+  </view>
+
+  <!-- 弹出选择面板 -->
+  <view wx:if="{{showPicker}}" class="overlay" catchtap="closePicker" catchtouchmove="stopPropagation">
+    <view class="picker-panel" catchtap="stopPropagation" catchtouchmove="stopPropagation">
+      <view class="picker-header">
+        <text class="picker-title">选择分区</text>
+        <view class="picker-close" bindtap="closePicker">✕</view>
+      </view>
+      <view class="search-bar" catchtap="stopPropagation">
+        <input class="search-input" placeholder="搜索分区名称或编号" value="{{keyword}}" bindinput="onKeywordInput" confirm-type="search" adjust-position="{{true}}" />
+        <view wx:if="{{keyword}}" class="search-clear" bindtap="clearKeyword">✕</view>
+      </view>
+      <scroll-view class="zone-list" scroll-y catchtouchmove="stopPropagation">
+        <view wx:if="{{filteredZones.length === 0}}" class="empty-state">
+          <text class="empty-text">未找到匹配的分区</text>
+        </view>
+        <view wx:for="{{filteredZones}}" wx:key="_id"
+              class="zone-item {{value && value._id === item._id ? 'zone-item-active' : ''}}"
+              bindtap="selectZone"
+              data-zone="{{item}}">
+          <view class="zone-item-name">{{item.zoneName}}</view>
+          <view class="zone-item-code">{{item.zoneCode}}</view>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+</view>

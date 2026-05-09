@@ -1,21 +1,53 @@
 const app = getApp()
 const util = require('../../../utils/util')
+const auth = require('../../../utils/auth')
 const db = require('../../../utils/db')
 
 Page({
   data: {
     userInfo: null,
+    roleDisplayName: '',
     pendingZoneManagerCount: 0,
-    pendingAllianceManagerCount: 0
+    pendingAllianceManagerCount: 0,
+    pendingZoneCreationCount: 0
   },
 
   onLoad: function () {
-    this.loadUserInfo()
-    this.loadPendingCounts()
+    this.waitForRoleReady()
   },
 
   onShow: function () {
+    if (app.globalData.roleReady) {
+      this.loadUserInfo()
+      this.loadPendingCounts()
+    }
+  },
+
+  // 等待角色就绪
+  waitForRoleReady: function () {
+    if (app.globalData.roleReady) {
+      this.checkPermission()
+    } else {
+      setTimeout(() => {
+        this.waitForRoleReady()
+      }, 100)
+    }
+  },
+
+  // 检查权限
+  checkPermission: function () {
+    const role = app.globalData.role || 'user'
+    if (!auth.isSuperAdmin(role)) {
+      util.showError('权限不足')
+      wx.switchTab({
+        url: '/pages/index/index'
+      })
+      return
+    }
     this.loadUserInfo()
+    this.setData({
+      roleDisplayName: auth.getRoleDisplayName(role)
+    })
     this.loadPendingCounts()
   },
 
@@ -31,10 +63,12 @@ Page({
       // 分别获取区管和盟管的待审核数量
       const zoneManagerCount = await this.getPendingCountByType('zoneManager')
       const allianceManagerCount = await this.getPendingCountByType('allianceManager')
+      const zoneCreationCount = await this.getPendingCountByType('zoneCreation')
 
       this.setData({
         pendingZoneManagerCount: zoneManagerCount,
-        pendingAllianceManagerCount: allianceManagerCount
+        pendingAllianceManagerCount: allianceManagerCount,
+        pendingZoneCreationCount: zoneCreationCount
       })
     } catch (err) {
       console.error('加载待审核数量失败:', err)
@@ -75,9 +109,21 @@ Page({
     })
   },
 
+  goToZoneCreationReview: function () {
+    wx.navigateTo({
+      url: '/pages/superAdmin/admin-review/admin-review?applyType=zoneCreation'
+    })
+  },
+
   goToPhoneManage: function () {
     wx.navigateTo({
       url: '/pages/superAdmin/phone-manage/phone-manage'
+    })
+  },
+
+  goToMemberManage: function () {
+    wx.navigateTo({
+      url: '/pages/superAdmin/member-manage/member-manage'
     })
   },
 
@@ -99,9 +145,29 @@ Page({
     })
   },
 
+  goToTimeSlotConfig: function () {
+    wx.navigateTo({
+      url: '/pages/admin/time-slot-config/time-slot-config'
+    })
+  },
+
   goToAutoClear: function () {
     wx.navigateTo({
       url: '/pages/superAdmin/auto-clear/auto-clear'
     })
+  },
+
+  goToBattleConfig: function () {
+    wx.navigateTo({
+      url: '/pages/user/battle-list/battle-list'
+    })
+  },
+
+  // 分享
+  onShareAppMessage: function () {
+    return {
+      title: '无尽冬日堡垒分配管理系统',
+      path: '/pages/index/index'
+    }
   }
 })

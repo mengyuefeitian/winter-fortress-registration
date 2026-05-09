@@ -1,0 +1,10 @@
+{
+  "name": "sendFeedbackEmail",
+  "version": "1.0.0",
+  "description": "Send feedback emails to admin",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3",
+    "nodemailer": "^6.9.0"
+  }
+}

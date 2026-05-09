@@ -1,0 +1,58 @@
+<!--pages/user/apply-alliance-manager/apply-alliance-manager.wxml-->
+<view class="page">
+  <!-- 分区信息 -->
+  <view class="card">
+    <view class="zone-info-row">
+      <text class="form-label">当前分区：</text>
+      <text class="zone-name-text">{{selectedZone ? selectedZone.zoneName : '未选择'}}</text>
+    </view>
+    <view wx:if="{{!selectedZone}}" class="empty-tip">
+      <text>请先在首页选择您的分区</text>
+    </view>
+  </view>
+
+  <!-- 申请表单 -->
+  <view wx:if="{{selectedZone}}" class="card">
+    <!-- 联盟选择 -->
+    <view class="form-item">
+      <text class="form-label">选择联盟</text>
+      <picker wx:if="{{alliances.length > 0}}" bindchange="onAllianceChange" value="{{alliancePickerIndex}}" range="{{alliances}}" range-key="allianceName">
+        <view class="picker-view">
+          <text>{{selectedAlliance ? selectedAlliance.allianceName : '请选择联盟'}}</text>
+        </view>
+      </picker>
+      <view wx:else class="picker-view disabled">
+        <text class="picker-placeholder">该分区暂无联盟</text>
+      </view>
+    </view>
+
+    <!-- 联盟名称自定义（仅当选中联盟为默认名称时显示） -->
+    <view wx:if="{{selectedAlliance && showAllianceNameInput}}" class="form-item">
+      <text class="form-label">联盟名称</text>
+      <input class="form-input" placeholder="请输入联盟名称" value="{{customAllianceName}}" bindinput="onAllianceNameInput" maxlength="20" />
+      <text class="input-hint">您可为该联盟设置自定义名称，审核通过后将自动生效</text>
+    </view>
+
+    <!-- 手机号 -->
+    <view class="form-item">
+      <text class="form-label">绑定手机号</text>
+      <input class="form-input" type="number" placeholder="请输入手机号" value="{{phone}}" bindinput="onPhoneInput" maxlength="11" />
+    </view>
+
+    <!-- 提交按钮 -->
+    <button class="btn btn-primary btn-full" bindtap="submitApplication" disabled="{{submitting}}">
+      {{submitting ? '提交中...' : '提交申请'}}
+    </button>
+  </view>
+
+  <!-- 申请说明 -->
+  <view wx:if="{{selectedZone}}" class="card">
+    <view class="section-header">
+      <text class="section-title">申请说明</text>
+    </view>
+    <text class="tip-text">1. 选择您希望管理的联盟</text>
+    <text class="tip-text">2. 如联盟名称为默认名称，可自定义修改</text>
+    <text class="tip-text">3. 提交后等待区管审核</text>
+    <text class="tip-text">4. 审核通过后自动成为该联盟盟管</text>
+  </view>
+</view>

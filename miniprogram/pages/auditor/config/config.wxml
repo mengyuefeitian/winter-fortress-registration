@@ -1,27 +1,114 @@
 <!--pages/auditor/config/config.wxml-->
-<view class="auditor-config-container">
-  <view class="section">
-    <view class="section-title">时间段备注配置</view>
-
-    <view wx:if="{{timeSlots.length === 0}}" class="empty-state">
-      <view class="empty-text">暂无时间段</view>
+<view class="page">
+  <!-- 紧凑配置区域 -->
+  <view class="card">
+    <!-- 第一行：日期 + 时间 -->
+    <view class="form-row">
+      <view class="form-col">
+        <text class="form-label">日期</text>
+        <picker mode="date" value="{{selectedDate}}" start="{{minDate}}" end="{{maxDate}}" bindchange="onDateChange">
+          <view class="picker-compact">{{selectedDate || '今日'}}<image class="picker-compact-arrow" src="/images/icon-arrow-down.png"></image></view>
+        </picker>
+      </view>
+      <view class="form-col">
+        <text class="form-label">时间</text>
+        <picker range="{{TIME_OPTIONS}}" range-key="label" value="{{selectedTimeIndex}}" bindchange="onBaseTimeChange">
+          <view class="picker-compact">{{selectedTime.label}}<image class="picker-compact-arrow" src="/images/icon-arrow-down.png"></image></view>
+        </picker>
+      </view>
     </view>
 
-    <view wx:else class="slot-list">
-      <view wx:for="{{timeSlots}}" wx:key="_id" class="slot-card">
+    <!-- 第二行：堡垒名称选择（单选标签） -->
+    <view class="form-row tags-row">
+      <text class="form-label">堡垒名称</text>
+      <view class="tag-options">
+        <view wx:for="{{FORTRESS_OPTIONS}}" wx:key="*this"
+              class="tag-option fortress-tag-option {{selectedFortress === item ? 'active' : ''}}"
+              bindtap="onFortressSelect" data-fortress="{{item}}">
+          {{item}}
+        </view>
+      </view>
+    </view>
+
+    <!-- 第三行：标签选择 -->
+    <view class="form-row tags-row">
+      <text class="form-label">奖励</text>
+      <view class="tag-options">
+        <view wx:for="{{TAG_OPTIONS}}" wx:key="*this"
+              class="tag-option {{selectedTag === item ? 'active' : ''}}"
+              bindtap="onTagSelect" data-tag="{{item}}">
+          {{item}}
+        </view>
+      </view>
+    </view>
+
+    <!-- 添加按钮 -->
+    <button class="btn btn-primary btn-full" bindtap="addTimeSlot">添加时间段</button>
+  </view>
+
+  <!-- 已有时间段列表 -->
+  <view class="section-header">
+    <text class="section-title">时间段列表</text>
+    <text class="section-count">{{timeSlots.length}}个</text>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{!loading && timeSlots.length === 0}}">
+    <text class="empty-text">暂无时间段，请添加</text>
+  </view>
+
+  <!-- 时间段列表 -->
+  <view wx:if="{{!loading && timeSlots.length > 0}}" class="slot-list">
+    <!-- 外层循环：使用 slotIndex 避免与内层 index 冲突 -->
+    <view wx:for="{{timeSlots}}" wx:key="_id" wx:for-index="slotIndex" class="slot-card">
+      <view class="slot-content">
         <view class="slot-header">
-          <view class="slot-time">{{item.displayName}}</view>
+          <view class="slot-time">
+            {{item.displayName}}
+            <text wx:if="{{item.fortress}}" class="slot-tag fortress-tag">{{item.fortress}}</text>
+            <text wx:if="{{item.tag}}" class="slot-tag">{{item.tag}}</text>
+          </view>
           <view class="slot-count">{{item.currentCount}}/{{item.maxCount}}人</view>
         </view>
+        <view wx:if="{{item.date}}" class="slot-date">日期: {{item.date}}</view>
 
-        <view class="slot-remark-section">
-          <view class="remark-label">备注</view>
-          <input class="remark-input" placeholder="输入备注信息" value="{{item.editRemark}}" bindinput="onRemarkInput" data-index="{{index}}" maxlength="50" />
-          <button class="save-btn" bindtap="saveRemark" data-id="{{item._id}}" data-index="{{index}}">保存</button>
+        <!-- 编辑标签区域 -->
+        <view wx:if="{{item.editing}}" class="edit-tag-section">
+          <view class="edit-row">
+            <text class="edit-label">堡垒:</text>
+            <view class="edit-fortress-options">
+              <view wx:for="{{FORTRESS_OPTIONS}}" wx:key="*this" wx:for-item="fortItem"
+                    class="edit-fortress-option {{timeSlots[slotIndex].editFortress === fortItem ? 'active' : ''}}"
+                    bindtap="onEditFortressSelect" data-slot-index="{{slotIndex}}" data-fortress="{{fortItem}}">
+                {{fortItem}}
+              </view>
+            </view>
+          </view>
+          <view class="edit-row">
+            <text class="edit-label">标签:</text>
+            <view class="edit-tag-options">
+              <view wx:for="{{TAG_OPTIONS}}" wx:key="*this" wx:for-item="tagItem" wx:for-index="tagIndex"
+                    class="edit-tag-option {{timeSlots[slotIndex].editTag === tagItem ? 'active' : ''}}"
+                    bindtap="onEditTagSelect" data-slot-index="{{slotIndex}}" data-tag="{{tagItem}}">
+                {{tagItem}}
+              </view>
+            </view>
+          </view>
+          <view class="edit-actions">
+            <button class="save-btn" bindtap="saveTag" data-id="{{item._id}}" data-index="{{slotIndex}}">保存</button>
+            <button class="cancel-btn" bindtap="cancelEditTag" data-index="{{slotIndex}}">取消</button>
+          </view>
         </view>
 
-        <view wx:if="{{item.remark}}" class="current-remark">
-          当前备注: {{item.remark}}
+        <!-- 操作按钮 -->
+        <view wx:if="{{!item.editing}}" class="slot-actions">
+          <button class="edit-btn" bindtap="editTag" data-index="{{slotIndex}}">编辑标签</button>
+          <button class="delete-btn" bindtap="deleteTimeSlot" data-id="{{item._id}}" data-index="{{slotIndex}}">删除</button>
         </view>
       </view>
     </view>

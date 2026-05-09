@@ -6,6 +6,7 @@ cloud.init({
 })
 
 const db = cloud.database()
+const _ = db.command
 
 // 云函数入口函数
 exports.main = async (event, context) => {
@@ -21,6 +22,14 @@ exports.main = async (event, context) => {
         return await getAllZones()
       case 'delete':
         return await deleteZone(data.zoneId)
+      case 'updateAllianceName':
+        return await updateAllianceName(data.allianceId, data.name)
+      case 'bindAllianceAuditor':
+        return await bindAllianceAuditor(data.allianceId, data.auditorId)
+      case 'unbindAllianceAuditor':
+        return await unbindAllianceAuditor(data.allianceId, data.auditorId)
+      case 'getAlliancesByZone':
+        return await getAlliancesByZone(data.zoneId)
       default:
         return {
           err: 'Unknown action'
@@ -96,4 +105,84 @@ async function deleteZone(zoneId) {
   return {
     success: true
   }
+}
+
+// 获取分区的联盟列表（云函数版本，不受客户端权限限制）
+async function getAlliancesByZone(zoneId) {
+  const res = await db.collection('alliances').where({
+    zoneId: zoneId
+  }).orderBy('allianceIndex', 'asc').get()
+
+  // 兼容旧数据
+  for (const alliance of res.data) {
+    if (alliance.auditorId && !alliance.auditorIds) {
+      alliance.auditorIds = [alliance.auditorId]
+    } else if (!alliance.auditorIds) {
+      alliance.auditorIds = []
+    }
+  }
+
+  return { data: res.data }
+}
+
+// 更新联盟名称（云函数版本，绕过客户端权限限制）
+async function updateAllianceName(allianceId, name) {
+  await db.collection('alliances').doc(allianceId).update({
+    data: {
+      allianceName: name,
+      updateTime: db.serverDate()
+    }
+  })
+
+  return { success: true }
+}
+
+// 绑定盟管到联盟
+async function bindAllianceAuditor(allianceId, auditorId) {
+  const alliance = await db.collection('alliances').doc(allianceId).get()
+  let currentIds = alliance.data.auditorIds || []
+
+  // 兼容旧数据
+  if (alliance.data.auditorId && !alliance.data.auditorIds) {
+    currentIds = [alliance.data.auditorId]
+  }
+
+  if (currentIds.includes(auditorId)) {
+    throw new Error('该盟管已绑定此联盟')
+  }
+
+  currentIds.push(auditorId)
+
+  await db.collection('alliances').doc(allianceId).update({
+    data: {
+      auditorId: null,
+      auditorIds: currentIds,
+      updateTime: db.serverDate()
+    }
+  })
+
+  return { success: true }
+}
+
+// 从联盟解绑盟管
+async function unbindAllianceAuditor(allianceId, auditorId) {
+  const alliance = await db.collection('alliances').doc(allianceId).get()
+  let currentIds = alliance.data.auditorIds || []
+
+  // 兼容旧数据
+  if (alliance.data.auditorId && !alliance.data.auditorIds) {
+    currentIds = [alliance.data.auditorId]
+  }
+
+  currentIds = currentIds.filter(id => id !== auditorId)
+
+  await db.collection('alliances').doc(allianceId).update({
+    data: {
+      auditorId: null,
+      auditorIds: currentIds,
+      updateTime: db.serverDate()
+    }
+  })
+
+  return { success: true }
 }

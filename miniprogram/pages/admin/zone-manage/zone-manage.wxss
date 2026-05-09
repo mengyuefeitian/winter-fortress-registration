@@ -49,12 +49,13 @@
 }
 
 .create-btn {
-  background-color: #4A90D9;
+  background-color: #07C160;
   color: #FFFFFF;
-  border-radius: 8px;
-  padding: 12px 24px;
-  font-size: 16px;
-  width: 100%;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  width: auto;
+  margin-top: 8px;
 }
 
 .empty-state {
@@ -86,7 +87,7 @@
 }
 
 .zone-code {
-  background-color: #4A90D9;
+  background-color: #576B95;
   color: #FFFFFF;
   font-size: 14px;
   padding: 4px 12px;
@@ -129,10 +130,13 @@
 
 .action-btn {
   font-size: 12px;
-  padding: 8px 12px;
+  padding: 0 12px;
+  height: 28px;
+  line-height: 28px;
   border-radius: 6px;
   flex: 1;
   min-width: 80px;
+  box-sizing: border-box;
 }
 
 .edit-btn {
@@ -204,5 +208,5 @@
 }
 
 .modal-btn.confirm {
-  color: #4A90D9;
+  color: #07C160;
 }

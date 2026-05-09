@@ -1,4 +1,6 @@
 {
   "navigationBarTitleText": "全局统计",
-  "usingComponents": {}
+  "usingComponents": {
+    "zone-selector": "/components/zone-selector/zone-selector"
+  }
 }

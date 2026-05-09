@@ -1,4 +1,6 @@
 {
   "navigationBarTitleText": "管理员控制台",
-  "usingComponents": {}
+  "usingComponents": {
+    "zone-selector": "/components/zone-selector/zone-selector"
+  }
 }

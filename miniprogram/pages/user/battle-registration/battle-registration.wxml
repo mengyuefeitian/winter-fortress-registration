@@ -1,0 +1,69 @@
+<!--pages/user/battle-registration/battle-registration.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="title">国战报名</text>
+    <text class="date">{{date}}</text>
+    <text class="zone" wx:if="{{zoneName}}">{{zoneName}}</text>
+  </view>
+
+  <view class="form">
+    <view class="form-item">
+      <text class="label">联盟</text>
+      <picker bindchange="onAllianceChange" value="{{allianceIndex}}" range="{{alliances}}" range-key="allianceName">
+        <view class="picker-value">
+          {{allianceIndex >= 0 ? alliances[allianceIndex].allianceName : '请选择联盟'}}
+        </view>
+      </picker>
+    </view>
+
+    <view class="form-item">
+      <text class="label">游戏昵称</text>
+      <view class="input-group">
+        <input type="text" placeholder="请输入游戏昵称" maxlength="15" bindinput="onNickNameInput" value="{{inputNickName}}" />
+      </view>
+    </view>
+
+    <view class="form-item">
+      <text class="label">熔炉等级</text>
+      <view class="input-group">
+        <input type="text" placeholder="如：火4、城堡25" maxlength="10" bindinput="onFurnaceInput" value="{{furnaceLevel}}" />
+      </view>
+    </view>
+
+    <view class="form-item">
+      <text class="label">兵营等级</text>
+      <view class="input-group">
+        <input type="text" placeholder="可输入兵营等级如555,543,30/30/30等" maxlength="20" bindinput="onBarracksInput" value="{{barracksLevel}}" />
+      </view>
+    </view>
+
+    <view class="form-item">
+      <text class="label">钻石(万)</text>
+      <view class="input-group">
+        <input type="digit" placeholder="需要钻石进行加速" maxlength="10" bindinput="onDiamondsInput" value="{{diamonds}}" />
+      </view>
+    </view>
+
+    <view class="form-item">
+      <text class="label">开麦情况</text>
+      <picker bindchange="onVoiceChange" value="{{voiceIndex}}" range="{{voiceOptions}}">
+        <view class="picker-value picker-select">
+          <text>{{voiceOptions[voiceIndex]}}</text>
+          <text class="picker-arrow">▾</text>
+        </view>
+      </picker>
+    </view>
+
+    <view class="form-item">
+      <text class="label">报名位置</text>
+      <picker bindchange="onPositionChange" value="{{positionIndex}}" range="{{positionOptions}}">
+        <view class="picker-value picker-select">
+          <text>{{positionOptions[positionIndex]}}</text>
+          <text class="picker-arrow">▾</text>
+        </view>
+      </picker>
+    </view>
+  </view>
+
+  <button class="btn-submit" bindtap="onSubmit" loading="{{loading}}">提交报名</button>
+</view>

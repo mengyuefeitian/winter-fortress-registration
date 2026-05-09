@@ -1,1 +1,304 @@
-/* pages/user/my-registrations/my-registrations.wxss - Minimal Style, rely on global styles */
+/* pages/user/my-registrations/my-registrations.wxss */
+/* 微信设计语言风格 */
+
+.page {
+  min-height: 100vh;
+  background-color: #F6F6F6;
+  padding-bottom: 20px;
+}
+
+/* 卡片样式 */
+.card {
+  background-color: #FFFFFF;
+  border-radius: 8px;
+  margin: 16px;
+  padding: 16px;
+}
+
+.card-body {
+  display: flex;
+  align-items: center;
+}
+
+.avatar-lg {
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+}
+
+.ml-16 {
+  margin-left: 16px;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.text-lg {
+  font-size: 17px;
+}
+
+.font-semibold {
+  font-weight: 500;
+}
+
+.text-secondary {
+  color: #5F5F5F;
+}
+
+.mt-8 {
+  margin-top: 8px;
+}
+
+.mt-16 {
+  margin-top: 16px;
+}
+
+.mt-24 {
+  margin-top: 24px;
+}
+
+.flex {
+  display: flex;
+}
+
+.items-center {
+  align-items: center;
+}
+
+/* 状态点 */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  margin-right: 6px;
+}
+
+.status-active {
+  background-color: #07C160;
+}
+
+.status-inactive {
+  background-color: #A6A6A6;
+}
+
+/* 卡片底部 */
+.card-footer {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #F0F0F0;
+}
+
+/* 按钮样式 */
+.btn {
+  height: 44px;
+  line-height: 44px;
+  font-size: 17px;
+  border-radius: 4px;
+  border: none;
+}
+
+.btn-full {
+  width: 100%;
+}
+
+.btn-primary {
+  background-color: #07C160;
+  color: #FFFFFF;
+}
+
+.btn-danger {
+  background-color: #FA5151;
+  color: #FFFFFF;
+}
+
+/* 分区标题 */
+.section-header {
+  margin: 16px 16px 8px;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: #5F5F5F;
+}
+
+/* 空状态 */
+.empty-state {
+  padding: 24px;
+  text-align: center;
+}
+
+.empty-text {
+  color: #A6A6A6;
+  font-size: 15px;
+  display: block;
+}
+
+.empty-action {
+  margin-top: 16px;
+}
+
+.empty-action .btn {
+  width: auto;
+  padding: 0 24px;
+}
+
+/* 表格容器 */
+.table-container {
+  background-color: #FFFFFF;
+  margin: 0 16px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* 表格行 */
+.table-row {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #F0F0F0;
+}
+
+.table-row:last-child {
+  border-bottom: none;
+}
+
+.table-header-row {
+  background-color: #F5F5F5;
+  padding: 10px 16px;
+}
+
+/* 表格单元格 */
+.table-cell {
+  flex: 1;
+  font-size: 14px;
+  color: #000000;
+  text-align: left;
+  min-width: 0;
+}
+
+.table-header-row .table-cell {
+  font-size: 13px;
+  color: #5F5F5F;
+  font-weight: 500;
+}
+
+/* 时间单元格 - 三行展示 */
+.time-cell {
+  flex: 1.5;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 50px;
+}
+
+.time-header {
+  flex: 1.5;
+}
+
+.time-main {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333333;
+  line-height: 1.4;
+}
+
+.time-tag-inline {
+  display: inline-block;
+  background-color: #07C160;
+  color: #FFFFFF;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.time-date-small {
+  font-size: 12px;
+  color: #A6A6A6;
+  line-height: 1.3;
+}
+
+/* 操作列 - 固定宽度 */
+.action-cell {
+  flex: 0 0 50px;
+  text-align: center;
+}
+
+/* 取消按钮 - 缩小 */
+.cancel-btn-small {
+  display: inline-block;
+  font-size: 12px;
+  color: #FA5151;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background-color: #FFF5F5;
+}
+
+.cancel-btn-small:active {
+  background-color: #FFE8E8;
+}
+
+/* 分区信息条 */
+.zone-info-bar {
+  margin: 0 16px;
+  padding: 8px 16px;
+  background-color: rgba(74, 144, 217, 0.08);
+  border-radius: 4px;
+}
+
+.zone-info-text {
+  font-size: 13px;
+  color: #4A90D9;
+}
+
+/* 分区代码单元格 */
+.zone-code-cell {
+  font-size: 13px;
+  color: #999;
+  font-weight: 500;
+}
+
+/* 意见反馈条目 */
+.feedback-entry {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+}
+
+.feedback-icon {
+  font-size: 24px;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: #f0f7ff;
+  border-radius: 8px;
+}
+
+.feedback-content {
+  flex: 1;
+}
+
+.feedback-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: #000;
+  display: block;
+}
+
+.feedback-desc {
+  font-size: 13px;
+  color: #999;
+  margin-top: 2px;
+  display: block;
+}
+
+.feedback-arrow {
+  font-size: 24px;
+  color: #ccc;
+  margin-left: 8px;
+}

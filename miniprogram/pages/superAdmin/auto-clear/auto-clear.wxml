@@ -15,7 +15,7 @@
   <view class="switch-section">
     <view class="switch-row">
       <text class="switch-label">启用自动清空</text>
-      <switch checked="{{enabled}}" bindchange="onSwitchChange" color="#4A90D9" />
+      <switch checked="{{enabled}}" bindchange="onSwitchChange" color="#07C160" />
     </view>
   </view>
 

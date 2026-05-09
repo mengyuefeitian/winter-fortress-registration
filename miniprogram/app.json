@@ -5,6 +5,12 @@
     "pages/user/registration/registration",
     "pages/user/position-list/position-list",
     "pages/user/position-registration/position-registration",
+    "pages/user/battle-list/battle-list",
+    "pages/user/battle-registration/battle-registration",
+    "pages/user/battle-statistics/battle-statistics",
+    "pages/user/battle-allocation/battle-allocation",
+    "pages/user/feedback/feedback",
+    "pages/user/apply-alliance-manager/apply-alliance-manager",
     "pages/user/my-registrations/my-registrations",
     "pages/admin/home/home",
     "pages/admin/zone-manage/zone-manage",
@@ -12,6 +18,7 @@
     "pages/admin/time-slot-config/time-slot-config",
     "pages/admin/position-manage/position-manage",
     "pages/admin/statistics/statistics",
+    "pages/admin/member-manage/member-manage",
     "pages/auditor/home/home",
     "pages/auditor/config/config",
     "pages/auditor/statistics/statistics",
@@ -20,7 +27,8 @@
     "pages/superAdmin/all-statistics/all-statistics",
     "pages/superAdmin/phone-manage/phone-manage",
     "pages/superAdmin/alliance-manage/alliance-manage",
-    "pages/superAdmin/auto-clear/auto-clear"
+    "pages/superAdmin/auto-clear/auto-clear",
+    "pages/superAdmin/member-manage/member-manage"
   ],
   "window": {
     "navigationBarBackgroundColor": "#1a1a2e",

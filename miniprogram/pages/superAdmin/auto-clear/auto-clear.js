@@ -1,6 +1,7 @@
 // pages/superAdmin/auto-clear/auto-clear.js
 const app = getApp()
 const util = require('../../../utils/util')
+const auth = require('../../../utils/auth')
 
 Page({
   data: {
@@ -20,6 +21,30 @@ Page({
   },
 
   onLoad: function () {
+    this.waitForRoleReady()
+  },
+
+  // 等待角色就绪
+  waitForRoleReady: function () {
+    if (app.globalData.roleReady) {
+      this.checkPermission()
+    } else {
+      setTimeout(() => {
+        this.waitForRoleReady()
+      }, 100)
+    }
+  },
+
+  // 检查权限
+  checkPermission: function () {
+    const role = app.globalData.role || 'user'
+    if (!auth.isSuperAdmin(role)) {
+      util.showError('权限不足')
+      wx.switchTab({
+        url: '/pages/index/index'
+      })
+      return
+    }
     this.initHourOptions()
     this.loadConfig()
   },
@@ -149,17 +174,24 @@ Page({
           try {
             util.showLoading('正在清空...')
 
-            await wx.cloud.callFunction({
+            const result = await wx.cloud.callFunction({
               name: 'clearRegistrations',
-              data: { clearAll: true }
+              data: {
+                action: 'clearExpiredAll',
+                data: {}
+              }
             })
 
             util.hideLoading()
-            util.showSuccess('清空成功')
+            if (result.result.err) {
+              util.showError('清空失败: ' + result.result.err)
+            } else {
+              util.showSuccess(result.result.message || '清空成功')
+            }
 
           } catch (err) {
             util.hideLoading()
-            util.showError('清空失败')
+            util.showError('清空失败: ' + err.message)
           }
         }
       }

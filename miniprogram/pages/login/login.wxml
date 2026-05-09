@@ -1,13 +1,28 @@
 <!--pages/login/login.wxml-->
 <view class="login-container">
   <view class="login-header">
-    <view class="title">无尽冬日堡垒分配</view>
-    <view class="desc">联盟报名管理系统</view>
+    <view class="title">无尽冬日报名管理</view>
+    <view class="desc">联盟活动报名系统</view>
   </view>
 
   <view class="login-content">
-    <!-- 身份信息设置 -->
-    <view class="auth-section">
+    <!-- 隐私协议（优先展示） -->
+    <view class="privacy-section">
+      <view class="privacy-check" bindtap="togglePrivacy">
+        <view class="checkbox {{privacyAgreed ? 'checked' : ''}}">
+          <view class="checkbox-icon" wx:if="{{privacyAgreed}}">✓</view>
+        </view>
+        <view class="privacy-text">
+          我已阅读并同意
+          <text class="privacy-link" catchtap="openPrivacyContract">《隐私保护指引》</text>
+          和
+          <text class="privacy-link" catchtap="openUserAgreement">《用户服务协议》</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 身份信息设置（同意协议后显示） -->
+    <view wx:if="{{userInfoLoaded}}" class="auth-section">
       <view class="auth-title">设置身份信息</view>
 
       <!-- 头像和昵称并排显示 -->
@@ -38,12 +53,8 @@
 
     <!-- 完成登录 -->
     <view class="complete-section">
-      <button class="login-btn {{!tempAvatarUrl || !tempNickName ? 'disabled' : ''}}" bindtap="completeLogin" disabled="{{!tempAvatarUrl || !tempNickName}}">立即登录</button>
+      <button class="login-btn {{!tempAvatarUrl || !tempNickName || !privacyAgreed ? 'disabled' : ''}}" bindtap="completeLogin" disabled="{{!tempAvatarUrl || !tempNickName || !privacyAgreed}}">立即登录</button>
       <view class="login-tip">登录后可在「我的」页面申请管理员</view>
     </view>
-  </view>
-
-  <view class="login-footer">
-    <view class="footer-text">登录即表示同意相关服务条款</view>
   </view>
 </view>

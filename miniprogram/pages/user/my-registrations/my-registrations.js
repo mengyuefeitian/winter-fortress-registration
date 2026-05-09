@@ -2,6 +2,7 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
+const version = require('../../../utils/version')
 
 Page({
   data: {
@@ -10,23 +11,43 @@ Page({
     roleName: '',
     registrations: [],
     weeklyRegistrations: [],
-    positionRegistrations: []
+    positionRegistrations: [],
+    versionText: version.getVersionText(),
+    // 分区过滤
+    currentZone: null,
+    zones: [],
+    zonesLoaded: false
   },
 
   onLoad: function () {
-    this.loadUserInfo()
-    this.loadMyRegistrations()
+    this.waitForRoleReady()
   },
 
   onShow: function () {
-    this.loadUserInfo()
-    this.loadMyRegistrations()
+    if (app.globalData.roleReady) {
+      this.loadUserInfo()
+      this.loadZones()
+      this.loadMyRegistrations()
+    }
+  },
+
+  // 等待角色就绪
+  waitForRoleReady: function () {
+    if (app.globalData.roleReady) {
+      this.loadUserInfo()
+      this.loadZones()
+      this.loadMyRegistrations()
+    } else {
+      setTimeout(() => {
+        this.waitForRoleReady()
+      }, 100)
+    }
   },
 
   // 加载用户信息
   loadUserInfo: function () {
     const userInfo = app.globalData.userInfo
-    const role = app.globalData.role
+    const role = app.globalData.role || 'user'
     const roleName = util.getRoleName(role)
 
     this.setData({
@@ -34,6 +55,29 @@ Page({
       userInfo: userInfo,
       roleName: userInfo ? roleName : '未登录'
     })
+  },
+
+  // 加载分区列表
+  loadZones: async function () {
+    try {
+      const zones = await db.getAllZones()
+      const currentZone = app.globalData.currentZone || null
+      this.setData({
+        zones: zones,
+        currentZone: currentZone,
+        zonesLoaded: true
+      })
+    } catch (err) {
+      console.error('加载分区失败:', err)
+      this.setData({ zones: [], zonesLoaded: true })
+    }
+  },
+
+  // 分区选择变化
+  onZoneChange: function (e) {
+    const zone = e.detail.zone
+    this.setData({ currentZone: zone })
+    this.loadMyRegistrations()
   },
 
   // 加载我的报名记录
@@ -64,14 +108,21 @@ Page({
           ...reg,
           zoneName: zone ? zone.zoneName : '未知分区',
           zoneCode: zone ? zone.zoneCode : '',
+          zoneId: reg.zoneId,
           allianceName: alliance ? alliance.allianceName : '未知联盟',
           displayName: timeSlot ? timeSlot.displayName : '未知时间',
-          timeRemark: timeSlot ? timeSlot.remark : '',
+          timeTag: timeSlot ? timeSlot.tag : '',
+          timeDate: timeSlot ? timeSlot.date : '',
           formattedTime: util.formatDate(reg.createTime, 'YYYY-MM-DD HH:mm')
         })
       }
 
-      const weeklyRegistrations = this.filterWeeklyRegistrations(processedRegistrations)
+      // 按分区过滤
+      const filteredRegistrations = this.data.currentZone
+        ? processedRegistrations.filter(r => r.zoneId === this.data.currentZone._id)
+        : processedRegistrations
+
+      const weeklyRegistrations = this.filterWeeklyRegistrations(filteredRegistrations)
 
       // 加载官职报名记录
       const positionRegistrations = await db.getPositionRegistrationsByUser(userId)
@@ -90,7 +141,7 @@ Page({
       })
 
       this.setData({
-        registrations: processedRegistrations,
+        registrations: filteredRegistrations,
         weeklyRegistrations: weeklyRegistrations,
         positionRegistrations: processedPositionRegistrations
       })
@@ -120,8 +171,8 @@ Page({
   // 获取分区信息
   getZoneById: async function (zoneId) {
     try {
-      const db = wx.cloud.database()
-      const res = await db.collection('zones').doc(zoneId).get()
+      const wxdb = wx.cloud.database()
+      const res = await wxdb.collection('zones').doc(zoneId).get()
       return res.data
     } catch (err) {
       return null
@@ -131,8 +182,8 @@ Page({
   // 获取联盟信息
   getAllianceById: async function (allianceId) {
     try {
-      const db = wx.cloud.database()
-      const res = await db.collection('alliances').doc(allianceId).get()
+      const wxdb = wx.cloud.database()
+      const res = await wxdb.collection('alliances').doc(allianceId).get()
       return res.data
     } catch (err) {
       return null
@@ -142,7 +193,6 @@ Page({
   // 取消报名
   cancelRegistration: async function (e) {
     const registrationId = e.currentTarget.dataset.id
-    const index = e.currentTarget.dataset.index
 
     const confirm = await util.showConfirm('确认取消', '确定要取消这条报名记录吗？')
 
@@ -153,15 +203,8 @@ Page({
 
       await db.cancelRegistration(registrationId)
 
-      const registrations = this.data.registrations
-      registrations.splice(index, 1)
-
-      const weeklyRegistrations = this.filterWeeklyRegistrations(registrations)
-
-      this.setData({
-        registrations: registrations,
-        weeklyRegistrations: weeklyRegistrations
-      })
+      // 重新加载数据（确保数据一致性）
+      await this.loadMyRegistrations()
 
       util.hideLoading()
       util.showSuccess('取消成功')
@@ -175,7 +218,6 @@ Page({
   // 取消官职报名
   cancelPositionRegistration: async function (e) {
     const registrationId = e.currentTarget.dataset.id
-    const index = e.currentTarget.dataset.index
 
     const confirm = await util.showConfirm('确认取消', '确定要取消这条官职报名记录吗？')
 
@@ -186,12 +228,8 @@ Page({
 
       await db.cancelPositionRegistration(registrationId)
 
-      const positionRegistrations = this.data.positionRegistrations
-      positionRegistrations.splice(index, 1)
-
-      this.setData({
-        positionRegistrations: positionRegistrations
-      })
+      // 重新加载数据（确保数据一致性）
+      await this.loadMyRegistrations()
 
       util.hideLoading()
       util.showSuccess('取消成功')
@@ -206,6 +244,13 @@ Page({
   goToRegistration: function () {
     wx.navigateTo({
       url: '/pages/user/registration/registration'
+    })
+  },
+
+  // 意见反馈
+  goToFeedback: function () {
+    wx.navigateTo({
+      url: '/pages/user/feedback/feedback'
     })
   },
 
@@ -256,5 +301,13 @@ Page({
         }
       }
     })
+  },
+
+  // 分享
+  onShareAppMessage: function () {
+    return {
+      title: '我的报名记录 - 无尽冬日堡垒分配',
+      path: '/pages/user/my-registrations/my-registrations'
+    }
   }
 })

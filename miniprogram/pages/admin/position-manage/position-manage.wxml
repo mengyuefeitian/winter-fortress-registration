@@ -1,91 +1,78 @@
 <!-- pages/admin/position-manage/position-manage.wxml -->
 <view class="page">
-  <!-- 创建配置区域 -->
-  <view class="section-header">
-    <text class="section-title">创建官职报名</text>
-  </view>
-
+  <!-- 创建配置区域 - 紧凑布局 -->
   <view class="card">
-    <view class="card-body">
+    <!-- 第一行：分区 + 日期 -->
+    <view class="form-row">
       <!-- 分区选择（超管可见） -->
-      <view class="form-group" wx:if="{{showZonePicker && zones.length > 0}}">
-        <text class="form-label">选择分区</text>
-        <picker mode="selector" range="{{zones}}" range-key="zoneName" value="{{zoneIndex}}"
-                bindchange="onZoneChange">
-          <view class="picker">
-            <text wx:if="{{currentZone}}">{{currentZone.zoneName}}</text>
-            <text class="picker-placeholder" wx:else>请选择分区</text>
-            <image class="picker-arrow" src="/images/icon-arrow-down.png"></image>
-          </view>
-        </picker>
+      <view class="form-col" wx:if="{{showZonePicker && zones.length > 0}}">
+        <text class="form-label">分区</text>
+        <zone-selector value="{{currentZone}}" zones="{{zones}}" loaded="{{true}}" bind:change="onZoneChange" />
       </view>
 
       <!-- 超管无分区提示 -->
-      <view class="form-group" wx:if="{{showZonePicker && zones.length === 0}}">
-        <text class="form-label text-danger">当前没有分区</text>
-        <button class="btn btn-outline btn-sm mt-8" bindtap="goToZoneManage">创建分区</button>
+      <view class="form-col" wx:if="{{showZonePicker && zones.length === 0}}">
+        <text class="form-label text-danger">无分区</text>
+        <button class="btn btn-outline btn-sm" bindtap="goToZoneManage">创建</button>
       </view>
 
       <!-- 当前分区显示（区管） -->
-      <view class="form-group" wx:if="{{!showZonePicker && currentZone}}">
-        <text class="form-label">当前分区</text>
-        <view class="picker">
+      <view class="form-col" wx:if="{{!showZonePicker && currentZone}}">
+        <text class="form-label">分区</text>
+        <view class="picker-compact static">
           <text>{{currentZone.zoneName}}</text>
         </view>
       </view>
 
-      <!-- 区管无分区提示 -->
-      <view class="form-group" wx:if="{{!showZonePicker && zones.length === 0}}">
-        <text class="form-label text-danger">您还没有创建分区</text>
-        <button class="btn btn-outline btn-sm mt-8" bindtap="goToZoneManage">创建分区</button>
-      </view>
-
       <!-- 日期选择 -->
-      <view class="form-group">
-        <text class="form-label">选择日期</text>
+      <view class="form-col">
+        <text class="form-label">日期</text>
         <picker mode="date" value="{{selectedDate}}" start="{{minDate}}" end="{{maxDate}}"
                 bindchange="onDateChange">
-          <view class="picker">
+          <view class="picker-compact">
             <text wx:if="{{selectedDate}}">{{selectedDate}}</text>
-            <text class="picker-placeholder" wx:else>请选择日期</text>
-            <image class="picker-arrow" src="/images/icon-arrow-down.png"></image>
+            <text class="picker-placeholder" wx:else>选择日期</text>
+            <image class="picker-compact-arrow" src="/images/icon-arrow-down.png"></image>
           </view>
         </picker>
       </view>
+    </view>
 
+    <!-- 第二行：职位类型 + 起始时间 -->
+    <view class="form-row">
       <!-- 职位类型选择 -->
-      <view class="form-group">
-        <text class="form-label">职位类型</text>
+      <view class="form-col">
+        <text class="form-label">职位</text>
         <picker mode="selector" range="{{positionTypes}}" value="{{positionTypeIndex}}"
                 bindchange="onPositionTypeChange">
-          <view class="picker">
+          <view class="picker-compact">
             <text>{{positionTypes[positionTypeIndex]}}</text>
-            <image class="picker-arrow" src="/images/icon-arrow-down.png"></image>
+            <image class="picker-compact-arrow" src="/images/icon-arrow-down.png"></image>
           </view>
         </picker>
       </view>
 
       <!-- 起始时间选择 -->
-      <view class="form-group">
-        <text class="form-label">起始时间</text>
+      <view class="form-col">
+        <text class="form-label">起始</text>
         <picker mode="selector" range="{{startTimes}}" value="{{startTimeIndex}}"
                 bindchange="onStartTimeChange">
-          <view class="picker">
+          <view class="picker-compact">
             <text>{{startTimes[startTimeIndex]}}</text>
-            <image class="picker-arrow" src="/images/icon-arrow-down.png"></image>
+            <image class="picker-compact-arrow" src="/images/icon-arrow-down.png"></image>
           </view>
         </picker>
       </view>
-
-      <!-- 创建按钮 -->
-      <button class="btn btn-primary btn-full mt-24" bindtap="createConfig" disabled="{{!canCreate}}">
-        创建配置
-      </button>
     </view>
+
+    <!-- 创建按钮 -->
+    <button class="btn btn-primary btn-full" bindtap="createConfig" disabled="{{!canCreate}}">
+      创建配置
+    </button>
   </view>
 
   <!-- 已创建配置列表 -->
-  <view class="section-header mt-32">
+  <view class="section-header">
     <text class="section-title">已创建配置</text>
   </view>
 
@@ -97,19 +84,21 @@
     <text class="empty-text">暂无配置</text>
   </view>
 
-  <view class="function-grid">
-    <view class="card" wx:for="{{configs}}" wx:key="_id">
-      <view class="card-header">
-        <text class="card-title">{{item.positionType}}</text>
-        <view class="tag">{{item.date}}</view>
+  <view class="config-list">
+    <view class="config-card" wx:for="{{configs}}" wx:key="_id">
+      <view class="config-header">
+        <view class="config-info">
+          <text class="config-title">{{item.positionType}}</text>
+          <text class="config-date">{{item.date}}</text>
+        </view>
+        <view class="config-stats">{{item.registrationCount || 0}}人报名</view>
       </view>
-      <view class="card-body">
-        <text class="text-secondary">起始：{{item.startTime}}</text>
-        <text class="text-weak text-sm mt-8">已报名：{{item.registrationCount || 0}}人</text>
+      <view class="config-body">
+        <text class="config-time">起始：{{item.startTime}}</text>
       </view>
-      <view class="card-footer">
+      <view class="config-footer">
         <button class="btn btn-danger btn-sm" bindtap="clearData"
-                data-config-id="{{item._id}}" data-config-info="{{item.positionType}} - {{item.date}}">清空数据</button>
+                data-config-id="{{item._id}}" data-config-info="{{item.positionType}} - {{item.date}}">清空</button>
         <button class="btn btn-ghost btn-sm" bindtap="deleteConfig"
                 data-config-id="{{item._id}}" data-config-info="{{item.positionType}} - {{item.date}}">删除</button>
       </view>

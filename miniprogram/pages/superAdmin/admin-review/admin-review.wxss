@@ -1,161 +1,272 @@
 /* pages/superAdmin/admin-review/admin-review.wxss */
 
-.admin-review-container {
-  padding: 20px;
-  background-color: #F5F7FA;
+.page {
+  padding: 10px;
+  background-color: #F5F5F5;
   min-height: 100vh;
 }
 
-.section {
-  background-color: #FFFFFF;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+.section-header {
+  margin: 8px 2px 6px;
 }
 
 .section-title {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
-  color: #333333;
-  margin-bottom: 16px;
+  color: #666;
 }
 
 .empty-state {
-  padding: 40px;
+  padding: 16px;
   text-align: center;
 }
 
 .empty-text {
-  font-size: 14px;
-  color: #999999;
+  font-size: 13px;
+  color: #999;
 }
 
-.application-list {
+/* 卡片样式 - 最紧凑布局 */
+.card {
+  width: 100%;
+  background-color: #FFF;
+  border-radius: 4px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.card-body {
   display: flex;
   flex-direction: column;
 }
 
-.application-card {
-  background-color: #F5F7FA;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
-}
-
-.application-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.applicant-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  margin-right: 12px;
-}
-
-.applicant-info {
-  flex: 1;
-}
-
-.applicant-name {
-  font-size: 16px;
-  font-weight: 500;
-  color: #333333;
-  margin-bottom: 4px;
-}
-
-.applicant-phone {
-  font-size: 14px;
-  color: #666666;
-}
-
+/* 申请/审核时间 */
 .application-time {
-  font-size: 12px;
-  color: #999999;
-  margin-bottom: 12px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #EEE;
+  margin-bottom: 6px;
 }
 
-.application-actions {
+.card-footer {
   display: flex;
-  justify-content: space-between;
+  gap: 6px;
+  padding-top: 6px;
+  margin-top: 6px;
+  border-top: 1px solid #EEE;
 }
 
-.approve-btn,
-.reject-btn {
-  font-size: 14px;
-  padding: 10px 20px;
-  border-radius: 6px;
-  flex: 1;
-  margin-right: 8px;
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
 }
 
-.approve-btn:last-child,
-.reject-btn:last-child {
-  margin-right: 0;
+.ml-10 {
+  margin-left: 10px;
 }
 
-.approve-btn {
-  background-color: #52C41A;
-  color: #FFFFFF;
+.mt-2 {
+  margin-top: 2px;
 }
 
-.reject-btn {
-  background-color: transparent;
-  color: #FF6B6B;
-  border: 1px solid #FF6B6B;
+.mt-4 {
+  margin-top: 4px;
 }
 
-.reviewed-list {
-  display: flex;
-  flex-direction: column;
+.mt-6 {
+  margin-top: 6px;
 }
 
-.reviewed-card {
-  background-color: #F5F7FA;
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 8px;
+.mt-24 {
+  margin-top: 16px;
 }
 
-.reviewed-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
+.text-sm {
+  font-size: 13px;
 }
 
-.reviewed-name {
-  font-size: 14px;
+.text-xs {
+  font-size: 11px;
+}
+
+.font-medium {
   font-weight: 500;
-  color: #333333;
 }
 
-.reviewed-status {
-  font-size: 12px;
+.text-secondary {
+  color: #666;
+}
+
+.text-weak {
+  color: #999;
+}
+
+.text-danger {
+  color: #FA5151;
+}
+
+.text-primary {
+  color: #4A90D9;
+}
+
+.custom-name-hint {
+  margin-top: 6px;
   padding: 4px 8px;
+  background-color: #F0F4FA;
   border-radius: 4px;
 }
 
-.reviewed-status.approved {
-  background-color: #E8FFE8;
+.invalid-warning {
+  padding: 4px 8px;
+  background-color: #FFF1F0;
+  border-radius: 2px;
+}
+
+.flex {
+  display: flex;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.gap-4 {
+  gap: 4px;
+}
+
+/* 用户信息行 - 昵称和标签在同一行完美对齐 */
+.user-info-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+/* 标签样式 - 文字完美居中 */
+.tag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  padding: 0 6px;
+  height: 18px;
+  border-radius: 2px;
+}
+
+.tag-default {
+  background-color: #F0F0F0;
+  color: #666;
+}
+
+.tag-success {
+  background-color: #E8F5E8;
   color: #52C41A;
 }
 
-.reviewed-status.rejected {
-  background-color: #FFE8E8;
-  color: #FF6B6B;
+.tag-danger {
+  background-color: #FFF1F0;
+  color: #FA5151;
 }
 
-.reviewed-phone {
+.tag-primary {
+  background-color: #E6F7E6;
+  color: #52C41A;
+}
+
+/* 按钮样式 - 文字居中 */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 12px;
-  color: #666666;
+  height: 26px;
+  line-height: 1;
+  padding: 0;
+  border-radius: 4px;
+  border: none;
+  flex: 1;
+}
+
+.btn-success {
+  background-color: #52C41A;
+  color: #FFF;
+}
+
+.btn-danger {
+  background-color: #FA5151;
+  color: #FFF;
+}
+
+.btn-ghost {
+  background-color: #F0F0F0;
+  color: #666;
+}
+
+/* 分区选择 */
+.zone-select-section {
+  padding-top: 6px;
+  margin-top: 6px;
+  border-top: 1px solid #EEE;
+}
+
+.zone-creation-section {
+  padding-top: 6px;
+  margin-top: 6px;
+  border-top: 1px solid #EEE;
+}
+
+.zone-creation-form {
+  margin-top: 8px;
+}
+
+.creation-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.creation-label {
+  font-size: 12px;
+  color: #666;
+  width: 60px;
+  flex-shrink: 0;
+}
+
+.creation-input {
+  flex: 1;
+  height: 32px;
+  background-color: #F5F5F5;
+  border: 1px solid #E5E5E5;
+  border-radius: 4px;
+  padding: 0 10px;
+  font-size: 14px;
+}
+
+.select-label {
+  font-size: 12px;
+  color: #666;
   margin-bottom: 4px;
 }
 
-.reviewed-time {
-  font-size: 12px;
-  color: #999999;
+.select-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+/* 功能网格 */
+.function-grid {
+  display: flex;
+  flex-direction: column;
 }

@@ -8,6 +8,28 @@ cloud.init({
 const db = cloud.database()
 const _ = db.command
 
+// 批量查询所有数据（突破默认100条限制）
+async function getAllRecords(collection, whereCondition = {}) {
+  const MAX_LIMIT = 100
+  const allData = []
+
+  // 先获取总数
+  const countRes = await db.collection(collection).where(whereCondition).count()
+  const total = countRes.total
+
+  // 批量获取
+  const batchTimes = Math.ceil(total / MAX_LIMIT)
+  for (let i = 0; i < batchTimes; i++) {
+    const res = await db.collection(collection).where(whereCondition)
+      .skip(i * MAX_LIMIT)
+      .limit(MAX_LIMIT)
+      .get()
+    allData.push(...res.data)
+  }
+
+  return allData
+}
+
 // 云函数入口函数
 exports.main = async (event, context) => {
   const { action, data } = event
@@ -22,6 +44,12 @@ exports.main = async (event, context) => {
         return await clearAll()
       case 'clearByTimeSlot':
         return await clearByTimeSlot(data.timeSlotId)
+      case 'clearExpiredByAlliance':
+        return await clearExpiredByAlliance(data.allianceId)
+      case 'clearExpiredByZone':
+        return await clearExpiredByZone(data.zoneId)
+      case 'clearExpiredAll':
+        return await clearExpiredAll()
       default:
         return {
           err: 'Unknown action'
@@ -34,7 +62,59 @@ exports.main = async (event, context) => {
   }
 }
 
-// 按联盟清空报名数据
+// 解析各种格式的日期字符串为 Date 对象
+// 支持格式：YYYY-MM-DD, YY/MM/DD, YYYY/MM/DD 等
+function parseDate(dateStr) {
+  if (!dateStr) return null
+
+  // 尝试 YYYY-MM-DD 格式
+  if (dateStr.includes('-')) {
+    const parts = dateStr.split('-')
+    if (parts.length === 3) {
+      const year = parseInt(parts[0])
+      const month = parseInt(parts[1]) - 1
+      const day = parseInt(parts[2])
+      return new Date(year, month, day)
+    }
+  }
+
+  // 尝试 YY/MM/DD 或 YYYY/MM/DD 格式
+  if (dateStr.includes('/')) {
+    const parts = dateStr.split('/')
+    if (parts.length === 3) {
+      // 处理两位年份（如 26 -> 2026）
+      let year = parseInt(parts[0])
+      if (year < 100) {
+        year += 2000 // 假设是 2000 年代
+      }
+      const month = parseInt(parts[1]) - 1
+      const day = parseInt(parts[2])
+      return new Date(year, month, day)
+    }
+  }
+
+  return null
+}
+
+// 获取今天的日期对象和字符串
+function getTodayInfo() {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0) // 只比较日期部分
+  const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  return { dateObj: today, dateStr: dateStr }
+}
+
+// 判断日期是否过期（早于今天）
+function isDateExpired(dateStr, todayObj) {
+  if (!dateStr) return true // 无日期视为过期
+
+  const dateObj = parseDate(dateStr)
+  if (!dateObj) return true // 无法解析视为过期
+
+  return dateObj < todayObj
+}
+
+// 按联盟清空报名数据（原有功能）
 async function clearByAlliance(allianceId) {
   // 获取该联盟的所有时间段
   const timeSlotsRes = await db.collection('timeSlots').where({
@@ -64,7 +144,7 @@ async function clearByAlliance(allianceId) {
   }
 }
 
-// 按分区清空报名数据
+// 按分区清空报名数据（原有功能）
 async function clearByZone(zoneId) {
   // 获取该分区的所有联盟
   const alliancesRes = await db.collection('alliances').where({
@@ -132,5 +212,459 @@ async function clearByTimeSlot(timeSlotId) {
     success: true,
     deletedCount: result.stats.removed,
     message: `已清空 ${result.stats.removed} 条报名记录`
+  }
+}
+
+// 盟管清空过期数据：清空今日之前的报名数据、时间段配置，以及孤立的报名记录
+async function clearExpiredByAlliance(allianceId) {
+  const { dateObj: todayObj, dateStr: today } = getTodayInfo()
+  const results = {
+    registrations: 0,
+    timeSlots: 0,
+    orphanRegistrations: 0
+  }
+
+  console.log('开始清空联盟数据, allianceId:', allianceId, '今天:', today)
+
+  // 1. 获取该联盟的所有时间段（不管status，批量查询）
+  const allTimeSlots = await getAllRecords('timeSlots', { allianceId: allianceId })
+  console.log('查询到时间段数量:', allTimeSlots.length)
+
+  // 打印所有时间段的日期信息，方便调试
+  allTimeSlots.forEach(slot => {
+    console.log('时间段:', slot._id, 'date:', slot.date, 'status:', slot.status)
+  })
+
+  const allTimeSlotIds = allTimeSlots.map(slot => slot._id)
+
+  // 2. 找出需要删除的时间段（使用日期对象比较）
+  const toDeleteTimeSlots = allTimeSlots.filter(slot => {
+    if (!slot.status) return true // 无状态字段
+    if (slot.status === 'inactive') return true // 已删除
+    if (isDateExpired(slot.date, todayObj)) return true // 过期或无日期
+    return false
+  })
+
+  console.log('需要删除的时间段数量:', toDeleteTimeSlots.length)
+  const toDeleteTimeSlotIds = toDeleteTimeSlots.map(slot => slot._id)
+
+  if (toDeleteTimeSlotIds.length > 0) {
+    // 删除这些时间段的报名记录（通过timeSlotId删除）
+    const regResult = await db.collection('registrations').where({
+      timeSlotId: _.in(toDeleteTimeSlotIds)
+    }).remove()
+    results.registrations = regResult.stats.removed
+
+    // 删除时间段配置
+    const slotResult = await db.collection('timeSlots').where({
+      _id: _.in(toDeleteTimeSlotIds)
+    }).remove()
+    results.timeSlots = slotResult.stats.removed
+  }
+
+  // 3. 清理孤立的报名记录（报名记录对应的timeSlotId不存在或已删除）
+  // 方法：直接查询所有报名记录，找出那些 timeSlotId 不在时间段列表中的
+  const allRegistrations = await getAllRecords('registrations', { allianceId: allianceId })
+  console.log('查询到报名记录数量（按allianceId）:', allRegistrations.length)
+
+  // 找出活跃时间段的ID（使用日期对象比较）
+  const activeTimeSlotIds = allTimeSlots
+    .filter(slot => slot.status === 'active' && !isDateExpired(slot.date, todayObj))
+    .map(slot => slot._id)
+
+  // 找出孤立报名记录（timeSlotId不在活跃时间段列表中，或者timeSlotId为空）
+  const orphanRegistrations = allRegistrations.filter(reg => {
+    // 没有timeSlotId字段的旧数据
+    if (!reg.timeSlotId) return true
+    // timeSlotId不在活跃时间段列表中
+    if (!activeTimeSlotIds.includes(reg.timeSlotId)) return true
+    return false
+  })
+
+  const orphanRegIds = orphanRegistrations.map(reg => reg._id)
+  console.log('孤立报名记录数量:', orphanRegIds.length)
+
+  if (orphanRegIds.length > 0) {
+    const orphanRegResult = await db.collection('registrations').where({
+      _id: _.in(orphanRegIds)
+    }).remove()
+    results.orphanRegistrations = orphanRegResult.stats.removed
+  }
+
+  // 4. 清理没有 allianceId 的孤立报名记录（旧数据可能没有 allianceId）
+  // 这部分记录无法通过 allianceId 查询到，需要通过 timeSlotId 反查
+  if (allTimeSlotIds.length > 0) {
+    // 获取所有可能的报名记录（通过 timeSlotId 查询）
+    const regsByTimeSlot = await getAllRecords('registrations', { timeSlotId: _.in(allTimeSlotIds) })
+    console.log('通过timeSlotId查询到的报名记录数量:', regsByTimeSlot.length)
+
+    // 找出不属于当前活跃时间段的报名记录
+    const additionalOrphanRegs = regsByTimeSlot.filter(reg => {
+      if (!reg.timeSlotId) return true
+      if (!activeTimeSlotIds.includes(reg.timeSlotId)) return true
+      return false
+    })
+
+    const additionalOrphanIds = additionalOrphanRegs.map(reg => reg._id)
+    console.log('额外孤立报名记录数量:', additionalOrphanIds.length)
+
+    if (additionalOrphanIds.length > 0) {
+      const additionalResult = await db.collection('registrations').where({
+        _id: _.in(additionalOrphanIds)
+      }).remove()
+      results.orphanRegistrations += additionalResult.stats.removed
+    }
+  }
+
+  console.log('清空结果:', results)
+  return {
+    success: true,
+    data: results,
+    message: `已清空：过期报名 ${results.registrations} 条，过期时间段 ${results.timeSlots} 个，孤立报名 ${results.orphanRegistrations} 条`
+  }
+}
+
+// 区管清空过期数据：清空分区下所有联盟的过期数据、官职配置，以及孤立数据
+async function clearExpiredByZone(zoneId) {
+  const { dateObj: todayObj, dateStr: today } = getTodayInfo()
+  const results = {
+    registrations: 0,
+    timeSlots: 0,
+    positionConfigs: 0,
+    positionRegistrations: 0,
+    orphanRegistrations: 0,
+    orphanPositionRegistrations: 0
+  }
+
+  console.log('开始清空分区数据, zoneId:', zoneId, '今天:', today)
+
+  // 1. 获取该分区的所有联盟
+  const allAlliances = await getAllRecords('alliances', { zoneId: zoneId })
+  const allianceIds = allAlliances.map(a => a._id)
+  console.log('分区联盟数量:', allianceIds.length)
+
+  // 收集所有时间段（用于后续查询报名记录）
+  let allTimeSlots = []
+
+  if (allianceIds.length > 0) {
+    // 获取所有时间段（批量查询）
+    for (const allianceId of allianceIds) {
+      const slots = await getAllRecords('timeSlots', { allianceId: allianceId })
+      allTimeSlots.push(...slots)
+    }
+    console.log('查询到时间段数量:', allTimeSlots.length)
+
+    // 打印所有时间段的日期信息
+    allTimeSlots.forEach(slot => {
+      console.log('时间段:', slot._id, 'allianceId:', slot.allianceId, 'date:', slot.date, 'status:', slot.status)
+    })
+
+    // 找出需要删除的时间段（使用日期对象比较）
+    const toDeleteTimeSlots = allTimeSlots.filter(slot => {
+      if (!slot.status) return true // 无状态字段
+      if (slot.status === 'inactive') return true // 已删除
+      if (isDateExpired(slot.date, todayObj)) return true // 过期或无日期
+      return false
+    })
+
+    const toDeleteTimeSlotIds = toDeleteTimeSlots.map(slot => slot._id)
+    console.log('需要删除的时间段数量:', toDeleteTimeSlotIds.length)
+
+    if (toDeleteTimeSlotIds.length > 0) {
+      // 删除报名记录（通过 timeSlotId 删除）
+      const regResult = await db.collection('registrations').where({
+        timeSlotId: _.in(toDeleteTimeSlotIds)
+      }).remove()
+      results.registrations = regResult.stats.removed
+
+      // 删除时间段配置
+      const slotResult = await db.collection('timeSlots').where({
+        _id: _.in(toDeleteTimeSlotIds)
+      }).remove()
+      results.timeSlots = slotResult.stats.removed
+    }
+
+    // 找出活跃时间段的ID
+    const activeTimeSlotIds = allTimeSlots
+      .filter(slot => slot.status === 'active' && !isDateExpired(slot.date, todayObj))
+      .map(slot => slot._id)
+    console.log('活跃时间段数量:', activeTimeSlotIds.length)
+
+    // 2. 清理孤立的堡垒报名记录
+    // 方法1：通过 allianceId 查询报名记录
+    const allRegistrations = []
+    for (const allianceId of allianceIds) {
+      const regs = await getAllRecords('registrations', { allianceId: allianceId })
+      allRegistrations.push(...regs)
+    }
+    console.log('通过allianceId查询到报名记录数量:', allRegistrations.length)
+
+    // 找出孤立报名记录
+    const orphanRegistrations = allRegistrations.filter(reg => {
+      if (!reg.timeSlotId) return true
+      if (!activeTimeSlotIds.includes(reg.timeSlotId)) return true
+      return false
+    })
+
+    const orphanRegIds = orphanRegistrations.map(reg => reg._id)
+    console.log('孤立报名记录数量（方法1）:', orphanRegIds.length)
+
+    if (orphanRegIds.length > 0) {
+      const orphanRegResult = await db.collection('registrations').where({
+        _id: _.in(orphanRegIds)
+      }).remove()
+      results.orphanRegistrations = orphanRegResult.stats.removed
+    }
+
+    // 方法2：通过 zoneId 直接查询报名记录（部分旧数据可能没有 allianceId 但有 zoneId）
+    const regsByZone = await getAllRecords('registrations', { zoneId: zoneId })
+    console.log('通过zoneId查询到报名记录数量:', regsByZone.length)
+
+    const orphanByZone = regsByZone.filter(reg => {
+      if (!reg.timeSlotId) return true
+      if (!activeTimeSlotIds.includes(reg.timeSlotId)) return true
+      return false
+    })
+
+    const orphanByZoneIds = orphanByZone.map(reg => reg._id)
+    console.log('孤立报名记录数量（方法2）:', orphanByZoneIds.length)
+
+    if (orphanByZoneIds.length > 0) {
+      const orphanZoneResult = await db.collection('registrations').where({
+        _id: _.in(orphanByZoneIds)
+      }).remove()
+      results.orphanRegistrations += orphanZoneResult.stats.removed
+    }
+
+    // 方法3：通过所有时间段ID查询报名记录（最全面）
+    const allTimeSlotIds = allTimeSlots.map(slot => slot._id)
+    if (allTimeSlotIds.length > 0) {
+      const regsByTimeSlot = await getAllRecords('registrations', { timeSlotId: _.in(allTimeSlotIds) })
+      console.log('通过timeSlotId查询到报名记录数量:', regsByTimeSlot.length)
+
+      const orphanByTimeSlot = regsByTimeSlot.filter(reg => {
+        if (!reg.timeSlotId) return true
+        if (!activeTimeSlotIds.includes(reg.timeSlotId)) return true
+        return false
+      })
+
+      const orphanByTimeSlotIds = orphanByTimeSlot.map(reg => reg._id)
+      console.log('孤立报名记录数量（方法3）:', orphanByTimeSlotIds.length)
+
+      if (orphanByTimeSlotIds.length > 0) {
+        const orphanTimeSlotResult = await db.collection('registrations').where({
+          _id: _.in(orphanByTimeSlotIds)
+        }).remove()
+        results.orphanRegistrations += orphanTimeSlotResult.stats.removed
+      }
+    }
+  }
+
+  // 3. 清空该分区下的官职配置和报名数据
+  const allConfigs = await getAllRecords('positionConfigs', { zoneId: zoneId })
+  console.log('查询到官职配置数量:', allConfigs.length)
+
+  // 打印所有配置的日期信息
+  allConfigs.forEach(config => {
+    console.log('官职配置:', config._id, 'date:', config.date, 'status:', config.status)
+  })
+
+  const toDeleteConfigs = allConfigs.filter(config => {
+    if (!config.status) return true // 无状态字段
+    if (config.status === 'inactive') return true // 已删除
+    if (isDateExpired(config.date, todayObj)) return true // 过期或无日期
+    return false
+  })
+
+  const toDeleteConfigIds = toDeleteConfigs.map(c => c._id)
+  console.log('需要删除的官职配置数量:', toDeleteConfigIds.length)
+
+  if (toDeleteConfigIds.length > 0) {
+    // 删除官职报名记录（通过 configId 删除）
+    const posRegResult = await db.collection('positionRegistrations').where({
+      configId: _.in(toDeleteConfigIds)
+    }).remove()
+    results.positionRegistrations = posRegResult.stats.removed
+
+    // 删除官职配置
+    const configResult = await db.collection('positionConfigs').where({
+      _id: _.in(toDeleteConfigIds)
+    }).remove()
+    results.positionConfigs = configResult.stats.removed
+  }
+
+  // 4. 清理孤立的官职报名记录
+  const allConfigIds = allConfigs.map(c => c._id)
+  console.log('所有官职配置ID数量:', allConfigIds.length)
+
+  // 找出活跃配置ID
+  const activeConfigIds = allConfigs
+    .filter(c => c.status === 'active' && !isDateExpired(c.date, todayObj))
+    .map(c => c._id)
+  console.log('活跃官职配置数量:', activeConfigIds.length)
+
+  // 方法1：通过配置ID查询报名记录
+  if (allConfigIds.length > 0) {
+    const allPositionRegs = await getAllRecords('positionRegistrations', { configId: _.in(allConfigIds) })
+    console.log('通过configId查询到官职报名记录数量:', allPositionRegs.length)
+
+    const orphanPositionRegs = allPositionRegs.filter(reg => {
+      if (!reg.configId) return true
+      if (!activeConfigIds.includes(reg.configId)) return true
+      return false
+    })
+
+    const orphanPosRegIds = orphanPositionRegs.map(reg => reg._id)
+    console.log('孤立官职报名数量（方法1）:', orphanPosRegIds.length)
+
+    if (orphanPosRegIds.length > 0) {
+      const orphanPosRegResult = await db.collection('positionRegistrations').where({
+        _id: _.in(orphanPosRegIds)
+      }).remove()
+      results.orphanPositionRegistrations = orphanPosRegResult.stats.removed
+    }
+  }
+
+  console.log('清空结果:', results)
+  return {
+    success: true,
+    data: results,
+    message: `已清空：堡垒报名 ${results.registrations} 条，时间段 ${results.timeSlots} 个，官职报名 ${results.positionRegistrations} 条，官职配置 ${results.positionConfigs} 个，孤立数据 ${results.orphanRegistrations + results.orphanPositionRegistrations} 条`
+  }
+}
+
+// 超管清空所有过期数据和孤立数据
+async function clearExpiredAll() {
+  const { dateObj: todayObj, dateStr: today } = getTodayInfo()
+  const results = {
+    registrations: 0,
+    timeSlots: 0,
+    positionConfigs: 0,
+    positionRegistrations: 0,
+    orphanRegistrations: 0,
+    orphanPositionRegistrations: 0
+  }
+
+  console.log('开始清空所有数据, 今天:', today)
+
+  // 1. 清空所有时间段和报名数据（批量查询）
+  const allTimeSlots = await getAllRecords('timeSlots')
+  console.log('查询到时间段数量:', allTimeSlots.length)
+
+  // 打印所有时间段的日期信息
+  allTimeSlots.forEach(slot => {
+    console.log('时间段:', slot._id, 'date:', slot.date, 'status:', slot.status)
+  })
+
+  const toDeleteTimeSlots = allTimeSlots.filter(slot => {
+    if (!slot.status) return true // 无状态字段
+    if (slot.status === 'inactive') return true // 已删除
+    if (isDateExpired(slot.date, todayObj)) return true // 过期或无日期
+    return false
+  })
+
+  const toDeleteTimeSlotIds = toDeleteTimeSlots.map(slot => slot._id)
+  console.log('需要删除的时间段数量:', toDeleteTimeSlotIds.length)
+
+  if (toDeleteTimeSlotIds.length > 0) {
+    // 删除报名记录
+    const regResult = await db.collection('registrations').where({
+      timeSlotId: _.in(toDeleteTimeSlotIds)
+    }).remove()
+    results.registrations = regResult.stats.removed
+
+    // 删除时间段配置
+    const slotResult = await db.collection('timeSlots').where({
+      _id: _.in(toDeleteTimeSlotIds)
+    }).remove()
+    results.timeSlots = slotResult.stats.removed
+  }
+
+  // 清理孤立的堡垒报名记录
+  const allRegistrations = await getAllRecords('registrations')
+  console.log('查询到报名记录数量:', allRegistrations.length)
+
+  const activeTimeSlotIds = allTimeSlots
+    .filter(slot => slot.status === 'active' && !isDateExpired(slot.date, todayObj))
+    .map(slot => slot._id)
+
+  const orphanRegistrations = allRegistrations.filter(reg => {
+    if (!reg.timeSlotId) return true
+    if (!activeTimeSlotIds.includes(reg.timeSlotId)) return true
+    return false
+  })
+
+  const orphanRegIds = orphanRegistrations.map(reg => reg._id)
+  console.log('孤立报名记录数量:', orphanRegIds.length)
+
+  if (orphanRegIds.length > 0) {
+    const orphanRegResult = await db.collection('registrations').where({
+      _id: _.in(orphanRegIds)
+    }).remove()
+    results.orphanRegistrations = orphanRegResult.stats.removed
+  }
+
+  // 2. 清空所有官职配置和报名数据
+  const allConfigs = await getAllRecords('positionConfigs')
+  console.log('查询到官职配置数量:', allConfigs.length)
+
+  // 打印所有配置的日期信息
+  allConfigs.forEach(config => {
+    console.log('官职配置:', config._id, 'date:', config.date, 'status:', config.status)
+  })
+
+  const toDeleteConfigs = allConfigs.filter(config => {
+    if (!config.status) return true // 无状态字段
+    if (config.status === 'inactive') return true // 已删除
+    if (isDateExpired(config.date, todayObj)) return true // 过期或无日期
+    return false
+  })
+
+  const toDeleteConfigIds = toDeleteConfigs.map(c => c._id)
+  console.log('需要删除的官职配置数量:', toDeleteConfigIds.length)
+
+  if (toDeleteConfigIds.length > 0) {
+    // 删除官职报名记录
+    const posRegResult = await db.collection('positionRegistrations').where({
+      configId: _.in(toDeleteConfigIds)
+    }).remove()
+    results.positionRegistrations = posRegResult.stats.removed
+
+    // 删除官职配置
+    const configResult = await db.collection('positionConfigs').where({
+      _id: _.in(toDeleteConfigIds)
+    }).remove()
+    results.positionConfigs = configResult.stats.removed
+  }
+
+  // 清理孤立的官职报名记录
+  const allPositionRegs = await getAllRecords('positionRegistrations')
+  console.log('查询到官职报名记录数量:', allPositionRegs.length)
+
+  const activeConfigIds = allConfigs
+    .filter(c => c.status === 'active' && !isDateExpired(c.date, todayObj))
+    .map(c => c._id)
+
+  const orphanPositionRegs = allPositionRegs.filter(reg => {
+    if (!reg.configId) return true
+    if (!activeConfigIds.includes(reg.configId)) return true
+    return false
+  })
+
+  const orphanPosRegIds = orphanPositionRegs.map(reg => reg._id)
+  console.log('孤立官职报名数量:', orphanPosRegIds.length)
+
+  if (orphanPosRegIds.length > 0) {
+    const orphanPosRegResult = await db.collection('positionRegistrations').where({
+      _id: _.in(orphanPosRegIds)
+    }).remove()
+    results.orphanPositionRegistrations = orphanPosRegResult.stats.removed
+  }
+
+  console.log('清空结果:', results)
+  return {
+    success: true,
+    data: results,
+    message: `已清空全部数据：堡垒报名 ${results.registrations} 条，时间段 ${results.timeSlots} 个，官职报名 ${results.positionRegistrations} 条，官职配置 ${results.positionConfigs} 个，孤立数据 ${results.orphanRegistrations + results.orphanPositionRegistrations} 条`
   }
 }

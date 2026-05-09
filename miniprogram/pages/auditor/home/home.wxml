@@ -6,7 +6,7 @@
         <text class="text-lg font-semibold">{{userInfo.nickName || '未登录'}}</text>
         <view class="flex items-center mt-8">
           <view class="status-dot status-active"></view>
-          <text class="text-secondary">监管</text>
+          <text class="text-secondary">{{roleDisplayName}}</text>
         </view>
       </view>
     </view>
@@ -15,59 +15,86 @@
   <!-- 超管模式：选择分区和联盟 -->
   <view wx:if="{{isSuperAdmin}}" class="card mt-16">
     <view class="card-body">
-      <view class="form-group">
-        <text class="form-label">选择分区</text>
-        <picker bindchange="onZoneChange" value="{{zoneIndex}}" range="{{zones}}" range-key="zoneName">
-          <view class="picker">
-            <text>{{selectedZone ? selectedZone.zoneName : '请选择分区'}}</text>
-            <text class="text-weak">></text>
-          </view>
-        </picker>
-      </view>
-      <view wx:if="{{selectedZone}}" class="form-group">
-        <text class="form-label">选择联盟</text>
-        <picker bindchange="onAllianceChange" value="{{allianceIndex}}" range="{{alliances}}" range-key="allianceName">
-          <view class="picker">
-            <text>{{selectedAlliance ? selectedAlliance.allianceName : '请选择联盟'}}</text>
-            <text class="text-weak">></text>
-          </view>
-        </picker>
+      <view class="form-row">
+        <view class="form-col">
+          <text class="form-label">分区</text>
+          <zone-selector value="{{selectedZone}}" zones="{{zones}}" loaded="{{true}}" bind:change="onZoneChange" />
+        </view>
+        <view class="form-col">
+          <text class="form-label">联盟</text>
+          <picker wx:if="{{selectedZone}}" bindchange="onAllianceChange" value="{{allianceIndex}}" range="{{alliances}}" range-key="allianceName">
+            <view class="picker-compact">{{selectedAlliance ? selectedAlliance.allianceName : '请选择'}}<image class="picker-compact-arrow" src="/images/icon-arrow-down.png"></image></view>
+          </picker>
+          <view wx:else class="picker-compact disabled">请先选分区</view>
+        </view>
       </view>
     </view>
   </view>
 
-  <!-- 普通监管：绑定联盟信息 -->
+  <!-- 区管：选择分区下的联盟 -->
+  <view wx:elif="{{isAdmin}}" class="card mt-16">
+    <view class="card-body">
+      <view class="form-row">
+        <view class="form-col" wx:if="{{zones.length > 1}}">
+          <text class="form-label">分区</text>
+          <zone-selector value="{{selectedZone}}" zones="{{zones}}" loaded="{{true}}" bind:change="onAdminZoneChange" />
+        </view>
+        <view class="form-col">
+          <text class="form-label">联盟</text>
+          <picker wx:if="{{myAlliances.length > 0}}" bindchange="onMyAllianceChange" value="{{selectedAllianceIndex}}" range="{{myAlliances}}" range-key="allianceName">
+            <view class="picker-compact">{{myAlliances[selectedAllianceIndex].allianceName}}<image class="picker-compact-arrow" src="/images/icon-arrow-down.png"></image></view>
+          </picker>
+          <view wx:else class="picker-compact disabled">暂无联盟</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 普通盟管：绑定联盟信息 -->
   <view wx:else class="card mt-16">
     <view class="card-body">
       <text class="text-secondary text-sm">绑定联盟</text>
-      <view wx:if="{{myAlliance}}" class="mt-8">
-        <text class="text-lg font-semibold">{{myAlliance.allianceName}}</text>
-        <text class="text-weak text-sm ml-8">{{myAlliance.zoneName}}</text>
-      </view>
-      <view wx:else class="mt-8">
+      <view wx:if="{{myAlliances.length === 0}}" class="mt-8">
         <text class="text-weak">暂未绑定联盟</text>
       </view>
-    </view>
-  </view>
-
-  <view class="section-header">
-    <text class="section-title">功能</text>
-  </view>
-
-  <view class="function-grid">
-    <view class="function-card" bindtap="goToConfig">
-      <view class="function-content">
-        <text class="function-name">时间段配置</text>
-        <text class="function-desc">添加备注信息</text>
+      <view wx:elif="{{myAlliances.length === 1}}" class="mt-8">
+        <text class="text-lg font-semibold">{{myAlliances[0].allianceName}}</text>
+        <text class="text-weak text-sm ml-8">{{myAlliances[0].zoneName}}</text>
+      </view>
+      <view wx:else class="mt-8">
+        <picker bindchange="onMyAllianceChange" value="{{selectedAllianceIndex}}" range="{{myAlliances}}" range-key="allianceName">
+          <view class="picker-compact">{{myAlliances[selectedAllianceIndex].allianceName}} - {{myAlliances[selectedAllianceIndex].zoneName}}</view>
+          <image class="picker-compact-arrow" src="/images/icon-arrow-down.png"></image>
+        </picker>
       </view>
     </view>
-    <view class="function-card" bindtap="goToStatistics">
+  </view>
+
+  <!-- 配置管理 -->
+  <view class="section-header">
+    <text class="section-title">配置管理</text>
+  </view>
+  <view class="function-grid">
+    <view class="function-card-compact" bindtap="goToConfig">
+      <view class="function-content">
+        <text class="function-name">时间段配置</text>
+        <text class="function-desc">配置活动时间和标签</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 统计数据 -->
+  <view class="section-header mt-24">
+    <text class="section-title">统计数据</text>
+  </view>
+  <view class="function-grid">
+    <view class="function-card-compact" bindtap="goToStatistics">
       <view class="function-content">
         <text class="function-name">数据统计</text>
         <text class="function-desc">查看联盟统计</text>
       </view>
     </view>
-    <view class="function-card" bindtap="goToClearData">
+    <view class="function-card-compact" bindtap="goToClearData">
       <view class="function-content">
         <text class="function-name">清空数据</text>
         <text class="function-desc">清空报名记录</text>

@@ -1,1 +1,18 @@
-/* pages/auditor/home/home.wxss - Minimal Style, rely on global styles */
+/* pages/auditor/home/home.wxss */
+
+/* 表单行布局 - 两列 */
+.form-row {
+  display: flex;
+  gap: 8px;
+}
+
+.form-col {
+  flex: 1;
+}
+
+.form-label {
+  font-size: 13px;
+  color: #5F5F5F;
+  margin-bottom: 4px;
+  display: block;
+}

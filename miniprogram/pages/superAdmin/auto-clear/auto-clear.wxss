@@ -17,7 +17,7 @@
 .info-title {
   font-size: 14px;
   font-weight: 500;
-  color: #4A90D9;
+  color: #576B95;
   margin-bottom: 8px;
 }
 
@@ -146,8 +146,12 @@
 }
 
 .save-btn {
-  background-color: #4A90D9;
+  background-color: #07C160;
   color: #FFFFFF;
-  font-size: 16px;
-  border-radius: 8px;
+  font-size: 14px;
+  padding: 0 20px;
+  height: 40px;
+  line-height: 40px;
+  border-radius: 6px;
+  box-sizing: border-box;
 }

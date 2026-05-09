@@ -2,6 +2,7 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
+const auth = require('../../../utils/auth')
 
 Page({
   data: {
@@ -14,19 +15,43 @@ Page({
   },
 
   onLoad: function (options) {
-    if (options.allianceId) {
+    this.waitForRoleReady(options)
+  },
+
+  onShow: function () {
+    if (app.globalData.roleReady && this.data.allianceId) {
+      this.loadStatistics()
+    }
+  },
+
+  // 等待角色就绪
+  waitForRoleReady: function (options) {
+    if (app.globalData.roleReady) {
+      this.checkPermission(options)
+    } else {
+      setTimeout(() => {
+        this.waitForRoleReady(options)
+      }, 100)
+    }
+  },
+
+  // 检查权限
+  checkPermission: function (options) {
+    const role = app.globalData.role || 'user'
+    if (!auth.isAdminOrAbove(role)) {
+      util.showError('权限不足')
+      wx.switchTab({
+        url: '/pages/index/index'
+      })
+      return
+    }
+    if (options && options.allianceId) {
       this.setData({
         allianceId: options.allianceId
       })
       this.loadStatistics()
     } else {
       this.loadMyAlliance()
-    }
-  },
-
-  onShow: function () {
-    if (this.data.allianceId) {
-      this.loadStatistics()
     }
   },
 
@@ -39,7 +64,7 @@ Page({
 
       const wxdb = wx.cloud.database()
       const res = await wxdb.collection('alliances').where({
-        auditorId: userId
+        auditorIds: userId
       }).get()
 
       if (res.data.length > 0) {
@@ -102,7 +127,7 @@ Page({
     }
   },
 
-  // 清空报名数据
+  // 清空过期数据
   clearRegistrations: async function () {
     if (!this.data.allianceId) {
       util.showInfo('未绑定联盟')
@@ -111,7 +136,7 @@ Page({
 
     const confirm = await util.showConfirm(
       '确认清空',
-      `确定要清空「${this.data.allianceName}」的所有报名数据吗？\n\n此操作不可恢复！`
+      `确定要清空「${this.data.allianceName}」今日之前的所有报名数据和时间段配置吗？\n\n此操作不可恢复！`
     )
 
     if (!confirm) return
@@ -129,7 +154,7 @@ Page({
       const res = await wx.cloud.callFunction({
         name: 'clearRegistrations',
         data: {
-          action: 'clearByAlliance',
+          action: 'clearExpiredByAlliance',
           data: {
             allianceId: this.data.allianceId
           }
@@ -163,58 +188,86 @@ Page({
 
       const screenshotData = this.buildScreenshotData()
 
+      // 页边距和间距配置
+      const margin = 40
+      const canvasWidth = 750
+      const innerWidth = canvasWidth - margin * 2
+      const titleY = 70
+      const dateY = 115
+      const summaryY = 165
+      const lineY = 190
+      const dataStartY = 230
+
       const canvas = wx.createOffscreenCanvas({
         type: '2d',
-        width: 750,
+        width: canvasWidth,
         height: screenshotData.height
       })
       const ctx = canvas.getContext('2d')
 
       ctx.fillStyle = '#FFFFFF'
-      ctx.fillRect(0, 0, 750, screenshotData.height)
+      ctx.fillRect(0, 0, canvasWidth, screenshotData.height)
 
-      ctx.fillStyle = '#4A90D9'
-      ctx.font = 'bold 32px sans-serif'
-      ctx.fillText(this.data.allianceName + ' 报名统计', 30, 50)
+      ctx.fillStyle = '#07C160'
+      ctx.font = 'bold 36px sans-serif'
+      ctx.fillText(this.data.allianceName + ' 报名统计', margin, titleY)
 
       ctx.fillStyle = '#999999'
-      ctx.font = '24px sans-serif'
-      ctx.fillText(util.formatDate(new Date(), 'YYYY-MM-DD HH:mm'), 30, 90)
+      ctx.font = '26px sans-serif'
+      ctx.fillText(util.formatDate(new Date(), 'YY/MM/DD HH:mm'), margin, dateY)
 
       ctx.fillStyle = '#333333'
-      ctx.font = '28px sans-serif'
-      ctx.fillText(`总人数: ${this.data.totalRegistrations}  已满: ${this.data.fullSlots}  剩余: ${this.data.remainingSlots}`, 30, 140)
+      ctx.font = 'bold 28px sans-serif'
+      ctx.fillText(`总人数: ${this.data.totalRegistrations}  已满: ${this.data.fullSlots}  剩余: ${this.data.remainingSlots}`, margin, summaryY)
 
       ctx.strokeStyle = '#E8E8E8'
+      ctx.lineWidth = 1
       ctx.beginPath()
-      ctx.moveTo(30, 160)
-      ctx.lineTo(720, 160)
+      ctx.moveTo(margin, lineY)
+      ctx.lineTo(canvasWidth - margin, lineY)
       ctx.stroke()
 
-      let y = 200
+      let y = dataStartY
       for (const stat of this.data.stats) {
         ctx.fillStyle = stat.isFull ? '#FF6B6B' : '#333333'
         ctx.font = 'bold 28px sans-serif'
-        ctx.fillText(`${stat.timeSlot.displayName} (${stat.count}/${stat.timeSlot.maxCount}人)`, 30, y)
+        ctx.fillText(`${stat.timeSlot.displayName} (${stat.count}/${stat.timeSlot.maxCount}人)`, margin, y)
 
-        y += 40
+        y += 45
 
-        if (stat.timeSlot.remark) {
-          ctx.fillStyle = '#999999'
+        if (stat.timeSlot.tag) {
+          ctx.fillStyle = '#07C160'
           ctx.font = '24px sans-serif'
-          ctx.fillText(`备注: ${stat.timeSlot.remark}`, 50, y)
-          y += 35
+          ctx.fillText(`标签: ${stat.timeSlot.tag}`, margin + 20, y)
+          y += 40
+        }
+
+        if (stat.timeSlot.fortress) {
+          ctx.fillStyle = '#4A90D9'
+          ctx.font = '24px sans-serif'
+          ctx.fillText(`堡垒: ${stat.timeSlot.fortress}`, margin + 20, y)
+          y += 40
+        }
+
+        if (stat.timeSlot.date) {
+          ctx.fillStyle = '#A6A6A6'
+          ctx.font = '24px sans-serif'
+          ctx.fillText(`日期: ${stat.timeSlot.date}`, margin + 20, y)
+          y += 40
         }
 
         if (stat.registrations.length > 0) {
           ctx.fillStyle = '#666666'
           ctx.font = '24px sans-serif'
-          const names = stat.registrations.map((r, i) => `${i + 1}.${r.nickName}(${r.position === 'head' ? '车头' : '车身'})`).join(' ')
-          ctx.fillText(names, 50, y)
-          y += 35
+          const sorted = [...stat.registrations].sort((a, b) => (a.position === 'head' ? -1 : 1) - (b.position === 'head' ? -1 : 1))
+          const nameStrs = sorted.map((r, i) => `${i + 1}.${r.nickName}(${r.position === 'head' ? '车头' : '车身'})`)
+          for (let i = 0; i < nameStrs.length; i += 3) {
+            ctx.fillText(nameStrs.slice(i, i + 3).join(' '), margin + 20, y)
+            y += 40
+          }
         }
 
-        y += 20
+        y += 25
       }
 
       wx.canvasToTempFilePath({
@@ -260,20 +313,27 @@ Page({
   },
 
   buildScreenshotData: function () {
-    let height = 200
+    let height = 230
+    const bottomMargin = 40
 
     for (const stat of this.data.stats) {
-      height += 60
-      if (stat.timeSlot.remark) {
-        height += 35
+      height += 45
+      if (stat.timeSlot.tag) {
+        height += 40
+      }
+      if (stat.timeSlot.fortress) {
+        height += 40
+      }
+      if (stat.timeSlot.date) {
+        height += 40
       }
       if (stat.registrations.length > 0) {
-        height += 35
+        height += 40 * Math.ceil(stat.registrations.length / 3)
       }
-      height += 20
+      height += 25
     }
 
-    return { height: height }
+    return { height: height + bottomMargin }
   },
 
   saveScreenshotFallback: function () {

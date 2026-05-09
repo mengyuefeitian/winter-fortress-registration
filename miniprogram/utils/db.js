@@ -86,10 +86,22 @@ async function getUserByOpenid(openid) {
 // 根据手机号获取用户
 async function getUserByPhone(phone) {
   const db = getDb()
+  const phoneStr = String(phone).trim()
   const res = await db.collection('users').where({
-    phone: phone
+    phone: phoneStr
   }).get()
-  return res.data.length > 0 ? res.data[0] : null
+  if (res.data.length > 0) return res.data[0]
+
+  // 兼容历史数据：手机号可能以数字类型存储
+  const phoneNum = parseInt(phone, 10)
+  if (!isNaN(phoneNum)) {
+    const resNum = await db.collection('users').where({
+      phone: phoneNum
+    }).get()
+    if (resNum.data.length > 0) return resNum.data[0]
+  }
+
+  return null
 }
 
 // 绑定手机号到用户
@@ -147,6 +159,18 @@ async function resetUserIdentity(userId) {
     }
   })
 
+  // 清理 admins 集合中该用户的已通过记录，否则无法重新申请
+  const openid = user.data.openid
+  if (openid) {
+    const adminRes = await db.collection('admins').where({
+      userId: openid,
+      status: 'approved'
+    }).get()
+    for (const record of adminRes.data) {
+      await db.collection('admins').doc(record._id).remove()
+    }
+  }
+
   // 返回更新后的用户信息
   return await db.collection('users').doc(userId).get()
 }
@@ -156,24 +180,27 @@ async function resetUserIdentity(userId) {
  */
 
 // 创建管理员申请（支持区管和盟管申请）
-async function createAdminApplication(userId, phone, applyType = 'allianceManager') {
+async function createAdminApplication(userId, phone, applyType = 'allianceManager', extraData = {}) {
   const db = getDb()
 
   // 验证申请类型
-  const validTypes = ['zoneManager', 'allianceManager']
+  const validTypes = ['zoneManager', 'allianceManager', 'zoneCreation']
   if (!validTypes.includes(applyType)) {
     throw new Error('申请类型错误')
   }
 
-  return await db.collection('admins').add({
-    data: {
-      userId: userId,
-      phone: phone,
-      applyType: applyType,
-      status: 'pending',
-      createTime: db.serverDate()
-    }
-  })
+  const data = {
+    userId: userId,
+    phone: phone,
+    applyType: applyType,
+    status: 'pending',
+    createTime: db.serverDate()
+  }
+
+  // 合并额外数据（如 zoneId, zoneName）
+  Object.assign(data, extraData)
+
+  return await db.collection('admins').add({ data })
 }
 
 // 获取待审核的管理员申请（支持按类型筛选）
@@ -192,8 +219,8 @@ async function getPendingAdminApplications(applyType = null) {
   return res.data
 }
 
-// 审核管理员申请（记录批准的角色类型）
-async function reviewAdminApplication(applicationId, status, reviewedBy, approvedRole = null) {
+// 审核管理员申请（记录批准的角色类型，支持额外数据）
+async function reviewAdminApplication(applicationId, status, reviewedBy, approvedRole = null, extraData = {}) {
   const db = getDb()
 
   const updateData = {
@@ -207,8 +234,22 @@ async function reviewAdminApplication(applicationId, status, reviewedBy, approve
     updateData.approvedRole = approvedRole
   }
 
+  // 合并额外数据（如 zoneId, zoneName）
+  Object.assign(updateData, extraData)
+
   return await db.collection('admins').doc(applicationId).update({
     data: updateData
+  })
+}
+
+// 更新分区创建者（用于区管绑定分区）
+async function updateZoneCreator(zoneId, creatorId) {
+  const db = getDb()
+  return await db.collection('zones').doc(zoneId).update({
+    data: {
+      creatorId: creatorId,
+      updateTime: db.serverDate()
+    }
   })
 }
 
@@ -222,7 +263,7 @@ async function createZone(zoneCode, zoneName, creatorId) {
   // 检查分区编号是否已存在
   const existing = await getZoneByCode(zoneCode)
   if (existing) {
-    throw new Error('分区编号已存在')
+    throw new Error('分区编号' + zoneCode + '已存在（分区：' + existing.zoneName + '），请更换编号')
   }
 
   return await db.collection('zones').add({
@@ -246,23 +287,45 @@ async function getZoneByCode(zoneCode) {
   return res.data.length > 0 ? res.data[0] : null
 }
 
-// 获取所有活跃分区
+// 获取所有活跃分区（分页获取全部记录）
 async function getAllZones() {
   const db = getDb()
-  const res = await db.collection('zones').where({
-    status: 'active'
-  }).orderBy('createTime', 'desc').get()
-  return res.data
+  let allZones = []
+  let offset = 0
+  const batchSize = 20
+
+  while (true) {
+    const res = await db.collection('zones').where({
+      status: 'active'
+    }).orderBy('createTime', 'desc').skip(offset).limit(batchSize).get()
+    allZones = allZones.concat(res.data)
+    if (res.data.length < batchSize) break
+    offset += batchSize
+    if (offset > 500) break
+  }
+
+  return allZones
 }
 
 // 获取管理员创建的分区
 async function getZonesByCreator(creatorId) {
   const db = getDb()
-  const res = await db.collection('zones').where({
-    creatorId: creatorId,
-    status: 'active'
-  }).orderBy('createTime', 'desc').get()
-  return res.data
+  let allZones = []
+  let offset = 0
+  const batchSize = 20
+
+  while (true) {
+    const res = await db.collection('zones').where({
+      creatorId: creatorId,
+      status: 'active'
+    }).orderBy('createTime', 'desc').skip(offset).limit(batchSize).get()
+    allZones = allZones.concat(res.data)
+    if (res.data.length < batchSize) break
+    offset += batchSize
+    if (offset > 500) break
+  }
+
+  return allZones
 }
 
 /**
@@ -279,7 +342,7 @@ async function initAlliances(zoneId) {
         zoneId: zoneId,
         allianceIndex: i,
         allianceName: `联盟${i}`,
-        auditorId: null,
+        auditorIds: [],
         createTime: db.serverDate()
       }
     }))
@@ -293,29 +356,239 @@ async function getAlliancesByZone(zoneId) {
   const res = await db.collection('alliances').where({
     zoneId: zoneId
   }).orderBy('allianceIndex', 'asc').get()
+
+  // 兼容旧数据：从 auditorId 迁移到 auditorIds
+  for (const alliance of res.data) {
+    if (alliance.auditorId && !alliance.auditorIds) {
+      alliance.auditorIds = [alliance.auditorId]
+    } else if (!alliance.auditorIds) {
+      alliance.auditorIds = []
+    }
+  }
+
   return res.data
 }
 
-// 更新联盟名称
-async function updateAllianceName(allianceId, name) {
+// 根据ID获取联盟
+async function getAllianceById(allianceId) {
   const db = getDb()
-  return await db.collection('alliances').doc(allianceId).update({
-    data: {
-      allianceName: name,
-      updateTime: db.serverDate()
-    }
-  })
+  const res = await db.collection('alliances').doc(allianceId).get()
+  return res.data
 }
 
-// 绑定审计员
-async function bindAuditor(allianceId, auditorId) {
-  const db = getDb()
-  return await db.collection('alliances').doc(allianceId).update({
+// 更新联盟名称（通过云函数，绕过客户端权限限制）
+async function updateAllianceName(allianceId, name) {
+  const res = await wx.cloud.callFunction({
+    name: 'manageZone',
     data: {
-      auditorId: auditorId,
-      updateTime: db.serverDate()
+      action: 'updateAllianceName',
+      data: { allianceId, name }
     }
   })
+  if (res.result.err) throw new Error(res.result.err)
+  return res.result
+}
+
+// 绑定盟管（通过云函数，绕过客户端权限限制）
+async function bindAllianceAuditors(allianceId, auditorId, action = 'add') {
+  if (action === 'remove') {
+    const res = await wx.cloud.callFunction({
+      name: 'manageZone',
+      data: {
+        action: 'unbindAllianceAuditor',
+        data: { allianceId, auditorId }
+      }
+    })
+    if (res.result.err) throw new Error(res.result.err)
+    return res.result
+  }
+  const res = await wx.cloud.callFunction({
+    name: 'manageZone',
+    data: {
+      action: 'bindAllianceAuditor',
+      data: { allianceId, auditorId }
+    }
+  })
+  if (res.result.err) throw new Error(res.result.err)
+  return res.result
+}
+
+// 获取联盟绑定的盟管信息列表
+async function getAllianceAuditorInfo(allianceId) {
+  const db = getDb()
+  const _ = db.command
+  const alliance = await db.collection('alliances').doc(allianceId).get()
+  let auditorIds = alliance.data.auditorIds || []
+
+  // 兼容旧数据
+  if (alliance.data.auditorId && !alliance.data.auditorIds) {
+    auditorIds = [alliance.data.auditorId]
+  }
+
+  if (auditorIds.length === 0) return []
+
+  const res = await db.collection('users').where({
+    _id: _.in(auditorIds)
+  }).get()
+
+  return res.data
+}
+
+// 获取用户的所有申请记录
+async function getUserApplications(userId) {
+  const db = getDb()
+  const res = await db.collection('admins').where({
+    userId: userId
+  }).orderBy('createTime', 'desc').get()
+  return res.data
+}
+
+// 获取分区的成员列表（盟管和区管）
+async function getZoneMembers(zoneId) {
+  const db = getDb()
+  const _ = db.command
+
+  const alliances = await db.collection('alliances').where({
+    zoneId: zoneId
+  }).get()
+
+  const auditorIds = []
+  const auditorAllianceMap = {}
+  for (const alliance of alliances.data) {
+    let ids = alliance.auditorIds || []
+    if (alliance.auditorId && !alliance.auditorIds) {
+      ids = [alliance.auditorId]
+    }
+    for (const id of ids) {
+      if (!auditorIds.includes(id)) {
+        auditorIds.push(id)
+      }
+      if (!auditorAllianceMap[id]) {
+        auditorAllianceMap[id] = []
+      }
+      auditorAllianceMap[id].push(alliance.allianceName)
+    }
+  }
+
+  const auditors = []
+  if (auditorIds.length > 0) {
+    const res = await db.collection('users').where({
+      _id: _.in(auditorIds)
+    }).get()
+    for (const user of res.data) {
+      auditors.push({
+        _id: user._id,
+        nickName: user.nickName || '未知',
+        phone: user.phone || '',
+        role: 'auditor',
+        allianceNames: auditorAllianceMap[user._id] || []
+      })
+    }
+  }
+
+  const zone = await db.collection('zones').doc(zoneId).get()
+  const adminIds = []
+  if (zone.data.creatorId) {
+    adminIds.push(zone.data.creatorId)
+  }
+
+  const admins = []
+  if (adminIds.length > 0) {
+    const res = await db.collection('users').where({
+      _id: _.in(adminIds)
+    }).get()
+    for (const user of res.data) {
+      admins.push({
+        _id: user._id,
+        nickName: user.nickName || '未知',
+        phone: user.phone || '',
+        role: 'admin'
+      })
+    }
+  }
+
+  return { auditors, admins }
+}
+
+// 移除成员（重置为普通用户）
+async function removeMember(userId, role, zoneId) {
+  const db = getDb()
+  const _ = db.command
+
+  // 清理该分区所有联盟的盟管绑定（无论传入的 role 是什么，都清理 auditor 绑定）
+  const alliances = await db.collection('alliances').where({
+    zoneId: zoneId
+  }).get()
+
+  for (const alliance of alliances.data) {
+    let ids = alliance.auditorIds || []
+    if (alliance.auditorId && !alliance.auditorIds) {
+      ids = [alliance.auditorId]
+    }
+    if (ids.includes(userId) || alliance.auditorId === userId) {
+      await db.collection('alliances').doc(alliance._id).update({
+        data: {
+          auditorIds: _.pull(userId),
+          auditorId: null,
+          updateTime: db.serverDate()
+        }
+      })
+    }
+  }
+
+  // 清理分区创建者绑定
+  const zone = await db.collection('zones').doc(zoneId).get()
+  if (zone.data.creatorId === userId) {
+    await db.collection('zones').doc(zoneId).update({
+      data: {
+        creatorId: null,
+        updateTime: db.serverDate()
+      }
+    })
+  }
+
+  // 检查用户在其他分区是否仍有身份绑定，决定是否重置全局角色
+  let shouldResetRole = true
+
+  // 检查是否仍是其他分区的创建者（区管）
+  const otherZones = await db.collection('zones').where({
+    creatorId: userId
+  }).get()
+  if (otherZones.data.length > 0) {
+    shouldResetRole = false
+  }
+
+  // 检查是否仍是其他联盟的盟管
+  if (shouldResetRole) {
+    const otherAlliances = await db.collection('alliances').where({
+      auditorIds: userId
+    }).get()
+    if (otherAlliances.data.length > 0) {
+      shouldResetRole = false
+    }
+  }
+
+  if (shouldResetRole) {
+    await db.collection('users').doc(userId).update({
+      data: {
+        role: 'user',
+        updateTime: db.serverDate()
+      }
+    })
+
+    // 清理 admins 集合中该用户的已通过记录，否则无法重新申请
+    const userDoc = await db.collection('users').doc(userId).get()
+    const openid = userDoc.data && userDoc.data.openid
+    if (openid) {
+      const adminRes = await db.collection('admins').where({
+        userId: openid,
+        status: 'approved'
+      }).get()
+      for (const record of adminRes.data) {
+        await db.collection('admins').doc(record._id).remove()
+      }
+    }
+  }
 }
 
 /**
@@ -325,8 +598,20 @@ async function bindAuditor(allianceId, auditorId) {
 // 预设时间段
 const TIME_VALUES = ['10:00', '12:00', '15:00', '19:30', '21:00']
 
+// 标签选项
+const TAG_OPTIONS = ['高迁', '生命', '穿透', '加兵', '火晶', '橙碎', '加速', '螺丝', '宠石', '宠箱', '其他']
+
+// 堡垒名称选项（单选）
+const FORTRESS_OPTIONS = ['要塞1', '要塞2', '要塞3', '要塞4', '堡垒1', '堡垒2', '堡垒3', '堡垒4', '堡垒5', '堡垒6', '堡垒7', '堡垒8', '堡垒9', '堡垒10', '堡垒11', '堡垒12']
+
+// 国战报名 - 语音选项
+const VOICE_OPTIONS = ['是', '否', '不确定']
+
+// 国战报名 - 位置选项
+const BATTLE_POSITION_OPTIONS = ['车头', '车身']
+
 // 创建时间段
-async function createTimeSlot(zoneId, allianceId, timeValue, slotIndex, remark) {
+async function createTimeSlot(zoneId, allianceId, timeValue, slotIndex, date, tag, fortress) {
   const db = getDb()
   const displayName = slotIndex > 1 ? `${timeValue}-${slotIndex}` : timeValue
 
@@ -337,7 +622,10 @@ async function createTimeSlot(zoneId, allianceId, timeValue, slotIndex, remark) 
       timeValue: timeValue,
       slotIndex: slotIndex,
       displayName: displayName,
-      remark: remark || '',
+      date: date || '',
+      tag: tag || '',
+      fortress: fortress || '',
+      remark: '', // 保留 remark 字段兼容旧数据
       maxCount: 15,
       status: 'active',
       createTime: db.serverDate()
@@ -377,9 +665,25 @@ async function updateTimeSlotRemark(timeSlotId, remark) {
   })
 }
 
-// 删除时间段
+// 更新时间段标签
+async function updateTimeSlotTag(timeSlotId, tag) {
+  const db = getDb()
+  return await db.collection('timeSlots').doc(timeSlotId).update({
+    data: {
+      tag: tag || '',
+      updateTime: db.serverDate()
+    }
+  })
+}
+
+// 删除时间段（同时删除相关报名记录）
 async function deleteTimeSlot(timeSlotId) {
   const db = getDb()
+  // 先删除该时间段的所有报名记录
+  await db.collection('registrations').where({
+    timeSlotId: timeSlotId
+  }).remove()
+  // 再软删除时间段
   return await db.collection('timeSlots').doc(timeSlotId).update({
     data: {
       status: 'inactive',
@@ -395,6 +699,31 @@ async function getTimeSlotById(timeSlotId) {
   return res.data
 }
 
+// 通过云函数删除时间段（绕过数据库 creator-only 写权限限制）
+async function deleteTimeSlotViaCloud(timeSlotId) {
+  return await wx.cloud.callFunction({
+    name: 'manageTimeSlot',
+    data: {
+      action: 'delete',
+      data: { timeSlotId }
+    }
+  })
+}
+
+// 通过云函数更新时间段标签（绕过数据库 creator-only 写权限限制）
+async function updateTimeSlotTagViaCloud(timeSlotId, tag, fortress) {
+  const cloudData = { timeSlotId }
+  if (tag !== undefined) cloudData.tag = tag || ''
+  if (fortress !== undefined) cloudData.fortress = fortress || ''
+  return await wx.cloud.callFunction({
+    name: 'manageTimeSlot',
+    data: {
+      action: 'updateTag',
+      data: cloudData
+    }
+  })
+}
+
 /**
  * 报名相关操作
  */
@@ -408,6 +737,19 @@ async function createRegistration(data) {
 
   if (count >= timeSlot.maxCount) {
     throw new Error('该时间段报名人数已满')
+  }
+
+  // 检查同一时间段内昵称是否重复
+  const existingNick = await db.collection('registrations')
+    .where({
+      timeSlotId: data.timeSlotId,
+      nickName: data.nickName,
+      status: 'active'
+    })
+    .get()
+
+  if (existingNick.data.length > 0) {
+    throw new Error('该时间段已存在相同昵称的报名，请更换昵称')
   }
 
   return await db.collection('registrations').add({
@@ -472,20 +814,46 @@ async function cancelRegistration(registrationId) {
 // 获取联盟统计数据
 async function getAllianceStatistics(allianceId) {
   const timeSlots = await getTimeSlotsByAlliance(allianceId)
-  const stats = []
+  if (timeSlots.length === 0) return []
 
-  for (const slot of timeSlots) {
-    const registrations = await getRegistrationsByTimeSlot(slot._id)
-    stats.push({
-      timeSlot: slot,
-      registrations: registrations,
-      count: registrations.length,
-      remaining: slot.maxCount - registrations.length,
-      isFull: registrations.length >= slot.maxCount
-    })
+  const timeSlotIds = timeSlots.map(s => s._id)
+  const db = getDb()
+  let regsBySlot = {}
+
+  // 分页获取所有报名记录
+  let allRegs = []
+  let offset = 0
+  const batchSize = 20
+
+  while (true) {
+    const res = await db.collection('registrations').where({
+      timeSlotId: db.command.in(timeSlotIds),
+      status: 'active'
+    }).skip(offset).limit(batchSize).get()
+    allRegs = allRegs.concat(res.data)
+    if (res.data.length < batchSize) break
+    offset += batchSize
+    if (offset > 500) break
   }
 
-  return stats
+  for (const reg of allRegs) {
+    if (!regsBySlot[reg.timeSlotId]) {
+      regsBySlot[reg.timeSlotId] = []
+    }
+    regsBySlot[reg.timeSlotId].push(reg)
+  }
+
+  return timeSlots.map(slot => {
+    const regs = (regsBySlot[slot._id] || [])
+      .sort((a, b) => (a.position === 'head' ? -1 : 1) - (b.position === 'head' ? -1 : 1))
+    return {
+      timeSlot: slot,
+      registrations: regs,
+      count: regs.length,
+      remaining: slot.maxCount - regs.length,
+      isFull: regs.length >= slot.maxCount
+    }
+  })
 }
 
 // 获取分区统计数据
@@ -555,14 +923,28 @@ async function getPositionConfigs(filters = {}) {
   if (filters.positionType) {
     query.positionType = filters.positionType
   }
+  if (filters.zoneId) {
+    query.zoneId = filters.zoneId
+  }
 
-  const res = await db.collection('positionConfigs')
-    .where(query)
-    .orderBy('date', 'asc')
-    .orderBy('createTime', 'desc')
-    .get()
+  let allConfigs = []
+  let offset = 0
+  const batchSize = 20
+  while (true) {
+    const res = await db.collection('positionConfigs')
+      .where(query)
+      .orderBy('date', 'asc')
+      .orderBy('createTime', 'desc')
+      .skip(offset)
+      .limit(batchSize)
+      .get()
+    allConfigs = allConfigs.concat(res.data)
+    if (res.data.length < batchSize) break
+    offset += batchSize
+    if (offset > 500) break
+  }
 
-  return res.data
+  return allConfigs
 }
 
 // 根据ID获取官职配置
@@ -572,9 +954,14 @@ async function getPositionConfigById(configId) {
   return res.data
 }
 
-// 删除官职配置
+// 删除官职配置（同时删除相关报名记录）
 async function deletePositionConfig(configId) {
   const db = getDb()
+  // 先删除该配置的所有报名记录
+  await db.collection('positionRegistrations').where({
+    configId: configId
+  }).remove()
+  // 再软删除配置
   return await db.collection('positionConfigs').doc(configId).update({
     data: {
       status: 'inactive',
@@ -583,17 +970,18 @@ async function deletePositionConfig(configId) {
   })
 }
 
-// 根据起始时间生成时间段列表（0:00或0:30开始，每30分钟一格，到24:00）
+// 根据起始时间生成时间段列表（每30分钟一格，到24:00）
 function generatePositionTimeSlots(startTime) {
   const slots = []
-  const startHour = parseInt(startTime.split(':')[0])
-  const startMinute = parseInt(startTime.split(':')[1])
+  const [startHourStr, startMinuteStr] = startTime.split(':')
+  const startHour = parseInt(startHourStr)
+  const startMinute = parseInt(startMinuteStr)
 
   let currentHour = startHour
   let currentMinute = startMinute
 
   while (currentHour < 24) {
-    const timeStr = `${currentHour}:${currentMinute === 0 ? '00' : currentMinute}`
+    const timeStr = `${currentHour}:${String(currentMinute).padStart(2, '0')}`
     slots.push({
       time: timeStr,
       period: currentHour < 12 ? 'morning' : 'afternoon'
@@ -602,7 +990,7 @@ function generatePositionTimeSlots(startTime) {
     currentMinute += 30
     if (currentMinute >= 60) {
       currentHour += 1
-      currentMinute = 0
+      currentMinute -= 60
     }
   }
 
@@ -640,8 +1028,8 @@ async function createPositionRegistration(data) {
     })
     .get()
 
-  if (existingSlot.data.length > 0 && existingSlot.data[0].userId !== data.userId) {
-    throw new Error('该时间位置已被其他人选择')
+  if (existingSlot.data.length > 0) {
+    throw new Error('该时间位置已被选择')
   }
 
   return await db.collection('positionRegistrations').add({
@@ -841,6 +1229,203 @@ async function isPhoneSuperAdmin(phone) {
   return resNum.data.length > 0
 }
 
+/**
+ * 国战报名相关操作
+ */
+
+// 创建国战报名配置
+async function createBattleConfig(zoneId, zoneName, date, creatorId) {
+  const db = getDb()
+
+  // 检查是否已有相同日期的配置
+  const existing = await db.collection('battleConfigs').where({
+    zoneId: zoneId,
+    date: date,
+    status: 'active'
+  }).get()
+
+  if (existing.data.length > 0) {
+    throw new Error('该日期已存在国战报名')
+  }
+
+  return await db.collection('battleConfigs').add({
+    data: {
+      zoneId: zoneId,
+      zoneName: zoneName,
+      date: date,
+      creatorId: creatorId,
+      status: 'active',
+      createTime: db.serverDate()
+    }
+  })
+}
+
+// 获取国战配置列表
+async function getBattleConfigs(zoneId) {
+  const db = getDb()
+  const query = { status: 'active' }
+  if (zoneId) query.zoneId = zoneId
+
+  let allConfigs = []
+  let offset = 0
+  const batchSize = 20
+  while (true) {
+    const res = await db.collection('battleConfigs')
+      .where(query)
+      .orderBy('date', 'asc')
+      .skip(offset)
+      .limit(batchSize)
+      .get()
+    allConfigs = allConfigs.concat(res.data)
+    if (res.data.length < batchSize) break
+    offset += batchSize
+    if (offset > 500) break
+  }
+
+  return allConfigs
+}
+
+// 根据ID获取国战配置
+async function getBattleConfigById(configId) {
+  const db = getDb()
+  const res = await db.collection('battleConfigs').doc(configId).get()
+  return res.data
+}
+
+// 删除国战配置（同时删除所有报名记录）
+async function deleteBattleConfig(configId) {
+  const db = getDb()
+  // 先删除所有报名记录
+  await db.collection('battleRegistrations').where({
+    configId: configId
+  }).remove()
+  // 再删除配置
+  return await db.collection('battleConfigs').doc(configId).remove()
+}
+
+// 创建国战报名记录
+async function createBattleRegistration(data) {
+  const db = getDb()
+  const { configId, zoneId, userId, nickName, allianceId, allianceName, furnaceLevel, barracksLevel, diamonds, voice, position } = data
+
+  // 检查同一 configId + nickName 是否已报名（一人多账号按昵称去重）
+  const existing = await db.collection('battleRegistrations').where({
+    configId: configId,
+    nickName: nickName,
+    status: 'active'
+  }).get()
+
+  if (existing.data.length > 0) {
+    throw new Error('您已报名此国战活动')
+  }
+
+  return await db.collection('battleRegistrations').add({
+    data: {
+      configId: configId,
+      zoneId: zoneId,
+      userId: userId,
+      nickName: nickName,
+      allianceId: allianceId,
+      allianceName: allianceName,
+      furnaceLevel: furnaceLevel,
+      barracksLevel: barracksLevel,
+      diamonds: diamonds,
+      voice: voice,
+      position: position,
+      assignment: position === '车头' ? nickName : '机动',
+      status: 'active',
+      createTime: db.serverDate()
+    }
+  })
+}
+
+// 获取国战配置的报名列表
+async function getBattleRegistrationsByConfig(configId) {
+  const db = getDb()
+  const res = await db.collection('battleRegistrations').where({
+    configId: configId,
+    status: 'active'
+  }).orderBy('createTime', 'asc').get()
+
+  return res.data
+}
+
+// 获取用户的报名记录
+async function getBattleRegistrationsByUser(userId) {
+  const db = getDb()
+  const res = await db.collection('battleRegistrations').where({
+    userId: userId,
+    status: 'active'
+  }).orderBy('createTime', 'desc').get()
+
+  return res.data
+}
+
+// 根据ID获取报名记录
+async function getBattleRegistrationById(registrationId) {
+  const db = getDb()
+  const res = await db.collection('battleRegistrations').doc(registrationId).get()
+  return res.data
+}
+
+// 更新报名分配的"安排"
+async function updateBattleRegistrationAssignment(registrationId, assignment) {
+  const db = getDb()
+  return await db.collection('battleRegistrations').doc(registrationId).update({
+    data: {
+      assignment: assignment,
+      updateTime: db.serverDate()
+    }
+  })
+}
+
+// 删除单条报名记录
+async function deleteBattleRegistration(registrationId) {
+  const db = getDb()
+  return await db.collection('battleRegistrations').doc(registrationId).remove()
+}
+
+// 清空国战配置的所有报名
+async function clearBattleRegistrations(configId) {
+  const db = getDb()
+  return await db.collection('battleRegistrations').where({
+    configId: configId
+  }).remove()
+}
+
+// 获取报名人数
+async function getBattleRegistrationCount(configId) {
+  const db = getDb()
+  const res = await db.collection('battleRegistrations').where({
+    configId: configId,
+    status: 'active'
+  }).count()
+  return res.total
+}
+
+/**
+ * 意见反馈
+ */
+async function createFeedback(userId, nickName, type, content, contactInfo, imageUrls) {
+  const db = getDb()
+  return await db.collection('feedbacks').add({
+    data: {
+      userId,
+      nickName,
+      type,
+      content,
+      contactInfo: contactInfo || null,
+      imageUrls: imageUrls || [],
+      status: 'pending',
+      createTime: db.serverDate()
+    }
+  })
+}
+
+/**
+ * 导出所有数据库操作
+ */
+
 module.exports = {
   // 用户
   createOrUpdateUser,
@@ -854,6 +1439,7 @@ module.exports = {
   createAdminApplication,
   getPendingAdminApplications,
   reviewAdminApplication,
+  updateZoneCreator,
 
   // 分区
   createZone,
@@ -864,16 +1450,30 @@ module.exports = {
   // 联盟
   initAlliances,
   getAlliancesByZone,
+  getAllianceById,
   updateAllianceName,
-  bindAuditor,
+  bindAllianceAuditors,
+  getAllianceAuditorInfo,
+
+  // 管理员申请查询
+  getUserApplications,
+
+  // 成员管理
+  getZoneMembers,
+  removeMember,
 
   // 时间段
   TIME_VALUES,
+  TAG_OPTIONS,
+  FORTRESS_OPTIONS,
   createTimeSlot,
   getTimeSlotsByAlliance,
   getMaxSlotIndex,
   updateTimeSlotRemark,
+  updateTimeSlotTag,
+  updateTimeSlotTagViaCloud,
   deleteTimeSlot,
+  deleteTimeSlotViaCloud,
   getTimeSlotById,
 
   // 报名
@@ -912,5 +1512,24 @@ module.exports = {
   // 超管
   addSuperAdmin,
   getAllSuperAdmins,
-  isPhoneSuperAdmin
+  isPhoneSuperAdmin,
+
+  // 国战报名
+  VOICE_OPTIONS,
+  BATTLE_POSITION_OPTIONS,
+  createBattleConfig,
+  getBattleConfigs,
+  getBattleConfigById,
+  deleteBattleConfig,
+  createBattleRegistration,
+  getBattleRegistrationsByConfig,
+  getBattleRegistrationsByUser,
+  getBattleRegistrationById,
+  updateBattleRegistrationAssignment,
+  deleteBattleRegistration,
+  clearBattleRegistrations,
+  getBattleRegistrationCount,
+
+  // 意见反馈
+  createFeedback
 }

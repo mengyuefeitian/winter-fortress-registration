@@ -25,9 +25,12 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #F5F7FA;
-  border-radius: 8px;
-  padding: 12px 16px;
+  background-color: #F5F5F5;
+  border-radius: 4px;
+  padding: 8px 12px;
+  height: 32px;
+  font-size: 14px;
+  color: #000000;
 }
 
 .picker-arrow {
@@ -54,7 +57,7 @@
 }
 
 .alliance-index {
-  background-color: #4A90D9;
+  background-color: #576B95;
   color: #FFFFFF;
   font-size: 14px;
   padding: 4px 12px;
@@ -85,45 +88,113 @@
 }
 
 .save-btn {
-  background-color: #6BB3F0;
+  background-color: #07C160;
   color: #FFFFFF;
   font-size: 12px;
   padding: 0 16px;
   height: 36px;
   line-height: 36px;
   border-radius: 6px;
+  box-sizing: border-box;
 }
 
 .auditor-section {
   display: flex;
-  align-items: center;
+  flex-direction: column;
 }
 
 .auditor-label {
   font-size: 12px;
   color: #999999;
-  width: 60px;
+  margin-bottom: 8px;
 }
 
-.auditor-picker {
-  flex: 1;
+.auditor-list {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-bottom: 8px;
+}
+
+.auditor-empty {
+  padding: 4px 0;
+}
+
+.auditor-tag {
+  display: inline-flex;
   align-items: center;
+  background: #e8f0fe;
+  color: #4A90D9;
+  padding: 6rpx 16rpx;
+  border-radius: 20rpx;
+  font-size: 22rpx;
+}
+
+.auditor-tag-name {
+  margin-right: 8rpx;
+}
+
+.auditor-remove {
+  color: #9ca3af;
+  font-size: 26rpx;
+  line-height: 1;
+  padding: 0 4rpx;
+}
+
+.add-auditor-btn {
+  display: inline-block;
+  color: #4A90D9;
+  font-size: 22rpx;
+  padding: 6rpx 16rpx;
+  border: 1rpx dashed #4A90D9;
+  border-radius: 20rpx;
+}
+
+.add-auditor-actions {
+  display: flex;
+  gap: 16rpx;
+  flex-wrap: wrap;
+}
+
+.add-auditor-phone {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 8px;
+}
+
+.phone-input {
+  flex: 1;
+  height: 36px;
   background-color: #FFFFFF;
   border: 1px solid #E8E8E8;
   border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 12px;
-  margin-right: 8px;
+  padding: 0 12px;
+  font-size: 14px;
 }
 
-.bind-btn {
-  background-color: #4A90D9;
-  color: #FFFFFF;
-  font-size: 12px;
-  padding: 0 16px;
-  height: 36px;
-  line-height: 36px;
+.add-auditor-picker {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 8px;
+}
+
+.picker-compact {
+  background-color: #FFFFFF;
+  border: 1px solid #E8E8E8;
   border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.picker-actions {
+  display: flex;
+  gap: 8rpx;
+}
+
+.btn-sm {
+  font-size: 22rpx;
+  padding: 6rpx 20rpx;
+  min-width: auto;
 }

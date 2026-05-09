@@ -19,6 +19,8 @@ exports.main = async (event, context) => {
         return await getTimeSlotsByAlliance(data.allianceId)
       case 'updateRemark':
         return await updateTimeSlotRemark(data.timeSlotId, data.remark)
+      case 'updateTag':
+        return await updateTimeSlotTag(data.timeSlotId, data.tag, data.fortress)
       case 'delete':
         return await deleteTimeSlot(data.timeSlotId)
       case 'getMaxIndex':
@@ -45,6 +47,7 @@ async function createTimeSlot(data) {
       slotIndex: data.slotIndex,
       displayName: data.displayName,
       remark: data.remark || '',
+      fortress: data.fortress || '',
       maxCount: data.maxCount || 15,
       status: 'active',
       createTime: db.serverDate()
@@ -83,8 +86,34 @@ async function updateTimeSlotRemark(timeSlotId, remark) {
   }
 }
 
-// 删除时间段
+// 更新时间段标签和堡垒名称
+async function updateTimeSlotTag(timeSlotId, tag, fortress) {
+  const updateData = {
+    updateTime: db.serverDate()
+  }
+  if (tag !== undefined) {
+    updateData.tag = tag || ''
+  }
+  if (fortress !== undefined) {
+    updateData.fortress = fortress || ''
+  }
+  await db.collection('timeSlots').doc(timeSlotId).update({
+    data: updateData
+  })
+
+  return {
+    success: true
+  }
+}
+
+// 删除时间段（同时删除相关报名记录）
 async function deleteTimeSlot(timeSlotId) {
+  // 先删除该时间段的所有报名记录
+  await db.collection('registrations').where({
+    timeSlotId: timeSlotId
+  }).remove()
+
+  // 再软删除时间段
   await db.collection('timeSlots').doc(timeSlotId).update({
     data: {
       status: 'inactive',

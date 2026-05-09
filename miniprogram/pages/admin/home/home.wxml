@@ -6,48 +6,77 @@
         <text class="text-lg font-semibold">{{userInfo.nickName || '未登录'}}</text>
         <view class="flex items-center mt-8">
           <view class="status-dot status-active"></view>
-          <text class="text-secondary">区管</text>
+          <text class="text-secondary">{{roleDisplayName}}</text>
+        </view>
+      </view>
+    </view>
+    <!-- 分区选择器 -->
+    <view wx:if="{{zones.length > 1}}" class="card-footer">
+      <view class="form-row">
+        <view class="form-col">
+          <text class="form-label">当前分区</text>
+          <zone-selector value="{{selectedZone}}" zones="{{zones}}" loaded="{{true}}" bind:change="onZoneChange" />
         </view>
       </view>
     </view>
   </view>
 
+  <!-- 配置管理 -->
   <view class="section-header">
-    <text class="section-title">功能</text>
+    <text class="section-title">配置管理</text>
   </view>
-
   <view class="function-grid">
-    <view class="function-card" bindtap="goToAllianceConfig">
+    <view class="function-card-compact" bindtap="goToAllianceConfig">
       <view class="function-content">
         <text class="function-name">联盟配置</text>
         <text class="function-desc">修改联盟名称、绑定盟管</text>
       </view>
     </view>
-    <view class="function-card" bindtap="goToTimeSlotConfig">
+    <view class="function-card-compact" bindtap="goToTimeSlotConfig">
       <view class="function-content">
         <text class="function-name">时间段配置</text>
-        <text class="function-desc">配置堡垒活动时间</text>
+        <text class="function-desc">配置活动时间和标签</text>
       </view>
     </view>
-    <view class="function-card" bindtap="goToStatistics">
-      <view class="function-content">
-        <text class="function-name">数据统计</text>
-        <text class="function-desc">查看报名统计</text>
-      </view>
-    </view>
-    <view class="function-card" bindtap="goToPositionManage">
+    <view class="function-card-compact" bindtap="goToPositionManage">
       <view class="function-content">
         <text class="function-name">官职管理</text>
         <text class="function-desc">创建官职报名配置</text>
       </view>
     </view>
-    <view class="function-card" bindtap="goToReviewManager">
+  </view>
+
+  <!-- 权限审核 -->
+  <view class="section-header mt-24">
+    <text class="section-title">权限审核</text>
+  </view>
+  <view class="function-grid">
+    <view class="function-card-compact" bindtap="goToReviewManager">
       <view class="function-content">
         <text class="function-name">盟管审核</text>
         <text class="function-desc">审核盟管申请</text>
       </view>
     </view>
-    <view class="function-card" bindtap="goToClearData">
+    <view class="function-card-compact" bindtap="goToMemberManage">
+      <view class="function-content">
+        <text class="function-name">成员管理</text>
+        <text class="function-desc">查看和管理盟管成员</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 统计数据 -->
+  <view class="section-header mt-24">
+    <text class="section-title">统计数据</text>
+  </view>
+  <view class="function-grid">
+    <view class="function-card-compact" bindtap="goToStatistics">
+      <view class="function-content">
+        <text class="function-name">数据统计</text>
+        <text class="function-desc">查看报名统计</text>
+      </view>
+    </view>
+    <view class="function-card-compact" bindtap="goToClearData">
       <view class="function-content">
         <text class="function-name">清空数据</text>
         <text class="function-desc">清空报名记录</text>

@@ -1,0 +1,63 @@
+<!--pages/user/battle-list/battle-list.wxml-->
+<view class="container">
+  <!-- 页面标题 + 帮助 -->
+  <view class="page-header">
+    <view class="page-title-row">
+      <text class="page-title">国战报名</text>
+      <view class="help-icon" bindtap="toggleTip">
+        <text class="help-text">?</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 提示信息 -->
+  <view wx:if="{{showTip}}" class="info-tip">
+    <text class="info-tip-text">分区管理员在国战报名页面可看到【创建国战】选项，选择国战日期后进行创建，用户即可点击日期填写国战报名信息。区管可在[统计表]中分配车身到对应的车头，[分配表]中可以看到最终结果，可保存截图分享。</text>
+  </view>
+
+  <!-- 分区选择器（超管显示） -->
+  <view class="zone-bar" wx:if="{{isSuperAdmin}}">
+    <zone-selector zones="{{zones}}" value="{{currentZone}}" loaded="{{zones.length > 0}}" bind:change="onZoneChange" />
+  </view>
+
+  <!-- 创建区 -->
+  <view class="create-bar" wx:if="{{canCreate}}">
+    <view class="date-picker">
+      <text class="label">日期</text>
+      <picker mode="date" value="{{selectedDate}}" bindchange="onDateChange">
+        <view class="picker-display">{{selectedDate}}</view>
+      </picker>
+    </view>
+    <view class="btn-create" bindtap="onCreateConfig">创建国战</view>
+  </view>
+
+  <view class="config-list" wx:if="{{configs.length > 0}}">
+    <view
+      class="config-item {{selectedConfig && selectedConfig._id === item._id ? 'selected' : ''}}"
+      wx:for="{{configs}}"
+      wx:key="_id"
+      bindtap="onConfigSelect"
+      data-id="{{item._id}}"
+      data-date="{{item.date}}"
+      data-zone-name="{{item.zoneName || ''}}"
+    >
+      <view class="config-date">{{item.date}} <text class="config-badge">国战报名</text></view>
+      <view class="config-zone" wx:if="{{item.zoneName}}">{{item.zoneName}}</view>
+      <view class="config-actions">
+        <view class="btn-delete" wx:if="{{isSuperAdmin}}" catchtap="onDeleteConfig" data-id="{{item._id}}" data-date="{{item.date}}">删除</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty-state" wx:else>
+    <text class="empty-icon">⚔️</text>
+    <text class="empty-text">暂无国战报名</text>
+    <text class="empty-hint" wx:if="{{canCreate}}">请选择日期后点击"创建国战"</text>
+    <text class="empty-hint" wx:else>管理员创建后可报名</text>
+  </view>
+
+  <view class="action-bar" wx:if="{{configs.length > 0}}">
+    <button class="btn btn-statistics" bindtap="onStatistics">统计表</button>
+    <button class="btn btn-allocation" bindtap="onAllocation">分配表</button>
+  </view>
+</view>

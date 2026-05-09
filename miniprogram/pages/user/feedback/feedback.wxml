@@ -1,0 +1,70 @@
+<!--pages/user/feedback/feedback.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="title">意见与建议</text>
+    <text class="hint">您的反馈帮助我们做得更好</text>
+  </view>
+
+  <view class="form">
+    <!-- 反馈类型 -->
+    <view class="form-section">
+      <text class="section-label">反馈类型</text>
+      <view class="type-list">
+        <view
+          class="type-item {{selectedType === item.value ? 'selected' : ''}}"
+          wx:for="{{feedbackTypes}}"
+          wx:key="value"
+          bindtap="onTypeSelect"
+          data-type="{{item.value}}"
+        >
+          <text class="type-label">{{item.label}}</text>
+          <text class="type-desc">{{item.desc}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 内容 -->
+    <view class="form-section">
+      <text class="section-label">详细内容</text>
+      <textarea
+        class="content-input"
+        placeholder="请详细描述您的需求或遇到的问题（10-500字）"
+        maxlength="500"
+        bindinput="onContentInput"
+        value="{{content}}"
+        auto-height
+      />
+      <view class="char-count">
+        <text class="{{charCount < 10 ? 'count-warn' : ''}}">{{charCount}}/500</text>
+        <text class="count-hint" wx:if="{{charCount < 10}}">至少10个字</text>
+      </view>
+    </view>
+
+    <!-- 图片 -->
+    <view class="form-section">
+      <text class="section-label">截图（可选，最多3张）</text>
+      <view class="image-list">
+        <view class="image-item" wx:for="{{imagePaths}}" wx:key="index">
+          <image src="{{item}}" mode="aspectFill" class="preview-img" bindtap="onPreviewImage" data-url="{{item}}" />
+          <view class="image-remove" bindtap="onRemoveImage" data-index="{{index}}">×</view>
+        </view>
+        <view class="image-add" bindtap="onChooseImage" wx:if="{{imagePaths.length < maxImages}}">
+          <text class="add-icon">+</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 联系方式 -->
+    <view class="form-section">
+      <text class="section-label">联系方式（可选）</text>
+      <input
+        class="contact-input"
+        placeholder="手机号/微信/QQ等，方便我们回复"
+        bindinput="onContactInput"
+        value="{{contactInfo}}"
+      />
+    </view>
+  </view>
+
+  <button class="btn-submit" bindtap="onSubmit" loading="{{submitting}}" disabled="{{submitting}}">提交反馈</button>
+</view>

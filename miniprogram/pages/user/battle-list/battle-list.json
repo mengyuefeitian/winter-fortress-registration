@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "国战报名",
+  "usingComponents": {
+    "zone-selector": "/components/zone-selector/zone-selector"
+  }
+}

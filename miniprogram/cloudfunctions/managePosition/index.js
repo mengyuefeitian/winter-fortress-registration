@@ -116,18 +116,14 @@ async function getConfigById(configId) {
   }
 }
 
-// 删除配置
+// 删除配置（同时删除相关报名记录）
 async function deleteConfig(configId) {
-  // 先检查是否有报名记录
-  const countRes = await db.collection('positionRegistrations').where({
-    configId: configId,
-    status: 'active'
-  }).count()
+  // 先删除该配置的所有报名记录
+  await db.collection('positionRegistrations').where({
+    configId: configId
+  }).remove()
 
-  if (countRes.total > 0) {
-    throw new Error('该配置下存在报名记录，无法删除')
-  }
-
+  // 再软删除配置
   await db.collection('positionConfigs').doc(configId).update({
     data: {
       status: 'inactive',
@@ -148,19 +144,7 @@ async function createRegistration(data) {
   const transaction = await db.startTransaction()
 
   try {
-    // 1. 检查用户是否已报名该配置
-    const existingUserRes = await transaction.collection('positionRegistrations').where({
-      configId: configId,
-      userId: userId,
-      status: 'active'
-    }).get()
-
-    if (existingUserRes.data.length > 0) {
-      await transaction.rollback()
-      throw new Error('您已报名该配置，请勿重复报名')
-    }
-
-    // 2. 检查昵称是否重复
+    // 1. 检查昵称是否重复
     const existingNickRes = await transaction.collection('positionRegistrations').where({
       configId: configId,
       nickName: nickName,
@@ -172,7 +156,7 @@ async function createRegistration(data) {
       throw new Error('该昵称已被使用，请更换昵称')
     }
 
-    // 3. 检查官职是否已被占用（如果有职位数量限制）
+    // 2. 检查官职是否已被占用（如果有职位数量限制）
     const configRes = await transaction.collection('positionConfigs').doc(configId).get()
     const config = configRes.data
 
@@ -193,7 +177,7 @@ async function createRegistration(data) {
       }
     }
 
-    // 4. 创建报名记录
+    // 3. 创建报名记录
     const result = await transaction.collection('positionRegistrations').add({
       data: {
         configId: configId,

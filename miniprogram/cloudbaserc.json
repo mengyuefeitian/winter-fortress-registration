@@ -14,6 +14,16 @@
       "handlerType": "event"
     },
     {
+      "name": "manageZone",
+      "handler": "index.main",
+      "config": {
+        "timeout": 10,
+        "envVariables": {}
+      },
+      "triggers": [],
+      "handlerType": "event"
+    },
+    {
       "name": "clearRegistrations",
       "handler": "index.main",
       "config": {
@@ -200,6 +210,60 @@
           "key": {
             "configId": 1,
             "timeSlot": 1
+          }
+        },
+        {
+          "name": "status_index",
+          "unique": false,
+          "key": {
+            "status": 1
+          }
+        }
+      ]
+    },
+    {
+      "collection_name": "battleConfigs",
+      "index": [
+        {
+          "name": "zoneId_index",
+          "unique": false,
+          "key": {
+            "zoneId": 1
+          }
+        },
+        {
+          "name": "status_index",
+          "unique": false,
+          "key": {
+            "status": 1
+          }
+        },
+        {
+          "name": "zoneId_status_date_index",
+          "unique": false,
+          "key": {
+            "zoneId": 1,
+            "status": 1,
+            "date": 1
+          }
+        }
+      ]
+    },
+    {
+      "collection_name": "battleRegistrations",
+      "index": [
+        {
+          "name": "configId_index",
+          "unique": false,
+          "key": {
+            "configId": 1
+          }
+        },
+        {
+          "name": "userId_index",
+          "unique": false,
+          "key": {
+            "userId": 1
           }
         },
         {

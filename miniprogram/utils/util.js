@@ -13,6 +13,7 @@ function formatDate(date, format = 'YYYY-MM-DD HH:mm:ss') {
 
   const d = new Date(date)
   const year = d.getFullYear()
+  const shortYear = String(year).slice(-2) // 取后两位年份
   const month = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   const hours = String(d.getHours()).padStart(2, '0')
@@ -21,6 +22,7 @@ function formatDate(date, format = 'YYYY-MM-DD HH:mm:ss') {
 
   return format
     .replace('YYYY', year)
+    .replace('YY', shortYear)
     .replace('MM', month)
     .replace('DD', day)
     .replace('HH', hours)
@@ -123,6 +125,19 @@ function showInfo(title) {
     title: title,
     icon: 'none',
     duration: 2000
+  })
+}
+
+/**
+ * 显示长文本错误提示（使用模态框）
+ * @param {string} title 提示文字
+ */
+function showErrorLong(title) {
+  wx.showModal({
+    title: '提示',
+    content: title,
+    showCancel: false,
+    confirmText: '确定'
   })
 }
 
@@ -262,6 +277,7 @@ module.exports = {
   showSuccess,
   showError,
   showInfo,
+  showErrorLong,
   showConfirm,
   deepClone,
   generateId,

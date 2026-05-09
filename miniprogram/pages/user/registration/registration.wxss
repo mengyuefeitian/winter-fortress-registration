@@ -1,35 +1,145 @@
 /* pages/user/registration/registration.wxss */
 
-.registration-container {
-  padding: 16px;
-  background-color: #F5F7FA;
+/* 页面布局 */
+.page {
+  padding: 12px;
+  background-color: #F6F6F6;
   min-height: 100vh;
 }
 
-.section {
-  background-color: #FFFFFF;
-  border-radius: 10px;
-  padding: 12px;
-  margin-bottom: 12px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+/* 页面标题 */
+.page-header {
+  padding: 12px 4px;
+  margin-bottom: 8px;
 }
 
-.section-title {
+.page-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #000000;
+}
+
+/* 帮助图标 */
+.help-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #1296DB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.help-text {
   font-size: 14px;
-  font-weight: 500;
-  color: #333333;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1;
+}
+
+/* 提示信息 */
+.info-tip {
+  background-color: #F0F4FA;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 4px 0 12px 0;
+}
+
+.info-tip-text {
+  font-size: 12px;
+  color: #5F5F5F;
+  line-height: 1.6;
+}
+
+/* 卡片样式 - 紧凑 */
+.card {
+  background-color: #FFFFFF;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+/* 表单行布局 - 两列 */
+.form-row {
+  display: flex;
+  gap: 8px;
   margin-bottom: 10px;
 }
 
-/* 选择器样式 */
+.form-col {
+  flex: 1;
+}
+
+/* 分区信息行 */
+.zone-info-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 8px 0;
+}
+
+.zone-name-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #000000;
+}
+
+.form-label {
+  font-size: 13px;
+  color: #5F5F5F;
+  margin-bottom: 4px;
+  display: block;
+}
+
+/* 选择器样式 - 紧凑 */
+.picker-compact {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #F5F5F5;
+  border-radius: 4px;
+  padding: 8px 12px;
+  height: 32px;
+  font-size: 14px;
+  color: #000000;
+}
+
+.picker-compact.disabled {
+  background-color: #F0F0F0;
+  color: #A6A6A6;
+}
+
+.picker-compact-arrow {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
 .picker {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #F5F7FA;
-  border-radius: 6px;
-  padding: 10px 12px;
+  background-color: #F5F5F5;
+  border-radius: 4px;
+  padding: 8px 12px;
+  height: 32px;
   font-size: 14px;
+  color: #000000;
+}
+
+.picker.disabled {
+  background-color: #F0F0F0;
+  color: #A6A6A6;
+}
+
+.picker-placeholder {
+  color: #A6A6A6;
 }
 
 .picker-arrow {
@@ -76,101 +186,180 @@
   font-size: 14px;
 }
 
-/* 时间段卡片 - 每行2个 */
-.time-slot-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+/* 时间段列表 */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-left: 4px;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: #5F5F5F;
+}
+
+.section-count {
+  font-size: 13px;
+  color: #A6A6A6;
+}
+
+.time-slot-list {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
 .time-slot-card {
-  background-color: #F5F7FA;
+  background-color: #FFFFFF;
   border-radius: 8px;
-  padding: 10px;
-  border: 2px solid transparent;
+  padding: 12px;
+  border: 1px solid #E5E5E5;
   transition: all 0.2s ease;
-  position: relative;
-  text-align: center;
 }
 
 .time-slot-card:active {
-  background-color: #E8F4FF;
+  background-color: #F5F5F5;
 }
 
 .time-slot-card.full {
   background-color: #F5F5F5;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 .time-slot-card.selected {
+  border-color: #07C160;
+  background-color: #F0FFF0;
+}
+
+/* 我已报名的时间段 - 蓝色边框+浅蓝背景（覆盖full的半透明） */
+.time-slot-card.my-slot {
   border-color: #4A90D9;
-  background-color: #E8F4FF;
+  background-color: #F0F4FA;
+  opacity: 1;
+}
+
+.slot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .slot-time {
-  font-size: 14px;
-  font-weight: 500;
-  color: #333333;
-  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.slot-count {
-  font-size: 12px;
-  color: #666666;
+.time-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #000000;
 }
 
-.slot-count.full {
-  color: #FF6B6B;
-}
-
-.slot-remark {
-  font-size: 10px;
-  color: #999999;
-  margin-top: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.full-badge {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  background-color: #FF6B6B;
+.slot-tag {
+  display: inline-block;
+  background-color: #07C160;
   color: #FFFFFF;
-  font-size: 10px;
-  padding: 1px 4px;
+  font-size: 12px;
+  padding: 3px 8px;
   border-radius: 4px;
 }
 
-/* 表单样式 */
-.form-section {
-  padding: 12px;
+.slot-tag.fortress-tag {
+  background-color: #4A90D9;
 }
 
+.full-badge {
+  background-color: #FA5151;
+  color: #FFFFFF;
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+/* 我已报名标签 - 蓝色 */
+.my-badge {
+  background-color: #4A90D9;
+  color: #FFFFFF;
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.slot-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.slot-date {
+  font-size: 13px;
+  color: #A6A6A6;
+}
+
+.slot-count {
+  font-size: 14px;
+  color: #5F5F5F;
+  font-weight: 500;
+}
+
+.slot-count.full {
+  color: #FA5151;
+}
+
+.empty-state {
+  display: flex;
+  justify-content: center;
+  padding: 40px 16px;
+}
+
+.empty-state-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+
+.empty-text {
+  color: #A6A6A6;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.empty-hint {
+  color: #C0C0C0;
+  font-size: 13px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* 表单样式 */
 .form-item {
   margin-bottom: 12px;
-}
-
-.form-label {
-  font-size: 13px;
-  color: #666666;
-  margin-bottom: 6px;
 }
 
 .form-input {
   width: 100%;
   height: 36px;
-  background-color: #F5F7FA;
+  background-color: #F5F5F5;
   border-radius: 6px;
-  padding: 0 10px;
+  padding: 0 12px;
   font-size: 14px;
+  border: 1px solid #E5E5E5;
 }
 
 /* 位置选择 */
 .position-options {
   display: flex;
-  justify-content: space-around;
   gap: 10px;
 }
 
@@ -179,51 +368,58 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px;
-  background-color: #F5F7FA;
+  padding: 14px;
+  background-color: #F5F5F5;
   border-radius: 8px;
-  transition: all 0.2s ease;
   border: 2px solid transparent;
+  transition: all 0.2s ease;
 }
 
 .position-option.active {
-  background-color: #4A90D9;
-  border-color: #4A90D9;
+  background-color: #07C160;
+  border-color: #07C160;
 }
 
 .position-icon {
-  font-size: 20px;
+  font-size: 24px;
   margin-bottom: 4px;
 }
 
 .position-name {
-  font-size: 13px;
-  color: #666666;
+  font-size: 14px;
+  color: #5F5F5F;
 }
 
 .position-option.active .position-name {
   color: #FFFFFF;
 }
 
-.submit-btn {
-  background-color: #4A90D9;
-  color: #FFFFFF;
-  border-radius: 8px;
-  padding: 10px 24px;
+/* 按钮样式 */
+.btn {
   font-size: 15px;
+  border-radius: 6px;
+  padding: 0 16px;
+  height: 44px;
+  line-height: 44px;
+  border: none;
+  box-sizing: border-box;
+}
+
+.btn-primary {
+  background-color: #07C160;
+  color: #FFFFFF;
+}
+
+.btn-full {
   width: 100%;
-  margin-top: 16px;
+  margin-top: 8px;
 }
 
-.submit-btn:active {
-  background-color: #3A80C9;
+.btn-primary:active {
+  background-color: #06AD56;
 }
 
-/* 已报名人员预览 */
-.preview-section {
-  margin-bottom: 0;
-}
-
+/* 已报名人员 */
 .registration-list {
   display: flex;
   flex-direction: column;
@@ -232,8 +428,8 @@
 .registration-item {
   display: flex;
   align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #E8E8E8;
+  padding: 10px 0;
+  border-bottom: 1px solid #F0F0F0;
 }
 
 .registration-item:last-child {
@@ -241,35 +437,74 @@
 }
 
 .registration-order {
-  width: 20px;
-  height: 20px;
-  background-color: #4A90D9;
+  width: 24px;
+  height: 24px;
+  background-color: #576B95;
   color: #FFFFFF;
   border-radius: 50%;
-  font-size: 11px;
+  font-size: 12px;
   text-align: center;
-  line-height: 20px;
-  margin-right: 10px;
+  line-height: 24px;
+  margin-right: 12px;
 }
 
 .registration-name {
   flex: 1;
-  font-size: 13px;
+  font-size: 14px;
   color: #333333;
 }
 
 .registration-position {
-  font-size: 11px;
-  padding: 2px 6px;
+  font-size: 12px;
+  padding: 4px 10px;
   border-radius: 4px;
 }
 
 .registration-position.head {
   background-color: #FFE8E8;
-  color: #FF6B6B;
+  color: #FA5151;
 }
 
 .registration-position.body {
-  background-color: #E8FFE8;
-  color: #52C41A;
+  background-color: #F0FFF0;
+  color: #07C160;
+}
+
+/* 我的报名 - 蓝色高亮 */
+.registration-item.my-registration {
+  background-color: #F0F4FA;
+  border-left: 3px solid #4A90D9;
+  padding-left: 9px;
+  border-radius: 0 4px 4px 0;
+}
+
+.registration-order.my-order {
+  background-color: #4A90D9;
+}
+
+.me-tag {
+  display: inline-block;
+  background-color: #4A90D9;
+  color: #FFFFFF;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.btn-share {
+  display: inline-block;
+  padding: 8px 24px;
+  background-color: #4A90D9;
+  color: #FFFFFF;
+  font-size: 13px;
+  border-radius: 20px;
+  border: none;
+  line-height: 1.6;
+  height: auto;
+}
+
+.btn-share::after {
+  border: none;
 }

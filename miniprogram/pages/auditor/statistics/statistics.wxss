@@ -1,75 +1,74 @@
-/* pages/auditor/statistics/statistics.wxss */
-
-.auditor-stats-container {
-  padding: 20px;
-  background-color: #F5F7FA;
+/* 微信设计语言 - 紧凑布局 */
+.page {
+  padding: 12px;
+  background-color: #F6F6F6;
   min-height: 100vh;
 }
 
-.section {
+/* 卡片样式 */
+.card {
   background-color: #FFFFFF;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  padding: 12px;
 }
 
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
+/* 按钮样式 */
+.btn {
+  font-size: 13px;
+  border-radius: 4px;
+  padding: 0 12px;
+  height: 28px;
+  line-height: 28px;
+  border: none;
+  box-sizing: border-box;
 }
 
-.section-title {
+.btn-sm {
+  font-size: 13px;
+  height: 28px;
+  line-height: 28px;
+  padding: 0 12px;
+}
+
+.btn-primary {
+  background-color: #07C160;
+  color: #FFFFFF;
+}
+
+.btn-danger {
+  background-color: #FA5151;
+  color: #FFFFFF;
+}
+
+/* 统计标题 */
+.stats-header {
+  margin-bottom: 8px;
+}
+
+.stats-title {
   font-size: 16px;
-  font-weight: 500;
-  color: #333333;
-  margin-bottom: 16px;
+  font-weight: 600;
+  color: #000000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.section-header .section-title {
-  margin-bottom: 0;
-  flex: 1;
-}
-
-.header-actions {
+.stats-actions {
   display: flex;
+  justify-content: flex-end;
   gap: 8px;
+  margin-bottom: 12px;
 }
 
-.clear-btn {
-  background-color: #FF6B6B;
-  color: #FFFFFF;
-  font-size: 12px;
-  padding: 8px 12px;
-  border-radius: 6px;
-}
-
-.save-btn {
-  background-color: #4A90D9;
-  color: #FFFFFF;
-  font-size: 12px;
-  padding: 8px 12px;
-  border-radius: 6px;
-}
-
-.empty-state {
-  padding: 40px;
-  text-align: center;
-}
-
-.empty-text {
-  font-size: 14px;
-  color: #999999;
-}
-
+/* 汇总数据 */
 .stats-summary {
   display: flex;
   justify-content: space-around;
-  padding: 16px;
-  background-color: #F5F7FA;
-  border-radius: 8px;
-  margin-bottom: 16px;
+  padding: 12px;
+  background-color: #F5F5F5;
+  border-radius: 6px;
+  margin-bottom: 12px;
 }
 
 .summary-item {
@@ -79,62 +78,78 @@
 }
 
 .summary-value {
-  font-size: 24px;
-  font-weight: 500;
-  color: #4A90D9;
-  margin-bottom: 8px;
+  font-size: 22px;
+  font-weight: 600;
+  color: #07C160;
+  margin-bottom: 4px;
 }
 
 .summary-label {
   font-size: 12px;
-  color: #999999;
+  color: #A6A6A6;
 }
 
+/* 时间段列表 */
 .time-slot-list {
   display: flex;
   flex-direction: column;
+  gap: 8px;
 }
 
 .time-slot-card {
-  background-color: #F5F7FA;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
+  background-color: #F5F5F5;
+  border-radius: 6px;
+  padding: 12px;
 }
 
 .slot-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
 }
 
 .slot-time {
   font-size: 16px;
-  font-weight: 500;
-  color: #333333;
+  font-weight: 600;
+  color: #000000;
+}
+
+.slot-tag {
+  display: inline-block;
+  background-color: #07C160;
+  color: #FFFFFF;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 4px;
+}
+
+.slot-tag.fortress-tag {
+  background-color: #4A90D9;
+}
+
+.slot-date {
+  font-size: 13px;
+  color: #A6A6A6;
+  margin-top: 4px;
 }
 
 .slot-status {
   font-size: 14px;
-  color: #666666;
+  color: #5F5F5F;
+  font-weight: 500;
 }
 
 .slot-status.full {
-  color: #FF6B6B;
+  color: #FA5151;
 }
 
-.slot-remark {
-  font-size: 12px;
-  color: #999999;
-  margin-bottom: 12px;
-}
-
+/* 报名人员列表 */
 .registration-list {
   display: flex;
   flex-direction: column;
-  border-top: 1px solid #E8E8E8;
-  padding-top: 12px;
+  border-top: 1px solid #E5E5E5;
+  padding-top: 8px;
   margin-top: 8px;
 }
 
@@ -142,7 +157,7 @@
   display: flex;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #E8E8E8;
+  border-bottom: 1px solid #E5E5E5;
 }
 
 .registration-item:last-child {
@@ -150,15 +165,15 @@
 }
 
 .reg-order {
-  width: 24px;
-  height: 24px;
-  background-color: #4A90D9;
+  width: 22px;
+  height: 22px;
+  background-color: #576B95;
   color: #FFFFFF;
   border-radius: 50%;
   font-size: 12px;
   text-align: center;
-  line-height: 24px;
-  margin-right: 12px;
+  line-height: 22px;
+  margin-right: 10px;
 }
 
 .reg-name {
@@ -169,16 +184,27 @@
 
 .reg-position {
   font-size: 12px;
-  padding: 4px 8px;
+  padding: 3px 8px;
   border-radius: 4px;
 }
 
 .reg-position.head {
   background-color: #FFE8E8;
-  color: #FF6B6B;
+  color: #FA5151;
 }
 
 .reg-position.body {
-  background-color: #E8FFE8;
-  color: #52C41A;
+  background-color: #F0FFF0;
+  color: #07C160;
+}
+
+/* 空状态 */
+.empty-state {
+  padding: 32px;
+  text-align: center;
+}
+
+.empty-text {
+  font-size: 14px;
+  color: #A6A6A6;
 }

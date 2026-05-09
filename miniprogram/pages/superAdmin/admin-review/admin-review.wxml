@@ -1,5 +1,6 @@
-<!--pages/superAdmin/admin-review/admin-review.wxml-->
+<!--pages/superAdmin/admin-review/admin-review.wxml -->
 <view class="page">
+  <!-- 待审核申请 -->
   <view class="section-header">
     <text class="section-title">待审核申请</text>
   </view>
@@ -9,39 +10,111 @@
   </view>
 
   <view wx:else class="function-grid">
-    <view wx:for="{{applications}}" wx:key="_id" class="card">
+    <view wx:for="{{applications}}" wx:key="_id" wx:for-index="appIndex" class="card">
+      <view class="application-time">
+        <text class="text-xs text-weak">申请时间: {{item.formattedTime}}</text>
+      </view>
       <view class="card-body">
         <view class="flex items-center">
-          <image class="avatar" src="{{item.avatarUrl || '/images/default-avatar.png'}}"></image>
-          <view class="ml-12 flex-1">
-            <text class="text-base font-medium">{{item.nickName || '未知用户'}}</text>
-            <text class="text-secondary text-sm mt-4">手机号: {{item.phone}}</text>
-            <view class="mt-8">
-              <view class="tag tag-default">
-                {{item.applyType === 'zoneManager' ? '区管申请' : '盟管申请'}}
-              </view>
+          <image class="avatar" src="{{item.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
+          <view class="ml-10 flex-1">
+            <text class="text-sm font-medium">{{item.nickName || '未知用户'}}</text>
+            <text class="text-xs text-secondary mt-2">手机号: {{item.phone}}</text>
+            <view class="mt-4">
+              <text class="tag tag-default">{{item.applyType === 'zoneManager' ? '区管申请' : item.applyType === 'allianceManager' ? '盟管申请' : '分区开通申请'}}</text>
             </view>
           </view>
         </view>
-        <view class="mt-12">
-          <text class="text-weak text-xs">申请时间: {{item.formattedTime}}</text>
+        <!-- 无效申请警告 -->
+        <view wx:if="{{!item.valid}}" class="invalid-warning mt-6">
+          <text class="text-xs text-danger">⚠ 用户数据异常，无法审核</text>
         </view>
       </view>
-      <view class="card-footer">
-        <button class="btn btn-success btn-sm" bindtap="approveApplication"
-                data-id="{{item._id}}" data-userid="{{item.userId}}" data-applytype="{{item.applyType}}" data-index="{{index}}">
-          批准
-        </button>
-        <button class="btn btn-danger btn-sm" bindtap="rejectApplication"
-                data-id="{{item._id}}" data-index="{{index}}">
-          拒绝
-        </button>
+
+      <!-- 区管申请按钮（仅有效申请可审核） -->
+      <view wx:if="{{item.valid && item.applyType === 'zoneManager' && !item.selectingZone}}" class="card-footer">
+        <button class="btn btn-success" bindtap="startSelectZone"
+                data-id="{{item._id}}" data-userid="{{item.userId}}" data-index="{{appIndex}}">批准</button>
+        <button class="btn btn-danger" bindtap="rejectApplication"
+                data-id="{{item._id}}" data-index="{{appIndex}}">拒绝</button>
+      </view>
+
+      <!-- 区管分区选择 -->
+      <view wx:if="{{item.valid && item.applyType === 'zoneManager' && item.selectingZone}}" class="zone-select-section">
+        <text class="select-label">选择分区：</text>
+        <zone-selector wx:if="{{availableZones.length > 0}}" value="{{item.selectedZone}}" zones="{{availableZones}}" loaded="{{true}}" bind:change="onZoneSelect" data-app-index="{{appIndex}}" />
+        <view wx:else class="picker-compact text-weak">暂无可用分区</view>
+        <view class="select-actions">
+          <button class="btn btn-success" bindtap="confirmApproveZoneManager"
+                  data-id="{{item._id}}" data-userid="{{item.userId}}" data-index="{{appIndex}}">确认</button>
+          <button class="btn btn-ghost" bindtap="cancelSelectZone" data-index="{{appIndex}}">取消</button>
+        </view>
+      </view>
+
+      <!-- 盟管申请按钮（仅有效申请可审核） -->
+      <view wx:if="{{item.valid && item.applyType === 'allianceManager' && !item.selectingAlliance}}" class="card-footer">
+        <button class="btn btn-success" bindtap="startSelectAlliance"
+                data-id="{{item._id}}" data-userid="{{item.userId}}" data-index="{{appIndex}}">批准</button>
+        <button class="btn btn-danger" bindtap="rejectApplication"
+                data-id="{{item._id}}" data-index="{{appIndex}}">拒绝</button>
+      </view>
+
+      <!-- 盟管联盟选择 -->
+      <view wx:if="{{item.valid && item.applyType === 'allianceManager' && item.selectingAlliance}}" class="zone-select-section">
+        <text class="select-label">选择分区：</text>
+        <picker bindchange="onAllianceZoneSelect" data-app-index="{{appIndex}}"
+                range="{{availableZones}}" range-key="zoneName" value="{{item.applicantZoneIndex >= 0 ? item.applicantZoneIndex : 0}}">
+          <view class="picker-compact">{{item.applicantZoneIndex >= 0 ? availableZones[item.applicantZoneIndex].zoneName : '请选择分区'}}</view>
+        </picker>
+        <text class="select-label" style="margin-top: 8px;">选择联盟：</text>
+        <picker wx:if="{{item.applicantAlliances.length > 0}}" bindchange="onAllianceSelect" data-app-index="{{appIndex}}"
+                range="{{item.applicantAlliances}}" range-key="allianceName" value="{{item.alliancePickerIndex || 0}}">
+          <view class="picker-compact">{{item.applicantAlliances[item.alliancePickerIndex || 0].allianceName || '请选择'}}</view>
+        </picker>
+        <view wx:else class="picker-compact text-weak">请先选择分区</view>
+        <!-- 显示申请人自定义的联盟名称 -->
+        <view wx:if="{{item.customAllianceName}}" class="custom-name-hint">
+          <text class="text-xs">申请人期望名称：</text>
+          <text class="text-xs text-primary">{{item.customAllianceName}}</text>
+        </view>
+        <view class="select-actions">
+          <button class="btn btn-success" bindtap="confirmApproveAllianceManager"
+                  data-id="{{item._id}}" data-userid="{{item.userId}}" data-index="{{appIndex}}">确认</button>
+          <button class="btn btn-ghost" bindtap="cancelSelectAlliance" data-index="{{appIndex}}">取消</button>
+        </view>
+      </view>
+
+      <!-- 分区开通申请 -->
+      <view wx:if="{{item.valid && item.applyType === 'zoneCreation'}}" class="zone-creation-section">
+        <text class="text-xs text-secondary">申请信息: {{item.zoneName}}</text>
+        <!-- 批准前填写分区编号和名称 -->
+        <view wx:if="{{!item.creatingZone}}" class="card-footer" style="margin-top: 8px;">
+          <button class="btn btn-success" bindtap="startCreateZone"
+                  data-id="{{item._id}}" data-userid="{{item.userId}}" data-index="{{appIndex}}" data-zonename="{{item.zoneName}}">批准</button>
+          <button class="btn btn-danger" bindtap="rejectApplication"
+                  data-id="{{item._id}}" data-index="{{appIndex}}">拒绝</button>
+        </view>
+        <view wx:if="{{item.creatingZone}}" class="zone-creation-form">
+          <view class="creation-row">
+            <text class="creation-label">分区编号</text>
+            <input class="creation-input" type="number" placeholder="如3558" maxlength="4" value="{{item.inputZoneCode}}" bindinput="onZoneCodeInput" data-index="{{appIndex}}" />
+          </view>
+          <view class="creation-row">
+            <text class="creation-label">分区名称</text>
+            <input class="creation-input" placeholder="如第一区" value="{{item.inputZoneName}}" bindinput="onZoneNameInput" data-index="{{appIndex}}" />
+          </view>
+          <view class="select-actions">
+            <button class="btn btn-success" bindtap="confirmApproveZoneCreation"
+                    data-id="{{item._id}}" data-userid="{{item.userId}}" data-index="{{appIndex}}">确认创建</button>
+            <button class="btn btn-ghost" bindtap="cancelCreateZone" data-index="{{appIndex}}">取消</button>
+          </view>
+        </view>
       </view>
     </view>
   </view>
 
-  <!-- 已审核列表 -->
-  <view class="section-header mt-32">
+  <!-- 已审核记录 -->
+  <view class="section-header mt-24">
     <text class="section-title">已审核记录</text>
   </view>
 
@@ -50,18 +123,28 @@
   </view>
 
   <view wx:else class="function-grid">
-    <view wx:for="{{reviewedApplications}}" wx:key="_id" class="card">
+    <view wx:for="{{reviewedApplications}}" wx:key="_id" wx:for-index="reviewIndex" class="card">
+      <view class="application-time">
+        <text class="text-xs text-weak">审核时间: {{item.formattedReviewTime}}</text>
+      </view>
       <view class="card-body">
-        <text class="text-base font-medium">{{item.nickName || '未知用户'}}</text>
-        <text class="text-secondary text-sm mt-4">手机号: {{item.phone}}</text>
-        <view class="flex items-center mt-8 gap-8">
+        <!-- 昵称和标签放在同一行 -->
+        <view class="user-info-row">
+          <view class="user-name">{{item.nickName || '未知用户'}}</view>
           <view class="tag {{item.status === 'approved' ? 'tag-success' : 'tag-danger'}}">
             {{item.status === 'approved' ? '已批准' : '已拒绝'}}
           </view>
           <view wx:if="{{item.approvedRole === 'admin'}}" class="tag tag-primary">区管</view>
           <view wx:if="{{item.approvedRole === 'auditor'}}" class="tag tag-primary">盟管</view>
+          <view wx:if="{{item.applyType === 'zoneCreation'}}" class="tag tag-primary">分区开通</view>
         </view>
-        <text class="text-weak text-xs mt-8">审核时间: {{item.formattedReviewTime}}</text>
+        <text class="text-xs text-secondary mt-2">手机号: {{item.phone}}</text>
+        <text wx:if="{{item.zoneName}}" class="text-xs text-secondary mt-2">分区: {{item.zoneName}}</text>
+        <text wx:if="{{item.allianceName}}" class="text-xs text-secondary mt-2">联盟: {{item.allianceName}}</text>
+      </view>
+      <view class="card-footer">
+        <button class="btn btn-ghost" bindtap="deleteReviewedApplication"
+                data-id="{{item._id}}" data-index="{{reviewIndex}}">删除</button>
       </view>
     </view>
   </view>

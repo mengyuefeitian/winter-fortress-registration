@@ -3,40 +3,62 @@
   <!-- 选择分区 -->
   <view class="section">
     <view class="section-title">选择分区</view>
-    <picker bindchange="onZoneChange" value="{{zoneIndex}}" range="{{zones}}" range-key="zoneName">
-      <view class="picker">
-        <text>{{selectedZone ? selectedZone.zoneName + ' (' + selectedZone.zoneCode + ')' : '请选择分区'}}</text>
-        <image class="picker-arrow" src="/images/icon-arrow-down.png"></image>
-      </view>
-    </picker>
+    <zone-selector value="{{selectedZone}}" zones="{{zones}}" loaded="{{true}}" bind:change="onZoneChange" />
   </view>
 
   <!-- 联盟列表 -->
   <view wx:if="{{selectedZone}}" class="section">
     <view class="section-title">联盟列表 (共{{alliances.length}}个)</view>
     <view class="alliance-list">
-      <view wx:for="{{alliances}}" wx:key="_id" class="alliance-card">
+      <view wx:for="{{alliances}}" wx:key="_id" wx:for-index="allianceIdx" class="alliance-card">
         <view class="alliance-header">
           <view class="alliance-index">联盟{{item.allianceIndex}}</view>
           <view class="alliance-name">{{item.allianceName}}</view>
         </view>
 
         <view class="alliance-edit">
-          <input class="edit-input" placeholder="修改联盟名称" value="{{item.editName}}" bindinput="onNameInput" data-index="{{index}}" maxlength="20" />
-          <button class="save-btn" bindtap="saveAllianceName" data-id="{{item._id}}" data-index="{{index}}" data-name="{{item.editName}}">
+          <input class="edit-input" placeholder="修改联盟名称" value="{{item.editName}}" bindinput="onNameInput" data-index="{{allianceIdx}}" maxlength="20" />
+          <button class="save-btn" bindtap="saveAllianceName" data-id="{{item._id}}" data-index="{{allianceIdx}}" data-name="{{item.editName}}">
             保存
           </button>
         </view>
 
-        <!-- 绑定审计员 -->
+        <!-- 盟管列表 -->
         <view class="auditor-section">
-          <view class="auditor-label">绑定审计员</view>
-          <picker bindchange="onAuditorChange" value="{{item.auditorIndex}}" range="{{auditors}}" range-key="nickName">
-            <view class="auditor-picker">
-              <text>{{item.auditorName || '未绑定'}}</text>
-              <image class="picker-arrow" src="/images/icon-arrow-down.png"></image>
+          <view class="auditor-label">盟管</view>
+          <view class="auditor-list">
+            <view wx:if="{{item.auditorNames.length === 0}}" class="auditor-empty">
+              <text class="text-weak text-xs">未绑定</text>
             </view>
-          </picker>
+            <view wx:for="{{item.auditorNames}}" wx:for-item="auditor" wx:key="_id" class="auditor-tag">
+              <text class="auditor-tag-name">{{auditor.nickName}}</text>
+              <view class="auditor-remove" bindtap="removeAuditor" data-allianceindex="{{allianceIdx}}" data-auditorid="{{auditor._id}}">×</view>
+            </view>
+          </view>
+          <view wx:if="{{!item.showAddAuditor && !item.showPhoneInput}}" class="add-auditor-actions">
+            <view class="add-auditor-btn" bindtap="showAddAuditorPicker" data-index="{{allianceIdx}}">
+              <text>+ 从列表添加</text>
+            </view>
+            <view class="add-auditor-btn" bindtap="showAddAuditorByPhone" data-index="{{allianceIdx}}">
+              <text>+ 手机号添加</text>
+            </view>
+          </view>
+          <view wx:if="{{item.showAddAuditor && auditors.length > 0}}" class="add-auditor-picker">
+            <picker bindchange="onAuditorPickerChange" value="{{item.auditorPickerIndex}}" range="{{auditors}}" range-key="nickName" data-index="{{allianceIdx}}">
+              <view class="picker-compact">{{auditors[item.auditorPickerIndex].nickName || '请选择'}}</view>
+            </picker>
+            <view class="picker-actions">
+              <button class="btn btn-success btn-sm" bindtap="confirmAddAuditor" data-index="{{allianceIdx}}">确认</button>
+              <button class="btn btn-ghost btn-sm" bindtap="cancelAddAuditor" data-index="{{allianceIdx}}">取消</button>
+            </view>
+          </view>
+          <view wx:if="{{item.showPhoneInput}}" class="add-auditor-phone">
+            <input class="phone-input" type="number" placeholder="输入手机号" maxlength="11" value="{{phoneInputValue}}" bindinput="onPhoneInput" />
+            <view class="picker-actions">
+              <button class="btn btn-success btn-sm" bindtap="confirmBindByPhone">确认</button>
+              <button class="btn btn-ghost btn-sm" bindtap="cancelPhoneInput">取消</button>
+            </view>
+          </view>
         </view>
       </view>
     </view>

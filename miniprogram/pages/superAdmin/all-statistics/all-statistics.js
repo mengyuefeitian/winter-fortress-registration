@@ -2,11 +2,16 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
+const auth = require('../../../utils/auth')
 
 Page({
   data: {
+    // 报名类型选择
+    registrationTypes: ['堡垒报名', '官职报名'],
+    regTypeIndex: 0,
+    selectedRegType: '堡垒报名',
+
     zones: [],
-    zoneIndex: 0,
     selectedZone: null,
 
     alliances: [],
@@ -16,17 +21,56 @@ Page({
     timeSlotStats: [],
     totalRegistrations: 0,
     fullSlots: 0,
-    remainingSlots: 0
+    remainingSlots: 0,
+
+    // 官职报名数据
+    positionConfigs: [],
+    positionStats: [],
+    positionTotal: 0
   },
 
   onLoad: function () {
-    this.loadZones()
+    this.waitForRoleReady()
   },
 
   onShow: function () {
-    if (this.data.selectedAlliance) {
+    if (app.globalData.roleReady && this.data.selectedZone) {
       this.loadStatistics()
     }
+  },
+
+  // 等待角色就绪
+  waitForRoleReady: function () {
+    if (app.globalData.roleReady) {
+      this.checkPermission()
+    } else {
+      setTimeout(() => {
+        this.waitForRoleReady()
+      }, 100)
+    }
+  },
+
+  // 检查权限
+  checkPermission: function () {
+    const role = app.globalData.role || 'user'
+    if (!auth.isSuperAdmin(role)) {
+      util.showError('权限不足')
+      wx.switchTab({
+        url: '/pages/index/index'
+      })
+      return
+    }
+    this.loadZones()
+  },
+
+  // 报名类型切换
+  onRegTypeChange: function (e) {
+    const index = parseInt(e.detail.value)
+    this.setData({
+      regTypeIndex: index,
+      selectedRegType: this.data.registrationTypes[index]
+    })
+    this.loadStatistics()
   },
 
   // 加载分区列表
@@ -41,10 +85,29 @@ Page({
       })
 
       if (zones.length > 0) {
+        // 优先读取全局分区
+        let selectedZone = zones[0]
+
+        if (app.globalData.currentZone) {
+          const foundIndex = zones.findIndex(z => z._id === app.globalData.currentZone._id)
+          if (foundIndex >= 0) {
+            selectedZone = zones[foundIndex]
+          }
+        } else {
+          // 尝试本地存储
+          const lastZoneId = wx.getStorageSync('lastZoneId')
+          if (lastZoneId) {
+            const foundIndex = zones.findIndex(z => z._id === lastZoneId)
+            if (foundIndex >= 0) {
+              selectedZone = zones[foundIndex]
+            }
+          }
+        }
+
         this.setData({
-          selectedZone: zones[0]
+          selectedZone: selectedZone
         })
-        this.loadAlliances(zones[0]._id)
+        this.loadAlliances(selectedZone._id)
       } else {
         util.hideLoading()
       }
@@ -84,31 +147,99 @@ Page({
   // 加载统计数据
   loadStatistics: async function () {
     try {
-      if (!this.data.selectedAlliance) return
-
       util.showLoading('加载统计数据...')
 
-      const allianceId = this.data.selectedAlliance._id
-      const stats = await db.getAllianceStatistics(allianceId)
-
-      let totalRegistrations = 0
-      let fullSlots = 0
-      let remainingSlots = 0
-
-      for (const stat of stats) {
-        totalRegistrations += stat.count
-        if (stat.isFull) {
-          fullSlots++
+      if (this.data.selectedRegType === '堡垒报名') {
+        // 堡垒报名统计
+        if (!this.data.selectedAlliance) {
+          util.hideLoading()
+          return
         }
-        remainingSlots += stat.remaining
-      }
 
-      this.setData({
-        timeSlotStats: stats,
-        totalRegistrations: totalRegistrations,
-        fullSlots: fullSlots,
-        remainingSlots: remainingSlots
-      })
+        const allianceId = this.data.selectedAlliance._id
+        const stats = await db.getAllianceStatistics(allianceId)
+
+        let totalRegistrations = 0
+        let fullSlots = 0
+        let remainingSlots = 0
+
+        for (const stat of stats) {
+          totalRegistrations += stat.count
+          if (stat.isFull) {
+            fullSlots++
+          }
+          remainingSlots += stat.remaining
+        }
+
+        this.setData({
+          timeSlotStats: stats,
+          totalRegistrations: totalRegistrations,
+          fullSlots: fullSlots,
+          remainingSlots: remainingSlots,
+          positionStats: [],
+          positionTotal: 0
+        })
+
+      } else {
+        // 官职报名统计
+        if (!this.data.selectedZone) {
+          util.hideLoading()
+          return
+        }
+
+        // 加载该分区下的官职配置
+        const res = await wx.cloud.callFunction({
+          name: 'managePosition',
+          data: {
+            action: 'getConfigs',
+            data: {
+              zoneId: this.data.selectedZone._id
+            }
+          }
+        })
+
+        if (!res.result.success) {
+          throw new Error('获取官职配置失败')
+        }
+
+        const configs = res.result.data
+
+        // 加载每个配置的报名统计
+        const positionStats = []
+        let positionTotal = 0
+
+        for (const config of configs) {
+          const regRes = await wx.cloud.callFunction({
+            name: 'managePosition',
+            data: {
+              action: 'getRegistrations',
+              data: {
+                configId: config._id
+              }
+            }
+          })
+
+          if (regRes.result.success) {
+            const registrations = regRes.result.data
+            positionStats.push({
+              config: config,
+              registrations: registrations,
+              count: registrations.length
+            })
+            positionTotal += registrations.length
+          }
+        }
+
+        this.setData({
+          positionConfigs: configs,
+          positionStats: positionStats,
+          positionTotal: positionTotal,
+          timeSlotStats: [],
+          totalRegistrations: 0,
+          fullSlots: 0,
+          remainingSlots: 0
+        })
+      }
 
       util.hideLoading()
 
@@ -118,19 +249,23 @@ Page({
     }
   },
 
-  // 分区选择变化
+  // 分区选择变化（由组件内部处理全局状态同步）
   onZoneChange: function (e) {
-    const index = e.detail.value
-    const zone = this.data.zones[index]
+    const zone = e.detail.zone
+    if (!zone) return
 
     this.setData({
-      zoneIndex: index,
       selectedZone: zone,
       selectedAlliance: null,
-      timeSlotStats: []
+      timeSlotStats: [],
+      positionStats: []
     })
 
-    this.loadAlliances(zone._id)
+    if (this.data.selectedRegType === '堡垒报名') {
+      this.loadAlliances(zone._id)
+    } else {
+      this.loadStatistics()
+    }
   },
 
   // 联盟选择变化
@@ -146,16 +281,21 @@ Page({
     this.loadStatistics()
   },
 
-  // 清空报名数据
+  // 清空过期数据
   clearRegistrations: async function () {
-    if (!this.data.selectedAlliance) {
+    if (this.data.selectedRegType === '堡垒报名' && !this.data.selectedAlliance) {
       util.showInfo('请先选择联盟')
       return
     }
+    if (this.data.selectedRegType === '官职报名' && !this.data.selectedZone) {
+      util.showInfo('请先选择分区')
+      return
+    }
 
+    // 超管清空所有过期数据
     const confirm = await util.showConfirm(
       '确认清空',
-      `确定要清空「${this.data.selectedAlliance.allianceName}」的所有报名数据吗？\n\n此操作不可恢复！`
+      `确定要清空今日之前的所有报名数据、时间段配置和官职报名配置吗？\n\n此操作将影响所有分区，不可恢复！`
     )
 
     if (!confirm) return
@@ -173,10 +313,8 @@ Page({
       const res = await wx.cloud.callFunction({
         name: 'clearRegistrations',
         data: {
-          action: 'clearByAlliance',
-          data: {
-            allianceId: this.data.selectedAlliance._id
-          }
+          action: 'clearExpiredAll',
+          data: {}
         }
       })
 
@@ -198,11 +336,6 @@ Page({
   // 保存截图
   saveScreenshot: async function () {
     try {
-      if (!this.data.selectedAlliance) {
-        util.showInfo('请先选择联盟')
-        return
-      }
-
       util.showLoading('正在生成截图...')
 
       const screenshotData = this.buildScreenshotData()
@@ -217,54 +350,133 @@ Page({
       ctx.fillStyle = '#FFFFFF'
       ctx.fillRect(0, 0, 750, screenshotData.height)
 
-      ctx.fillStyle = '#4A90D9'
-      ctx.font = 'bold 32px sans-serif'
-      ctx.fillText(this.data.selectedAlliance.allianceName + ' 报名统计', 30, 50)
-
-      ctx.fillStyle = '#999999'
-      ctx.font = '24px sans-serif'
-      ctx.fillText(util.formatDate(new Date(), 'YYYY-MM-DD HH:mm'), 30, 90)
-
-      if (this.data.selectedZone) {
-        ctx.fillStyle = '#666666'
-        ctx.font = '24px sans-serif'
-        ctx.fillText(`分区: ${this.data.selectedZone.zoneName} (${this.data.selectedZone.zoneCode})`, 30, 125)
-      }
-
-      ctx.fillStyle = '#333333'
-      ctx.font = '28px sans-serif'
-      ctx.fillText(`总人数: ${this.data.totalRegistrations}  已满: ${this.data.fullSlots}  剩余: ${this.data.remainingSlots}`, 30, 165)
-
-      ctx.strokeStyle = '#E8E8E8'
-      ctx.beginPath()
-      ctx.moveTo(30, 185)
-      ctx.lineTo(720, 185)
-      ctx.stroke()
-
-      let y = 225
-      for (const stat of this.data.timeSlotStats) {
-        ctx.fillStyle = stat.isFull ? '#FF6B6B' : '#333333'
-        ctx.font = 'bold 28px sans-serif'
-        ctx.fillText(`${stat.timeSlot.displayName} (${stat.count}/${stat.timeSlot.maxCount}人)`, 30, y)
-
-        y += 40
-
-        if (stat.timeSlot.remark) {
-          ctx.fillStyle = '#999999'
-          ctx.font = '24px sans-serif'
-          ctx.fillText(`备注: ${stat.timeSlot.remark}`, 50, y)
-          y += 35
+      // 根据报名类型生成不同的截图
+      if (this.data.selectedRegType === '堡垒报名') {
+        // 堡垒报名截图
+        if (!this.data.selectedAlliance) {
+          util.hideLoading()
+          util.showInfo('请先选择联盟')
+          return
         }
 
-        if (stat.registrations.length > 0) {
+        ctx.fillStyle = '#07C160'
+        ctx.font = 'bold 32px sans-serif'
+        ctx.fillText(this.data.selectedAlliance.allianceName + ' 堡垒报名统计', 30, 50)
+
+        ctx.fillStyle = '#999999'
+        ctx.font = '24px sans-serif'
+        ctx.fillText(util.formatDate(new Date(), 'YY/MM/DD HH:mm'), 30, 90)
+
+        if (this.data.selectedZone) {
           ctx.fillStyle = '#666666'
           ctx.font = '24px sans-serif'
-          const names = stat.registrations.map((r, i) => `${i + 1}.${r.nickName}(${r.position === 'head' ? '车头' : '车身'})`).join(' ')
-          ctx.fillText(names, 50, y)
-          y += 35
+          ctx.fillText(`分区: ${this.data.selectedZone.zoneName} (${this.data.selectedZone.zoneCode})`, 30, 125)
         }
 
-        y += 20
+        ctx.fillStyle = '#333333'
+        ctx.font = '28px sans-serif'
+        ctx.fillText(`总人数: ${this.data.totalRegistrations}  已满: ${this.data.fullSlots}  剩余: ${this.data.remainingSlots}`, 30, 165)
+
+        ctx.strokeStyle = '#E8E8E8'
+        ctx.beginPath()
+        ctx.moveTo(30, 185)
+        ctx.lineTo(720, 185)
+        ctx.stroke()
+
+        let y = 225
+        for (const stat of this.data.timeSlotStats) {
+          ctx.fillStyle = stat.isFull ? '#FF6B6B' : '#333333'
+          ctx.font = 'bold 28px sans-serif'
+          ctx.fillText(`${stat.timeSlot.displayName} (${stat.count}/${stat.timeSlot.maxCount}人)`, 30, y)
+
+          y += 40
+
+          if (stat.timeSlot.tag) {
+            ctx.fillStyle = '#07C160'
+            ctx.font = '24px sans-serif'
+            ctx.fillText(`标签: ${stat.timeSlot.tag}`, 50, y)
+            y += 35
+          }
+
+          if (stat.timeSlot.fortress) {
+            ctx.fillStyle = '#4A90D9'
+            ctx.font = '24px sans-serif'
+            ctx.fillText(`堡垒: ${stat.timeSlot.fortress}`, 50, y)
+            y += 35
+          }
+
+          if (stat.timeSlot.date) {
+            ctx.fillStyle = '#A6A6A6'
+            ctx.font = '24px sans-serif'
+            ctx.fillText(`日期: ${stat.timeSlot.date}`, 50, y)
+            y += 35
+          }
+
+          if (stat.registrations.length > 0) {
+            ctx.fillStyle = '#666666'
+            ctx.font = '24px sans-serif'
+            const sorted = [...stat.registrations].sort((a, b) => (a.position === 'head' ? -1 : 1) - (b.position === 'head' ? -1 : 1))
+            const nameStrs = sorted.map((r, i) => `${i + 1}.${r.nickName}(${r.position === 'head' ? '车头' : '车身'})`)
+            for (let i = 0; i < nameStrs.length; i += 3) {
+              ctx.fillText(nameStrs.slice(i, i + 3).join(' '), 50, y)
+              y += 35
+            }
+          }
+
+          y += 20
+        }
+
+      } else {
+        // 官职报名截图
+        if (!this.data.selectedZone) {
+          util.hideLoading()
+          util.showInfo('请先选择分区')
+          return
+        }
+
+        ctx.fillStyle = '#07C160'
+        ctx.font = 'bold 32px sans-serif'
+        ctx.fillText(this.data.selectedZone.zoneName + ' 官职报名统计', 30, 50)
+
+        ctx.fillStyle = '#999999'
+        ctx.font = '24px sans-serif'
+        ctx.fillText(util.formatDate(new Date(), 'YY/MM/DD HH:mm'), 30, 90)
+
+        ctx.fillStyle = '#333333'
+        ctx.font = '28px sans-serif'
+        ctx.fillText(`总人数: ${this.data.positionTotal}  配置数: ${this.data.positionStats.length}`, 30, 130)
+
+        ctx.strokeStyle = '#E8E8E8'
+        ctx.beginPath()
+        ctx.moveTo(30, 150)
+        ctx.lineTo(720, 150)
+        ctx.stroke()
+
+        let y = 190
+        for (const stat of this.data.positionStats) {
+          ctx.fillStyle = '#333333'
+          ctx.font = 'bold 28px sans-serif'
+          ctx.fillText(`${stat.config.positionType} (${stat.count}人)`, 30, y)
+
+          y += 40
+
+          ctx.fillStyle = '#07C160'
+          ctx.font = '24px sans-serif'
+          ctx.fillText(`日期: ${stat.config.date}  起始: ${stat.config.startTime}`, 50, y)
+          y += 35
+
+          if (stat.registrations.length > 0) {
+            ctx.fillStyle = '#666666'
+            ctx.font = '24px sans-serif'
+            const nameStrs = stat.registrations.map((r, i) => `${i + 1}.${r.nickName}(${r.timeSlot})`)
+            for (let i = 0; i < nameStrs.length; i += 3) {
+              ctx.fillText(nameStrs.slice(i, i + 3).join(' '), 50, y)
+              y += 35
+            }
+          }
+
+          y += 20
+        }
       }
 
       wx.canvasToTempFilePath({
@@ -310,20 +522,42 @@ Page({
   },
 
   buildScreenshotData: function () {
-    let height = 225
+    let height = 0
 
-    for (const stat of this.data.timeSlotStats) {
-      height += 60
-      if (stat.timeSlot.remark) {
-        height += 35
+    if (this.data.selectedRegType === '堡垒报名') {
+      height = 225
+
+      for (const stat of this.data.timeSlotStats) {
+        height += 60
+        if (stat.timeSlot.tag) {
+          height += 35
+        }
+        if (stat.timeSlot.fortress) {
+          height += 35
+        }
+        if (stat.timeSlot.date) {
+          height += 35
+        }
+        if (stat.registrations.length > 0) {
+          height += 35 * Math.ceil(stat.registrations.length / 3)
+        }
+        height += 20
       }
-      if (stat.registrations.length > 0) {
-        height += 35
+    } else {
+      // 官职报名截图高度
+      height = 190
+
+      for (const stat of this.data.positionStats) {
+        height += 40 // 标题
+        height += 35 // 日期起始时间
+        if (stat.registrations.length > 0) {
+          height += 35 * Math.ceil(stat.registrations.length / 3) // 报名人员（每3人换行）
+        }
+        height += 20 // 间隔
       }
-      height += 20
     }
 
-    return { height: height }
+    return { height: Math.max(height, 300) }
   },
 
   saveScreenshotFallback: function () {

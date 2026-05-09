@@ -1,38 +1,116 @@
 // pages/user/position-list/position-list.js
 const app = getApp()
-const util = require('../../utils/util')
-const db = require('../../utils/db')
+const util = require('../../../utils/util')
+const db = require('../../../utils/db')
 
 Page({
   data: {
     loading: false,
-    configs: []
+    configs: [],
+    selectedZone: null,
+    noZoneSelected: false,
+    showTip: false
   },
 
-  onLoad: function () {
-    this.loadConfigs()
+  onLoad: function (options) {
+    // 如果分享链接带有zoneId参数，优先使用该参数
+    if (options && options.zoneId) {
+      this._pendingZoneId = options.zoneId
+    }
+    // 数据加载由 onShow 处理
+  },
+
+  // 切换提示信息显示
+  toggleTip: function () {
+    this.setData({ showTip: !this.data.showTip })
   },
 
   onShow: function () {
-    // 每次显示页面时刷新数据
     this.loadConfigs()
   },
 
-  // 加载官职配置列表
   loadConfigs: async function () {
     try {
-      this.setData({ loading: true })
+      // 使用首页选择的分区，如果没有则从分享链接恢复
+      let selectedZone = app.globalData.currentZone
 
-      // 获取今天的日期字符串
-      const today = util.formatDate(new Date())
+      if (!selectedZone && this._pendingZoneId) {
+        const wxdb = wx.cloud.database()
+        try {
+          const res = await wxdb.collection('zones').doc(this._pendingZoneId).get()
+          if (res.data && res.data.status !== 'inactive') {
+            selectedZone = res.data
+            app.globalData.currentZone = selectedZone
+            wx.setStorageSync('lastZoneId', selectedZone._id)
+            this._pendingZoneId = null
+          }
+        } catch (err) {
+          console.error('从分享链接恢复分区失败:', err)
+        }
+      }
+
+      if (!selectedZone) {
+        const lastZoneId = wx.getStorageSync('lastZoneId')
+        if (lastZoneId) {
+          const wxdb = wx.cloud.database()
+          try {
+            const res = await wxdb.collection('zones').doc(lastZoneId).get()
+            if (res.data && res.data.status !== 'inactive') {
+              selectedZone = res.data
+              app.globalData.currentZone = selectedZone
+            }
+          } catch (err) {
+            console.error('从本地存储恢复分区失败:', err)
+          }
+        }
+      }
+
+      // 如果仍然没有分区，尝试加载分区列表
+      if (!selectedZone) {
+        const wxdb = wx.cloud.database()
+        try {
+          const res = await wxdb.collection('zones').where({
+            status: 'active'
+          }).orderBy('createTime', 'desc').limit(100).get()
+          if (res.list.length > 0) {
+            selectedZone = res.list[0]
+            app.globalData.currentZone = selectedZone
+            wx.setStorageSync('lastZoneId', selectedZone._id)
+          }
+        } catch (err) {
+          console.error('加载分区列表失败:', err)
+        }
+      }
+
+      if (!selectedZone) {
+        this.setData({
+          configs: [],
+          selectedZone: null,
+          noZoneSelected: true,
+          loading: false
+        })
+        return
+      }
+
+      this.setData({
+        selectedZone: selectedZone,
+        noZoneSelected: false,
+        loading: true
+      })
+
+      // 获取今天的日期字符串（只保留日期部分）
+      const today = util.formatDate(new Date(), 'YYYY-MM-DD')
 
       // 获取所有活跃的官职配置
       const allConfigs = await db.getPositionConfigs()
 
       // 筛选今天及以后的配置
-      const validConfigs = allConfigs.filter(config => {
-        return config.date >= today
+      let validConfigs = allConfigs.filter(config => {
+        return config.date && config.date >= today
       })
+
+      // 按分区过滤：只显示该分区和全局配置
+      validConfigs = validConfigs.filter(config => !config.zoneId || config.zoneId === selectedZone._id)
 
       // 按日期排序
       validConfigs.sort((a, b) => {
@@ -42,18 +120,32 @@ Page({
         return a.date.localeCompare(b.date)
       })
 
+      // 为每个配置计算报名统计
+      const processedConfigs = []
+      for (const config of validConfigs) {
+        const registrations = await db.getPositionRegistrationsByConfig(config._id)
+        const slots = db.generatePositionTimeSlots(config.startTime)
+
+        processedConfigs.push({
+          ...config,
+          registeredCount: registrations.length,
+          totalSlots: slots.length
+        })
+      }
+
       this.setData({
-        configs: validConfigs,
+        configs: processedConfigs,
         loading: false
       })
 
     } catch (err) {
       console.error('加载配置失败:', err)
-      util.showError('加载失败')
       this.setData({
         configs: [],
+        noZoneSelected: false,
         loading: false
       })
+      util.showError('加载失败')
     }
   },
 
@@ -65,8 +157,18 @@ Page({
     })
   },
 
-  // 刷新数据
-  refreshData: function () {
-    this.loadConfigs()
+  // 分享
+  onShareAppMessage: function () {
+    const zone = this.data.selectedZone || app.globalData.currentZone
+    const path = zone
+      ? `/pages/user/position-list/position-list?zoneId=${zone._id}`
+      : '/pages/user/position-list/position-list'
+    const title = zone
+      ? `官职报名 - ${zone.zoneName}`
+      : '官职报名 - 无尽冬日'
+    return {
+      title: title,
+      path: path
+    }
   }
 })

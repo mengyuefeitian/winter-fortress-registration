@@ -7,25 +7,16 @@ Page({
   data: {
     tempAvatarUrl: '',
     tempNickName: '',
-    openid: null
+    openid: null,
+    privacyAgreed: false,
+    userInfoLoaded: false
   },
 
   onLoad: async function () {
     console.log('=== 登录页面 onLoad ===')
 
-    // 先获取 openid
+    // 先获取 openid（后台静默获取，不涉及用户信息）
     await this.initOpenid()
-
-    // 如果已有用户信息，显示出来
-    if (app.globalData.userInfo) {
-      this.setData({
-        tempAvatarUrl: app.globalData.userInfo.avatarUrl,
-        tempNickName: app.globalData.userInfo.nickName
-      })
-    } else if (this.data.openid) {
-      // 检查该 openid 是否已有用户记录
-      await this.checkExistingUser()
-    }
   },
 
   // 初始化 openid
@@ -70,6 +61,24 @@ Page({
     }
   },
 
+  // 同意协议后，加载用户信息并显示输入区域
+  loadUserInfoAfterAgree: async function () {
+    // 如果已有用户信息，自动填充
+    if (app.globalData.userInfo) {
+      this.setData({
+        tempAvatarUrl: app.globalData.userInfo.avatarUrl,
+        tempNickName: app.globalData.userInfo.nickName,
+        userInfoLoaded: true
+      })
+    } else if (this.data.openid) {
+      // 检查该 openid 是否已有用户记录
+      await this.checkExistingUser()
+      this.setData({ userInfoLoaded: true })
+    } else {
+      this.setData({ userInfoLoaded: true })
+    }
+  },
+
   // 检查是否已有用户记录
   checkExistingUser: async function () {
     if (!this.data.openid) return
@@ -79,7 +88,6 @@ Page({
       console.log('检查已有用户记录:', existingUser)
 
       if (existingUser) {
-        // 已有用户记录，显示信息
         this.setData({
           tempAvatarUrl: existingUser.avatarUrl || '',
           tempNickName: existingUser.nickName || ''
@@ -119,6 +127,54 @@ Page({
     }
   },
 
+  // 切换隐私协议勾选
+  togglePrivacy: async function () {
+    const newAgreed = !this.data.privacyAgreed
+    this.setData({ privacyAgreed: newAgreed })
+
+    // 用户首次同意协议时，加载用户信息并显示输入区域
+    if (newAgreed && !this.data.userInfoLoaded) {
+      await this.loadUserInfoAfterAgree()
+    }
+  },
+
+  // 打开隐私保护指引
+  openPrivacyContract: function () {
+    if (wx.openPrivacyContract) {
+      wx.openPrivacyContract({
+        success: () => {
+          console.log('打开隐私协议成功')
+        },
+        fail: err => {
+          console.error('打开隐私协议失败:', err)
+          wx.showToast({ title: '请在设置中查看隐私协议', icon: 'none' })
+        }
+      })
+    } else {
+      wx.showToast({ title: '当前微信版本不支持，请升级微信', icon: 'none' })
+    }
+  },
+
+  // 打开用户服务协议
+  openUserAgreement: function () {
+    wx.showModal({
+      title: '用户服务协议',
+      content: '1. 本小程序为联盟活动报名管理工具，仅用于活动报名及管理。\n\n2. 用户须提供游戏昵称和头像用于身份识别，手机号仅用于管理员身份验证。\n\n3. 用户应遵守活动规则，不得恶意占用报名名额。\n\n4. 管理员应公正履职，不得滥用管理权限。\n\n5. 我们重视您的隐私保护，详细信息请查阅《隐私保护指引》。\n\n6. 本小程序保留对违规用户限制使用的权利。',
+      showCancel: false,
+      confirmText: '我已知晓'
+    })
+  },
+
+  // 处理隐私授权同意（resolve 挂起的隐私授权请求）
+  resolvePrivacyAuthorization: function () {
+    const app = getApp()
+    if (app.globalData.privacyResolve) {
+      app.globalData.privacyResolve({ event: 'agree' })
+      app.globalData.privacyResolve = null
+    }
+    app.globalData.privacyAuthorized = true
+  },
+
   // 完成登录
   completeLogin: async function () {
     console.log('=== 点击完成登录 ===')
@@ -136,6 +192,14 @@ Page({
       util.showInfo('请点击选择头像')
       return
     }
+
+    if (!this.data.privacyAgreed) {
+      util.showInfo('请先阅读并同意隐私政策和用户协议')
+      return
+    }
+
+    // 处理挂起的隐私授权请求
+    this.resolvePrivacyAuthorization()
 
     util.showLoading('正在登录...')
 
@@ -250,7 +314,15 @@ Page({
       util.showSuccess('登录成功')
 
       setTimeout(() => {
-        wx.navigateBack()
+        // 兼容两种入口：navigateTo 进来的可以返回，reLaunch 进来的用 switchTab
+        const pages = getCurrentPages()
+        if (pages.length > 1) {
+          wx.navigateBack()
+        } else {
+          wx.switchTab({
+            url: '/pages/index/index'
+          })
+        }
       }, 800)
 
     } catch (err) {

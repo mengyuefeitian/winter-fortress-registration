@@ -38,11 +38,13 @@ exports.main = async (event, context) => {
 
 // 自动清理（定时触发，无需确认）
 // 清理30天以上的堡垒报名数据和官职配置/报名数据
+// 同时将已过期的 timeSlots 标记为 inactive
 async function autoClear() {
   const results = {
     registrations: 0,
     positionConfigs: 0,
-    positionRegistrations: 0
+    positionRegistrations: 0,
+    expiredTimeSlots: 0
   }
 
   // 计算30天前的时间
@@ -69,10 +71,23 @@ async function autoClear() {
   }).remove()
   results.positionRegistrations = posRegResult.stats.removed
 
+  // 4. 将已过期的 timeSlots 标记为 inactive（date 字段非空且早于今天）
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const todayStr = today.toISOString().split('T')[0]
+
+  const timeSlotUpdate = await db.collection('timeSlots').where({
+    status: 'active',
+    date: _.and(_.neq(''), _.lt(todayStr))
+  }).update({
+    data: { status: 'inactive', updateTime: db.serverDate() }
+  })
+  results.expiredTimeSlots = timeSlotUpdate.stats.updated
+
   return {
     success: true,
     data: results,
-    message: `自动清理完成：堡垒报名 ${results.registrations} 条，官职配置 ${results.positionConfigs} 条，官职报名 ${results.positionRegistrations} 条`
+    message: `自动清理完成：堡垒报名 ${results.registrations} 条，官职配置 ${results.positionConfigs} 条，官职报名 ${results.positionRegistrations} 条，过期时间段 ${results.expiredTimeSlots} 个`
   }
 }
 

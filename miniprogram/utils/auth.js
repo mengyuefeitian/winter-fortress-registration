@@ -71,7 +71,7 @@ function canApplyAllianceManager(role) {
 
 // 检查是否可以申请区管
 function canApplyZoneManager(role) {
-  return role === 'user'
+  return role === 'user' || role === 'auditor'
 }
 
 // 检查是否可以审核盟管申请

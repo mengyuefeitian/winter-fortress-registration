@@ -1,35 +1,46 @@
 <!--pages/superAdmin/all-statistics/all-statistics.wxml-->
-<view class="all-statistics-container">
-  <!-- 选择分区 -->
-  <view class="section">
-    <view class="section-title">选择分区</view>
-    <picker bindchange="onZoneChange" value="{{zoneIndex}}" range="{{zones}}" range-key="zoneName">
-      <view class="picker">
-        <text>{{selectedZone ? selectedZone.zoneName + ' (' + selectedZone.zoneCode + ')' : '请选择分区'}}</text>
-        <image class="picker-arrow" src="/images/icon-arrow-down.png"></image>
+<view class="page">
+  <!-- 报名类型选择 -->
+  <view class="card">
+    <view class="form-row">
+      <view class="form-col">
+        <text class="form-label">报名类型</text>
+        <picker bindchange="onRegTypeChange" value="{{regTypeIndex}}" range="{{registrationTypes}}">
+          <view class="picker-compact">
+            <text>{{selectedRegType}}</text>
+            <image class="picker-compact-arrow" src="/images/icon-arrow-down.png"></image>
+          </view>
+        </picker>
       </view>
-    </picker>
+      <view class="form-col">
+        <text class="form-label">分区</text>
+        <zone-selector value="{{selectedZone}}" zones="{{zones}}" loaded="{{true}}" bind:change="onZoneChange" />
+      </view>
+    </view>
+    <view class="form-row" wx:if="{{selectedRegType === '堡垒报名'}}">
+      <view class="form-col">
+        <text class="form-label">联盟</text>
+        <picker wx:if="{{selectedZone}}" bindchange="onAllianceChange" value="{{allianceIndex}}" range="{{alliances}}" range-key="allianceName">
+          <view class="picker-compact">
+            <text>{{selectedAlliance ? selectedAlliance.allianceName : '请选择'}}</text>
+            <image class="picker-compact-arrow" src="/images/icon-arrow-down.png"></image>
+          </view>
+        </picker>
+        <view wx:else class="picker-compact disabled">
+          <text class="picker-placeholder">请先选分区</text>
+        </view>
+      </view>
+    </view>
   </view>
 
-  <!-- 选择联盟 -->
-  <view wx:if="{{selectedZone}}" class="section">
-    <view class="section-title">选择联盟</view>
-    <picker bindchange="onAllianceChange" value="{{allianceIndex}}" range="{{alliances}}" range-key="allianceName">
-      <view class="picker">
-        <text>{{selectedAlliance ? selectedAlliance.allianceName : '请选择联盟'}}</text>
-        <image class="picker-arrow" src="/images/icon-arrow-down.png"></image>
-      </view>
-    </picker>
-  </view>
-
-  <!-- 联盟统计 -->
-  <view wx:if="{{selectedAlliance}}" class="section">
-    <view class="section-header">
-      <view class="section-title">{{selectedAlliance.allianceName}} 报名统计</view>
-      <view class="header-actions">
-        <button class="clear-btn" bindtap="clearRegistrations">清空数据</button>
-        <button class="save-btn" bindtap="saveScreenshot">保存截图</button>
-      </view>
+  <!-- 堡垒报名统计 -->
+  <view wx:if="{{selectedRegType === '堡垒报名' && selectedAlliance}}" class="card">
+    <view class="stats-header">
+      <view class="stats-title">{{selectedAlliance.allianceName}} 堡垒报名统计</view>
+    </view>
+    <view class="stats-actions">
+      <button class="btn btn-danger btn-sm" bindtap="clearRegistrations">清空数据</button>
+      <button class="btn btn-primary btn-sm" bindtap="saveScreenshot">保存截图</button>
     </view>
 
     <!-- 汇总数据 -->
@@ -48,25 +59,111 @@
       </view>
     </view>
 
+    <!-- 时间段表格 -->
+    <view wx:if="{{timeSlotStats.length > 0}}" class="table-container">
+      <view class="table-row table-header-row">
+        <text class="table-cell">时间段</text>
+        <text class="table-cell">堡垒</text>
+        <text class="table-cell">标签</text>
+        <text class="table-cell">日期</text>
+        <text class="table-cell">人数</text>
+      </view>
+      <view wx:for="{{timeSlotStats}}" wx:key="*this" class="table-row">
+        <text class="table-cell">{{item.timeSlot.displayName}}</text>
+        <text class="table-cell">{{item.timeSlot.fortress || '-'}}</text>
+        <text class="table-cell">{{item.timeSlot.tag || '-'}}</text>
+        <text class="table-cell">{{item.timeSlot.date || '-'}}</text>
+        <text class="table-cell {{item.isFull ? 'full' : ''}}">{{item.count}}/{{item.timeSlot.maxCount}}</text>
+      </view>
+    </view>
+
     <!-- 时间段详情 -->
     <view class="time-slot-list">
-      <view wx:for="{{timeSlotStats}}" wx:key="timeSlot._id" class="time-slot-card">
+      <view wx:for="{{timeSlotStats}}" wx:key="*this" class="time-slot-card">
         <view class="slot-header">
-          <view class="slot-time">{{item.timeSlot.displayName}}</view>
+          <view class="slot-time">
+            {{item.timeSlot.displayName}}
+            <text wx:if="{{item.timeSlot.fortress}}" class="slot-tag fortress-tag">{{item.timeSlot.fortress}}</text>
+            <text wx:if="{{item.timeSlot.tag}}" class="slot-tag">{{item.timeSlot.tag}}</text>
+          </view>
           <view class="slot-status {{item.isFull ? 'full' : ''}}">
             {{item.count}}/{{item.timeSlot.maxCount}}人
           </view>
         </view>
-        <view wx:if="{{item.timeSlot.remark}}" class="slot-remark">{{item.timeSlot.remark}}</view>
+        <view wx:if="{{item.timeSlot.date}}" class="slot-date">日期: {{item.timeSlot.date}}</view>
 
         <!-- 报名人员列表 -->
         <view wx:if="{{item.registrations.length > 0}}" class="registration-list">
-          <view wx:for="{{item.registrations}}" wx:for-item="reg" wx:key="_id" class="registration-item">
-            <view class="reg-order">{{$index + 1}}</view>
+          <view wx:for="{{item.registrations}}" wx:for-item="reg" wx:for-index="regIdx" wx:key="_id" class="registration-item">
+            <view class="reg-order">{{regIdx + 1}}</view>
             <view class="reg-name">{{reg.nickName}}</view>
             <view class="reg-position {{reg.position === 'head' ? 'head' : 'body'}}">
               {{reg.position === 'head' ? '车头' : '车身'}}
             </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 官职报名统计 -->
+  <view wx:if="{{selectedRegType === '官职报名' && selectedZone}}" class="card">
+    <view class="stats-header">
+      <view class="stats-title">{{selectedZone.zoneName}} 官职报名统计</view>
+    </view>
+    <view class="stats-actions">
+      <button class="btn btn-danger btn-sm" bindtap="clearRegistrations">清空数据</button>
+      <button class="btn btn-primary btn-sm" bindtap="saveScreenshot">保存截图</button>
+    </view>
+
+    <!-- 汇总数据 -->
+    <view class="stats-summary">
+      <view class="summary-item">
+        <view class="summary-value">{{positionTotal}}</view>
+        <view class="summary-label">总报名人数</view>
+      </view>
+      <view class="summary-item">
+        <view class="summary-value">{{positionStats.length}}</view>
+        <view class="summary-label">官职配置</view>
+      </view>
+    </view>
+
+    <!-- 官职配置表格 -->
+    <view wx:if="{{positionStats.length > 0}}" class="table-container">
+      <view class="table-row table-header-row">
+        <text class="table-cell">职位类型</text>
+        <text class="table-cell">日期</text>
+        <text class="table-cell">起始时间</text>
+        <text class="table-cell">报名人数</text>
+      </view>
+      <view wx:for="{{positionStats}}" wx:key="*this" class="table-row">
+        <text class="table-cell">{{item.config.positionType}}</text>
+        <text class="table-cell">{{item.config.date}}</text>
+        <text class="table-cell">{{item.config.startTime}}</text>
+        <text class="table-cell">{{item.count}}人</text>
+      </view>
+    </view>
+
+    <!-- 官职详情列表 -->
+    <view class="time-slot-list">
+      <view wx:for="{{positionStats}}" wx:key="*this" class="time-slot-card">
+        <view class="slot-header">
+          <view class="slot-time">
+            <text class="config-title">{{item.config.positionType}}</text>
+            <text class="slot-tag">{{item.config.date}}</text>
+          </view>
+          <view class="slot-status">
+            {{item.count}}人报名
+          </view>
+        </view>
+        <view class="slot-date">起始时间: {{item.config.startTime}}</view>
+
+        <!-- 报名人员列表 -->
+        <view wx:if="{{item.registrations.length > 0}}" class="registration-list">
+          <view wx:for="{{item.registrations}}" wx:for-item="reg" wx:for-index="regIdx" wx:key="_id" class="registration-item">
+            <view class="reg-order">{{regIdx + 1}}</view>
+            <view class="reg-name">{{reg.nickName}}</view>
+            <view class="reg-time">{{reg.timeSlot}}</view>
           </view>
         </view>
       </view>

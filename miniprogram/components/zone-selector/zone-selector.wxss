@@ -1,0 +1,143 @@
+.zone-selector {
+  display: block;
+  width: 100%;
+}
+
+.zone-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  height: 32px;
+  border-radius: 4px;
+  background-color: #F5F5F5;
+}
+
+.zone-display-placeholder {
+  background: rgba(150, 150, 150, 0.1);
+}
+
+.zone-name {
+  font-size: 14px;
+  color: #000000;
+  font-weight: 500;
+}
+
+.zone-name-placeholder {
+  color: #999;
+}
+
+.zone-arrow {
+  font-size: 10px;
+  color: #999;
+  margin-left: 4px;
+}
+
+/* 弹出面板 */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.picker-panel {
+  width: 100%;
+  height: 70vh;
+  max-height: 70vh;
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+}
+
+.picker-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.picker-close {
+  font-size: 20px;
+  color: #999;
+  padding: 4px 8px;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #f8f8f8;
+}
+
+.search-input {
+  flex: 1;
+  font-size: 14px;
+  padding: 8px 12px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.search-clear {
+  font-size: 18px;
+  color: #999;
+  padding: 0 12px;
+}
+
+.zone-list {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 50vh;
+}
+
+.zone-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.zone-item-active {
+  background: rgba(74, 144, 217, 0.05);
+}
+
+.zone-item-name {
+  font-size: 15px;
+  color: #333;
+}
+
+.zone-item-code {
+  font-size: 13px;
+  color: #999;
+}
+
+.empty-state {
+  display: flex;
+  justify-content: center;
+  padding: 32px;
+}
+
+.empty-text {
+  font-size: 14px;
+  color: #999;
+}

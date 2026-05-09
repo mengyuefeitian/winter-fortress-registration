@@ -1,12 +1,12 @@
 <!--pages/auditor/statistics/statistics.wxml-->
-<view class="auditor-stats-container">
-  <view class="section">
-    <view class="section-header">
-      <view class="section-title">{{allianceName}} 报名统计</view>
-      <view class="header-actions">
-        <button class="clear-btn" bindtap="clearRegistrations">清空数据</button>
-        <button class="save-btn" bindtap="saveScreenshot">保存截图</button>
-      </view>
+<view class="page">
+  <view class="card">
+    <view class="stats-header">
+      <view class="stats-title">{{allianceName}} 报名统计</view>
+    </view>
+    <view class="stats-actions">
+      <button class="btn btn-danger btn-sm" bindtap="clearRegistrations">清空数据</button>
+      <button class="btn btn-primary btn-sm" bindtap="saveScreenshot">保存截图</button>
     </view>
 
     <view wx:if="{{stats.length === 0}}" class="empty-state">
@@ -32,20 +32,24 @@
 
       <!-- 时间段详情 -->
       <view class="time-slot-list">
-        <view wx:for="{{stats}}" wx:key="timeSlot._id" class="time-slot-card">
+        <view wx:for="{{stats}}" wx:key="*this" class="time-slot-card">
           <view class="slot-header">
-            <view class="slot-time">{{item.timeSlot.displayName}}</view>
+            <view class="slot-time">
+              {{item.timeSlot.displayName}}
+              <text wx:if="{{item.timeSlot.fortress}}" class="slot-tag fortress-tag">{{item.timeSlot.fortress}}</text>
+              <text wx:if="{{item.timeSlot.tag}}" class="slot-tag">{{item.timeSlot.tag}}</text>
+            </view>
             <view class="slot-status {{item.isFull ? 'full' : ''}}">
               {{item.count}}/{{item.timeSlot.maxCount}}人
             </view>
           </view>
 
-          <view wx:if="{{item.timeSlot.remark}}" class="slot-remark">{{item.timeSlot.remark}}</view>
+          <view wx:if="{{item.timeSlot.date}}" class="slot-date">日期: {{item.timeSlot.date}}</view>
 
           <!-- 报名人员列表 -->
           <view wx:if="{{item.registrations.length > 0}}" class="registration-list">
-            <view wx:for="{{item.registrations}}" wx:for-item="reg" wx:key="_id" class="registration-item">
-              <view class="reg-order">{{$index + 1}}</view>
+            <view wx:for="{{item.registrations}}" wx:for-item="reg" wx:for-index="regIdx" wx:key="_id" class="registration-item">
+              <view class="reg-order">{{regIdx + 1}}</view>
               <view class="reg-name">{{reg.nickName}}</view>
               <view class="reg-position {{reg.position === 'head' ? 'head' : 'body'}}">
                 {{reg.position === 'head' ? '车头' : '车身'}}

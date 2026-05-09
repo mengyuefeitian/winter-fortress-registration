@@ -1,13 +1,17 @@
 <!-- pages/user/position-registration/position-registration.wxml -->
 <view class="page">
   <!-- 配置信息卡片 -->
-  <view class="card mt-16 mx-16">
+  <view class="card mx-16 mt-16">
     <view class="card-header flex items-center justify-between">
       <text class="card-title">{{config.positionType}}</text>
       <view class="tag">{{config.date}}</view>
     </view>
-    <view class="card-body">
+    <view class="card-body flex items-center justify-between">
       <text class="text-secondary text-sm">起始时间：{{config.startTime}}</text>
+      <view class="refresh-btn" bindtap="refreshData">
+        <text class="refresh-icon-text">↻</text>
+        <text class="refresh-text">刷新</text>
+      </view>
     </view>
   </view>
 
@@ -28,33 +32,39 @@
 
   <!-- 座位表格 -->
   <view class="seat-table mt-16 mx-16" wx:if="{{!loading && filteredSlots.length > 0}}">
-    <view class="seat-row" wx:for="{{filteredSlots}}" wx:key="time">
-      <text class="seat-time">{{item.time}}</text>
-      <view class="seat-cell">
-        <!-- 空座位 -->
-        <view class="seat-name seat-empty" wx:if="{{!item.registration}}"
-              bindtap="selectSeat" data-time="{{item.time}}">
-          <text class="text-weak">选择座位</text>
+    <view class="seat-grid">
+      <view class="seat-item {{item.registration && item.registration.userId === currentUserId ? 'my-slot' : ''}}" wx:for="{{filteredSlots}}" wx:key="time">
+        <!-- 时间块 - 上层，删除按钮在右侧 -->
+        <view class="seat-time">
+          <text class="time-value">{{item.time}}</text>
+          <!-- 管理员删除按钮 - 只有区管和超管能看到 -->
+          <view class="seat-admin-action" wx:if="{{canDelete && item.registration}}"
+                bindtap="deleteSeat" data-reg="{{item.registration}}">
+            <text class="delete-icon">×</text>
+          </view>
         </view>
+        <!-- 报名内容 - 下层，一行展示 -->
+        <view class="seat-content">
+          <!-- 空座位 -->
+          <view class="seat-name seat-empty" wx:if="{{!item.registration}}"
+                bindtap="selectSeat" data-time="{{item.time}}">
+            <text class="seat-empty-text">报名位置</text>
+          </view>
 
-        <!-- 已占座位（自己） -->
-        <view class="seat-name seat-my" wx:elif="{{item.registration && item.registration.userId === currentUserId}}"
-              bindtap="editMySeat" data-reg="{{item.registration}}">
-          <text class="text-highlight font-semibold">{{item.registration.nickName}}</text>
-          <text class="seat-remark" wx:if="{{item.registration.remark}}">{{item.registration.remark}}</text>
-        </view>
+          <!-- 已占座位（自己） -->
+          <view class="seat-name seat-my" wx:elif="{{item.registration && item.registration.userId === currentUserId}}"
+                bindtap="editMySeat" data-reg="{{item.registration}}">
+            <text class="seat-my-text">{{item.registration.nickName}}</text>
+            <text class="seat-remark" wx:if="{{item.registration.remark}}">{{item.registration.remark}}</text>
+          </view>
 
-        <!-- 已占座位（别人） -->
-        <view class="seat-name seat-filled" wx:elif="{{item.registration}}"
-              bindtap="viewOtherSeat" data-reg="{{item.registration}}">
-          <text>{{item.registration.nickName}}</text>
-          <text class="seat-remark" wx:if="{{item.registration.remark}}">{{item.registration.remark}}</text>
+          <!-- 已占座位（别人） -->
+          <view class="seat-name seat-filled" wx:elif="{{item.registration}}"
+                bindtap="viewOtherSeat" data-reg="{{item.registration}}">
+            <text class="seat-filled-text">{{item.registration.nickName}}</text>
+            <text class="seat-remark" wx:if="{{item.registration.remark}}">{{item.registration.remark}}</text>
+          </view>
         </view>
-      </view>
-      <!-- 区管可以删除任意座位 -->
-      <view class="seat-action" wx:if="{{isAdmin && item.registration}}"
-            bindtap="deleteSeat" data-reg="{{item.registration}}">
-        <text class="text-danger">删除</text>
       </view>
     </view>
   </view>
@@ -64,16 +74,11 @@
     <text class="empty-text">{{currentPeriod === 'morning' ? '暂无上午时间段' : '暂无下午时间段'}}</text>
   </view>
 
-  <!-- 底部操作 -->
-  <view class="safe-area-bottom p-16">
-    <button class="btn btn-secondary btn-full" bindtap="refreshData">刷新数据</button>
-  </view>
-
   <!-- 选择座位弹窗 -->
   <view class="modal-mask" wx:if="{{showModal}}" bindtap="closeModal"></view>
   <view class="modal-container" wx:if="{{showModal}}">
     <view class="modal-header">
-      <text class="modal-title">选择座位</text>
+      <text class="modal-title">报名位置</text>
       <text class="modal-time">{{selectedTime}}</text>
     </view>
     <view class="modal-body">
@@ -98,7 +103,7 @@
   <view class="modal-mask" wx:if="{{showEditModal}}" bindtap="closeEditModal"></view>
   <view class="modal-container" wx:if="{{showEditModal}}">
     <view class="modal-header">
-      <text class="modal-title">我的座位</text>
+      <text class="modal-title">我的报名</text>
       <text class="modal-time">{{editingReg.timeSlot}}</text>
     </view>
     <view class="modal-body">

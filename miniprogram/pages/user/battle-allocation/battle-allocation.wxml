@@ -1,0 +1,27 @@
+<!--pages/user/battle-allocation/battle-allocation.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="title">国战分配表</text>
+    <text class="date">{{date}}</text>
+  </view>
+
+  <view class="table-wrapper">
+    <view class="table-header">
+      <view class="col col-head">车头</view>
+      <view class="col col-body">车身</view>
+    </view>
+
+    <view class="table-row" wx:for="{{rows}}" wx:key="index">
+      <view class="col col-head {{item.type === 'mobile' ? 'mobile-label' : ''}}">{{item.headNickName}}</view>
+      <view class="col col-body">{{item.bodyList || '-'}}</view>
+    </view>
+
+    <view class="empty-row" wx:if="{{rows.length === 0}}">
+      <text class="empty-text">暂无报名记录</text>
+    </view>
+  </view>
+
+  <view class="action-bar">
+    <view class="btn btn-save" bindtap="onSaveScreenshot">保存截图</view>
+  </view>
+</view>

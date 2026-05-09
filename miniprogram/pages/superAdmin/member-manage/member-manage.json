@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "联盟管理",
+  "usingComponents": {
+    "zone-selector": "/components/zone-selector/zone-selector"
+  }
+}

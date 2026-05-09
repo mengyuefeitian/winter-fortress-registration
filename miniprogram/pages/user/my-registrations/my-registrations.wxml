@@ -1,3 +1,4 @@
+<!-- pages/user/my-registrations/my-registrations.wxml -->
 <view class="page">
   <!-- 用户信息 -->
   <view class="card mt-16">
@@ -10,11 +11,18 @@
           <text class="text-secondary">{{roleName}}</text>
         </view>
       </view>
+      <!-- 分区选择器 -->
+      <zone-selector wx:if="{{isLoggedIn}}" value="{{currentZone}}" zones="{{zones}}" loaded="{{zonesLoaded}}" bind:change="onZoneChange" />
     </view>
     <view class="card-footer">
       <button wx:if="{{isLoggedIn}}" class="btn btn-danger btn-full" bindtap="logout">退出登录</button>
       <button wx:else class="btn btn-primary btn-full" bindtap="goToLogin">登录</button>
     </view>
+  </view>
+
+  <!-- 当前分区信息 -->
+  <view wx:if="{{isLoggedIn && currentZone}}" class="zone-info-bar">
+    <text class="zone-info-text">当前分区：{{currentZone.zoneName}}（{{currentZone.zoneCode}}）</text>
   </view>
 
   <!-- 堡垒报名记录 -->
@@ -31,22 +39,28 @@
     </view>
   </view>
 
-  <view wx:else class="table">
-    <view class="table-header">
-      <view class="table-cell table-cell-header" style="width: 80px;">时间</view>
-      <view class="table-cell table-cell-header">联盟</view>
-      <view class="table-cell table-cell-header" style="width: 60px;">状态</view>
-      <view class="table-cell table-cell-header" style="width: 80px;">操作</view>
+  <view wx:else class="table-container">
+    <!-- 移除状态列 -->
+    <view class="table-row table-header-row">
+      <text class="table-cell time-header">时间/标签</text>
+      <text class="table-cell">昵称</text>
+      <text class="table-cell">分区</text>
+      <text class="table-cell">联盟</text>
+      <text class="table-cell action-cell">操作</text>
     </view>
     <view wx:for="{{registrations}}" wx:key="_id" class="table-row">
-      <view class="table-cell table-cell-time" style="width: 80px;">{{item.displayName}}</view>
-      <view class="table-cell table-cell-name">{{item.allianceName}}</view>
-      <view class="table-cell" style="width: 60px;">
-        <text class="tag tag-success">有效</text>
+      <!-- 时间标签三行展示 -->
+      <view class="table-cell time-cell">
+        <text class="time-main">{{item.displayName}}</text>
+        <text wx:if="{{item.timeTag}}" class="time-tag-inline">{{item.timeTag}}</text>
+        <text wx:if="{{item.timeDate}}" class="time-date-small">{{item.timeDate}}</text>
       </view>
-      <view class="table-cell" style="width: 80px;">
-        <button class="btn btn-sm btn-ghost" bindtap="cancelRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</button>
-      </view>
+      <text class="table-cell">{{item.nickName}}</text>
+      <text class="table-cell zone-code-cell">{{item.zoneCode || '-'}}</text>
+      <text class="table-cell">{{item.allianceName}}</text>
+      <text class="table-cell action-cell">
+        <text class="cancel-btn-small" bindtap="cancelRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</text>
+      </text>
     </view>
   </view>
 
@@ -61,22 +75,46 @@
     </view>
   </view>
 
-  <view wx:else class="table">
-    <view class="table-header">
-      <view class="table-cell table-cell-header" style="width: 80px;">时间</view>
-      <view class="table-cell table-cell-header">官职类型</view>
-      <view class="table-cell table-cell-header" style="width: 60px;">状态</view>
-      <view class="table-cell table-cell-header" style="width: 80px;">操作</view>
+  <view wx:else class="table-container">
+    <!-- 移除状态列 -->
+    <view class="table-row table-header-row">
+      <text class="table-cell time-header">时间/日期</text>
+      <text class="table-cell">昵称</text>
+      <text class="table-cell">职位</text>
+      <text class="table-cell action-cell">操作</text>
     </view>
     <view wx:for="{{positionRegistrations}}" wx:key="_id" class="table-row">
-      <view class="table-cell table-cell-time" style="width: 80px;">{{item.timeSlot}}</view>
-      <view class="table-cell table-cell-name">{{item.configInfo.positionType}}</view>
-      <view class="table-cell" style="width: 60px;">
-        <text class="tag tag-success">有效</text>
+      <!-- 时间两行展示 -->
+      <view class="table-cell time-cell">
+        <text class="time-main">{{item.timeSlot}}</text>
+        <text wx:if="{{item.configInfo.date}}" class="time-date-small">{{item.configInfo.date}}</text>
       </view>
-      <view class="table-cell" style="width: 80px;">
-        <button class="btn btn-sm btn-ghost" bindtap="cancelPositionRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</button>
-      </view>
+      <text class="table-cell">{{item.nickName}}</text>
+      <text class="table-cell">{{item.configInfo.positionType}}</text>
+      <text class="table-cell action-cell">
+        <text class="cancel-btn-small" bindtap="cancelPositionRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</text>
+      </text>
     </view>
+  </view>
+
+  <!-- 意见反馈 -->
+  <view class="section-header mt-24">
+    <text class="section-title">帮助与反馈</text>
+  </view>
+
+  <view class="card">
+    <view class="feedback-entry" bindtap="goToFeedback">
+      <view class="feedback-icon">💬</view>
+      <view class="feedback-content">
+        <text class="feedback-name">意见与建议</text>
+        <text class="feedback-desc">反馈需求或问题</text>
+      </view>
+      <text class="feedback-arrow">›</text>
+    </view>
+  </view>
+
+  <!-- 底部版本号 -->
+  <view class="text-center mt-32 mb-16">
+    <text class="text-weak text-xs">{{versionText}}</text>
   </view>
 </view>

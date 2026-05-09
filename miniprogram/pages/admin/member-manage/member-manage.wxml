@@ -1,0 +1,29 @@
+<view class="page">
+  <!-- 分区选择 -->
+  <view wx:if="{{zones.length > 1}}" class="section">
+    <view class="section-title">选择分区</view>
+    <zone-selector value="{{selectedZone}}" zones="{{zones}}" loaded="{{true}}" bind:change="onZoneChange" />
+  </view>
+
+  <!-- 盟管列表 -->
+  <view class="section">
+    <view class="section-title">盟管成员</view>
+    <view wx:if="{{auditors.length === 0}}" class="empty-state">
+      <text class="empty-text">暂无盟管成员</text>
+    </view>
+    <view wx:else class="member-list">
+      <view wx:for="{{auditors}}" wx:key="_id" class="member-card">
+        <view class="member-info">
+          <text class="member-name">{{item.nickName}}</text>
+          <view class="member-tags">
+            <view class="tag tag-primary">盟管</view>
+            <view wx:for="{{item.allianceNames}}" wx:for-item="allianceName" wx:key="*this" class="tag tag-default">{{allianceName}}</view>
+          </view>
+        </view>
+        <view class="member-actions">
+          <button class="btn btn-danger btn-sm" bindtap="removeMember" data-id="{{item._id}}" data-index="{{index}}">移除</button>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

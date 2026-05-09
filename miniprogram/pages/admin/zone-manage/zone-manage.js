@@ -2,6 +2,7 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
+const auth = require('../../../utils/auth')
 
 Page({
   data: {
@@ -16,15 +17,42 @@ Page({
   },
 
   onLoad: function () {
-    this.setData({
-      isSuperAdmin: app.globalData.role === 'superAdmin'
-    })
-    this.loadZones()
+    this.waitForRoleReady()
   },
 
   onShow: function () {
+    if (app.globalData.roleReady) {
+      const role = app.globalData.role || 'admin'
+      this.setData({
+        isSuperAdmin: role === 'superAdmin'
+      })
+      this.loadZones()
+    }
+  },
+
+  // 等待角色就绪
+  waitForRoleReady: function () {
+    if (app.globalData.roleReady) {
+      this.checkPermission()
+    } else {
+      setTimeout(() => {
+        this.waitForRoleReady()
+      }, 100)
+    }
+  },
+
+  // 检查权限
+  checkPermission: function () {
+    const role = app.globalData.role || 'user'
+    if (!auth.isAdminOrAbove(role)) {
+      util.showError('权限不足')
+      wx.switchTab({
+        url: '/pages/index/index'
+      })
+      return
+    }
     this.setData({
-      isSuperAdmin: app.globalData.role === 'superAdmin'
+      isSuperAdmin: role === 'superAdmin'
     })
     this.loadZones()
   },
@@ -33,7 +61,7 @@ Page({
   loadZones: async function () {
     try {
       const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
-      const role = app.globalData.role
+      const role = app.globalData.role || 'admin'
 
       // 超级管理员可以看到所有分区，管理员只能看到自己创建的
       let zones
@@ -49,10 +77,24 @@ Page({
         formattedTime: util.formatDate(zone.createTime, 'YYYY-MM-DD')
       }))
 
-      // 加载每个分区的联盟数量
-      for (let i = 0; i < processedZones.length; i++) {
-        const alliances = await db.getAlliancesByZone(processedZones[i]._id)
-        processedZones[i].allianceCount = alliances.length
+      // 批量查询所有分区的联盟数量（一次查询，客户端分组）
+      if (processedZones.length > 0) {
+        const wxdb = wx.cloud.database()
+        const zoneIds = processedZones.map(z => z._id)
+        const allAlliancesRes = await wxdb.collection('alliances').where({
+          zoneId: wxdb.command.in(zoneIds),
+          status: 'active'
+        }).get()
+
+        // 按 zoneId 分组计数
+        const allianceCountMap = {}
+        for (const alliance of allAlliancesRes.data) {
+          allianceCountMap[alliance.zoneId] = (allianceCountMap[alliance.zoneId] || 0) + 1
+        }
+
+        for (const zone of processedZones) {
+          zone.allianceCount = allianceCountMap[zone._id] || 0
+        }
       }
 
       this.setData({
@@ -240,8 +282,7 @@ Page({
         }
       })
 
-      const zones = this.data.zones
-      zones.splice(index, 1)
+      const zones = this.data.zones.filter((_, i) => i !== index)
 
       this.setData({
         zones: zones

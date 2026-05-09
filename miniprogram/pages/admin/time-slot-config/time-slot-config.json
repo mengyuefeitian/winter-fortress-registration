@@ -1,4 +1,6 @@
 {
   "navigationBarTitleText": "时间段配置",
-  "usingComponents": {}
+  "usingComponents": {
+    "zone-selector": "/components/zone-selector/zone-selector"
+  }
 }

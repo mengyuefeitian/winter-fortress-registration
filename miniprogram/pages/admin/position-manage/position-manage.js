@@ -2,6 +2,7 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
+const auth = require('../../../utils/auth')
 
 Page({
   data: {
@@ -11,7 +12,6 @@ Page({
 
     // 分区选择（超管可见）
     zones: [],
-    zoneIndex: 0,
     currentZone: null,
     showZonePicker: false,
 
@@ -37,15 +37,42 @@ Page({
   },
 
   onLoad: function () {
-    this.initRole()
     this.initDateRange()
     this.initStartTimes()
-    this.loadZones()
-    this.loadConfigs()
+    this.waitForRoleReady()
   },
 
   onShow: function () {
-    // 每次显示时重新加载配置
+    // 每次显示时重新加载分区和配置（角色已就绪）
+    if (app.globalData.roleReady) {
+      this.loadZones()
+      this.loadConfigs()
+    }
+  },
+
+  // 等待角色就绪
+  waitForRoleReady: function () {
+    if (app.globalData.roleReady) {
+      this.checkPermission()
+    } else {
+      setTimeout(() => {
+        this.waitForRoleReady()
+      }, 100)
+    }
+  },
+
+  // 检查权限
+  checkPermission: function () {
+    const role = app.globalData.role || 'user'
+    if (!auth.isAdminOrAbove(role)) {
+      util.showError('权限不足')
+      wx.switchTab({
+        url: '/pages/index/index'
+      })
+      return
+    }
+    this.initRole()
+    this.loadZones()
     this.loadConfigs()
   },
 
@@ -61,6 +88,7 @@ Page({
     const maxDate = this.formatDate(new Date(year + 1, today.getMonth(), today.getDate()))
 
     this.setData({
+      selectedDate: minDate,
       minDate: minDate,
       maxDate: maxDate
     })
@@ -92,7 +120,7 @@ Page({
   loadZones: async function () {
     try {
       const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
-      const role = this.data.role
+      const role = app.globalData.role || 'admin'
 
       let zones
       if (role === 'superAdmin') {
@@ -106,14 +134,12 @@ Page({
       if (zones && zones.length > 0) {
         // 优先使用全局分区，其次使用本地存储，最后默认第一个
         let currentZone = zones[0]
-        let zoneIndex = 0
 
         // 从全局数据读取当前分区
         if (app.globalData.currentZone) {
           const foundIndex = zones.findIndex(z => z._id === app.globalData.currentZone._id)
           if (foundIndex >= 0) {
             currentZone = zones[foundIndex]
-            zoneIndex = foundIndex
           }
         } else {
           // 从本地存储读取上次选择的分区
@@ -122,16 +148,16 @@ Page({
             const foundIndex = zones.findIndex(z => z._id === lastZoneId)
             if (foundIndex >= 0) {
               currentZone = zones[foundIndex]
-              zoneIndex = foundIndex
             }
           }
         }
 
+        const hasDate = this.data.selectedDate !== ''
+        const hasZone = currentZone !== null
         this.setData({
           zones: zones,
           currentZone: currentZone,
-          zoneIndex: zoneIndex,
-          canCreate: this.checkCanCreate()
+          canCreate: hasDate && hasZone
         })
       } else {
         // 没有分区时
@@ -149,18 +175,16 @@ Page({
     }
   },
 
-  // 分区选择变化
+  // 分区选择变化（由组件内部处理全局状态同步）
   onZoneChange: function (e) {
-    const index = parseInt(e.detail.value)
-    const currentZone = this.data.zones[index]
-    // 同步到全局和本地存储
-    wx.setStorageSync('lastPositionZoneId', currentZone._id)
-    wx.setStorageSync('lastZoneId', currentZone._id)
-    app.globalData.currentZone = currentZone
+    const currentZone = e.detail.zone
+    if (!currentZone) return
+
+    const hasDate = this.data.selectedDate !== ''
+    const hasZone = currentZone !== null
     this.setData({
-      zoneIndex: index,
       currentZone: currentZone,
-      canCreate: this.checkCanCreate()
+      canCreate: hasDate && hasZone
     })
   },
 
@@ -175,9 +199,11 @@ Page({
   // 日期选择变化
   onDateChange: function (e) {
     const selectedDate = e.detail.value
+    const hasDate = selectedDate !== ''
+    const hasZone = this.data.currentZone !== null
     this.setData({
       selectedDate: selectedDate,
-      canCreate: this.checkCanCreate()
+      canCreate: hasDate && hasZone
     })
   },
 
@@ -229,19 +255,31 @@ Page({
         creatorId: userId
       }
 
-      await db.createPositionConfig(data)
+      const result = await db.createPositionConfig(data)
 
       util.hideLoading()
       util.showSuccess('创建成功')
 
       // 重置表单（保留分区选择）
       this.setData({
-        selectedDate: '',
-        canCreate: this.checkCanCreate()
+        selectedDate: this.data.minDate,
+        canCreate: this.data.minDate !== '' && this.data.currentZone !== null
       })
 
-      // 重新加载配置列表
-      this.loadConfigs()
+      // 立即将新配置添加到本地列表，避免数据库索引延迟导致列表为空
+      const newConfig = {
+        _id: result._id,
+        positionType: data.positionType,
+        date: data.date,
+        startTime: data.startTime,
+        zoneId: data.zoneId,
+        zoneName: data.zoneName,
+        creatorId: data.creatorId,
+        registrationCount: 0
+      }
+      this.setData({
+        configs: [newConfig, ...this.data.configs]
+      })
 
     } catch (err) {
       util.hideLoading()
@@ -256,12 +294,16 @@ Page({
       this.setData({ loading: true })
 
       const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
-      const role = app.globalData.role
+      const role = app.globalData.role || 'admin'
 
-      // 区管只能看到自己创建的配置，超管可以看到所有配置
+      // 区管只能看到自己创建的配置，超管需要选择分区后才能查看
       let configs
       if (role === 'superAdmin') {
-        configs = await db.getPositionConfigs()
+        if (this.data.currentZone) {
+          configs = await db.getPositionConfigs({ zoneId: this.data.currentZone._id })
+        } else {
+          configs = []
+        }
       } else {
         configs = await db.getPositionConfigs({ creatorId: userId })
       }
@@ -325,7 +367,7 @@ Page({
 
     const confirm = await util.showConfirm(
       '确认删除',
-      `确定要删除「${configInfo}」配置吗？已有的报名记录将被保留。`
+      `确定要删除「${configInfo}」配置吗？相关的报名记录也会被删除。`
     )
 
     if (!confirm) return

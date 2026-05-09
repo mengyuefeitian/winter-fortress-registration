@@ -1,8 +1,29 @@
-<!-- pages/user/position-list/position-list.wxml -->
+<!--pages/user/position-list/position-list.wxml-->
 <view class="page">
-  <!-- 页面标题 -->
-  <view class="section-header">
-    <text class="section-title">官职报名</text>
+  <!-- 页面标题 + 帮助 -->
+  <view class="page-header">
+    <view class="page-title-row">
+      <text class="page-title">官职报名</text>
+      <view class="help-icon" bindtap="toggleTip">
+        <text class="help-text">?</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 提示信息 -->
+  <view wx:if="{{showTip}}" class="info-tip">
+    <text class="info-tip-text">分区管理员在区管控制台 > 官职管理 中配置好起始时间后，所有用户可以进行官职报名。区管可在[控制台 > 数据统计]中看到报名结果，可保存截图分享。</text>
+  </view>
+
+  <!-- 当前分区提示 -->
+  <view wx:if="{{selectedZone}}" class="zone-info-bar">
+    <text class="text-sm">当前分区：</text>
+    <text class="text-sm font-semibold">{{selectedZone.zoneName}}</text>
+  </view>
+
+  <!-- 未选择分区提示 -->
+  <view wx:if="{{noZoneSelected}}" class="empty-state">
+    <text class="empty-text">请先在首页选择您的分区</text>
   </view>
 
   <!-- 加载状态 -->
@@ -11,12 +32,16 @@
   </view>
 
   <!-- 空状态 -->
-  <view class="empty-state" wx:if="{{!loading && configs.length === 0}}">
-    <text class="empty-text">暂无可报名的官职</text>
+  <view class="empty-state" wx:if="{{!loading && !noZoneSelected && configs.length === 0}}">
+    <view class="empty-state-content">
+      <text class="empty-icon">📋</text>
+      <text class="empty-text">暂无可报名的官职</text>
+      <text class="empty-hint">请联系区域管理员创建官职报名表</text>
+    </view>
   </view>
 
   <!-- 配置列表 -->
-  <view class="function-grid" wx:if="{{!loading && configs.length > 0}}">
+  <view class="function-grid" wx:if="{{!loading && !noZoneSelected && configs.length > 0}}">
     <view class="card" wx:for="{{configs}}" wx:key="_id"
           bindtap="goToRegistration" data-config-id="{{item._id}}">
       <view class="card-header">
@@ -25,12 +50,13 @@
       </view>
       <view class="card-body">
         <text class="text-secondary">起始时间：{{item.startTime}}</text>
+        <view class="stats-row mt-8">
+          <text class="text-secondary">已报名：</text>
+          <text class="{{item.registeredCount >= item.totalSlots ? 'text-danger' : 'text-success'}}">
+            {{item.registeredCount}}/{{item.totalSlots}}人
+          </text>
+        </view>
       </view>
     </view>
-  </view>
-
-  <!-- 底部操作 -->
-  <view class="safe-area-bottom p-16" wx:if="{{!loading}}">
-    <button class="btn btn-secondary btn-full" bindtap="refreshData">刷新数据</button>
   </view>
 </view>

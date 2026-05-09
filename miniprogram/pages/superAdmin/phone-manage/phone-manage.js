@@ -2,6 +2,7 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
+const auth = require('../../../utils/auth')
 
 Page({
   data: {
@@ -14,11 +15,37 @@ Page({
   },
 
   onLoad: function () {
-    this.loadSuperAdmins()
-    this.loadUsersWithPhone()
+    this.waitForRoleReady()
   },
 
   onShow: function () {
+    if (app.globalData.roleReady) {
+      this.loadSuperAdmins()
+      this.loadUsersWithPhone()
+    }
+  },
+
+  // 等待角色就绪
+  waitForRoleReady: function () {
+    if (app.globalData.roleReady) {
+      this.checkPermission()
+    } else {
+      setTimeout(() => {
+        this.waitForRoleReady()
+      }, 100)
+    }
+  },
+
+  // 检查权限
+  checkPermission: function () {
+    const role = app.globalData.role || 'user'
+    if (!auth.isSuperAdmin(role)) {
+      util.showError('权限不足')
+      wx.switchTab({
+        url: '/pages/index/index'
+      })
+      return
+    }
     this.loadSuperAdmins()
     this.loadUsersWithPhone()
   },
@@ -37,8 +64,11 @@ Page({
         let nickName = null
         if (admin.userId) {
           try {
-            const userRes = await wxdb.collection('users').doc(admin.userId).get()
-            nickName = userRes.data ? userRes.data.nickName : null
+            // userId 现在统一是 openid，直接用 where 查询
+            const userRes = await wxdb.collection('users').where({ openid: admin.userId }).get()
+            if (userRes.data && userRes.data.length > 0) {
+              nickName = userRes.data[0].nickName
+            }
           } catch (err) {
             console.log('获取用户信息失败')
           }
@@ -103,8 +133,8 @@ Page({
   searchByPhone: async function () {
     const phone = this.data.searchPhone
 
-    if (!phone || phone.length !== 11) {
-      util.showInfo('请输入正确的11位手机号')
+    if (!util.validatePhone(phone)) {
+      util.showInfo('请输入正确的手机号')
       return
     }
 
@@ -228,9 +258,7 @@ Page({
       const wxdb = wx.cloud.database()
       await wxdb.collection('superAdmins').doc(adminId).remove()
 
-      // 从列表中移除
-      const superAdmins = this.data.superAdmins
-      superAdmins.splice(index, 1)
+      const superAdmins = this.data.superAdmins.filter((_, i) => i !== index)
 
       this.setData({
         superAdmins: superAdmins

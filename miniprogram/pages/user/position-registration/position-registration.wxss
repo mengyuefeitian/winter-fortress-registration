@@ -1,107 +1,237 @@
 /* pages/user/position-registration/position-registration.wxss */
+/* 微信设计语言风格 */
 
 /* 页面容器 */
 .page {
   min-height: 100vh;
-  background-color: #fafbfc;
-  padding-bottom: 80px;
+  background-color: #F6F6F6;
 }
 
-/* 配置卡片外边距 */
-.mx-16 {
-  margin-left: 16px;
-  margin-right: 16px;
-}
-
-/* Period Tabs 容器 */
-.period-tabs-container {
-  padding: 0;
-}
-
-/* 座位表格样式覆盖 */
-.seat-table {
-  border: 1px solid #e5e7eb;
-}
-
-.seat-row {
+/* 刷新按钮 */
+.refresh-btn {
   display: flex;
   align-items: center;
-  min-height: 52px;
-  border-bottom: 1px solid #f3f4f6;
+  gap: 4px;
+  padding: 6px 12px;
+  background-color: #07C160;
+  border-radius: 4px;
 }
 
-.seat-row:last-child {
-  border-bottom: none;
+.refresh-icon-text {
+  font-size: 16px;
+  color: #FFFFFF;
 }
 
-.seat-time {
-  width: 70px;
-  padding: 12px 12px;
+.refresh-text {
   font-size: 13px;
-  color: #6b7280;
-  flex-shrink: 0;
-  background-color: #fafbfc;
-  border-right: 1px solid #f3f4f6;
+  color: #FFFFFF;
 }
 
-.seat-cell {
-  flex: 1;
-  padding: 10px 12px;
+.refresh-btn:active {
+  background-color: #06AD56;
+}
+
+/* 配置信息卡片 */
+.card {
+  background-color: #FFFFFF;
+  border-radius: 8px;
+  margin: 16px;
+  padding: 12px 16px;
+  box-shadow: none;
+}
+
+.card-header {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  min-height: 52px;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #F0F0F0;
 }
 
-.seat-name {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  cursor: pointer;
-}
-
-/* 空座位 */
-.seat-empty {
-  color: #9ca3af;
-  cursor: pointer;
-}
-
-.seat-empty:active {
-  opacity: 0.8;
-}
-
-/* 已占座位（别人） */
-.seat-filled {
-  color: #16213e;
+.card-title {
+  font-size: 17px;
   font-weight: 500;
+  color: #000000;
 }
 
-/* 我的座位 */
-.seat-my {
-  background-color: #fef2f2;
+.tag {
+  background-color: #07C160;
+  color: #FFFFFF;
+  font-size: 12px;
   padding: 4px 8px;
   border-radius: 4px;
 }
 
+.card-body {
+  padding-top: 8px;
+}
+
+/* 上午/下午切换 */
+.period-tabs-container {
+  margin: 0 16px;
+}
+
+.period-tabs {
+  display: flex;
+  background-color: #FFFFFF;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.period-tab {
+  flex: 1;
+  padding: 10px 0;
+  text-align: center;
+  font-size: 15px;
+  color: #5F5F5F;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.period-tab.active {
+  background-color: #07C160;
+  color: #FFFFFF;
+}
+
+/* 座位网格 */
+.seat-table {
+  margin: 16px;
+}
+
+.seat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+/* 座位卡片 - 上下两层结构 */
+.seat-item {
+  background-color: #FFFFFF;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  min-height: 70px;
+  border: 1px solid #E5E5E5;
+  position: relative;
+}
+
+/* 时间块 - 上层，加深背景 */
+.seat-time {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background-color: #E8F5E0;
+  border-radius: 4px;
+  margin-bottom: 6px;
+}
+
+.time-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #07C160;
+}
+
+/* 报名内容 - 下层，一行展示 */
+.seat-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.seat-name {
+  flex: 1;
+  border-radius: 4px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* 空座位 - 微信绿色 */
+.seat-empty {
+  background-color: #07C160;
+}
+
+.seat-empty-text {
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.seat-empty:active {
+  background-color: #06AD56;
+}
+
+/* 已占座位（别人） - 灰色 */
+.seat-filled {
+  background-color: #F5F5F5;
+}
+
+.seat-filled-text {
+  color: #5F5F5F;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* 我的座位 - 蓝色，与空位绿色区分 */
+.seat-my {
+  background-color: #4A90D9;
+}
+
+.seat-my-text {
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.seat-my:active {
+  background-color: #3A7BC8;
+}
+
 .seat-remark {
-  font-size: 11px;
-  color: #9ca3af;
-  margin-top: 2px;
+  font-size: 12px;
+  color: #A6A6A6;
 }
 
-.seat-action {
-  padding: 8px 12px;
-  flex-shrink: 0;
+.seat-my .seat-remark {
+  color: #D0E3F7;
 }
 
-/* 弹窗样式 */
+/* 我的座位 - 时间块头部也变蓝 */
+.seat-item.my-slot {
+  border-color: #4A90D9;
+}
+
+.seat-item.my-slot .seat-time {
+  background-color: #E3EDF7;
+}
+
+.seat-item.my-slot .time-value {
+  color: #4A90D9;
+}
+
+/* 管理员删除按钮 - 在时间块右侧 */
+.seat-admin-action {
+  padding: 4px 8px;
+}
+
+.delete-icon {
+  font-size: 16px;
+  color: #FA5151;
+  font-weight: 600;
+}
+
+/* 弹窗样式 - 微信风格 */
 .modal-mask {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.6);
   z-index: 100;
 }
 
@@ -111,42 +241,169 @@
   left: 50%;
   transform: translate(-50%, -50%);
   width: 280px;
-  background-color: #ffffff;
-  border-radius: 12px;
+  background-color: #FFFFFF;
+  border-radius: 8px;
   z-index: 101;
   overflow: hidden;
 }
 
 .modal-header {
   padding: 16px;
-  border-bottom: 1px solid #f3f4f6;
   text-align: center;
+  background-color: #FFFFFF;
 }
 
 .modal-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #111827;
+  font-size: 17px;
+  font-weight: 500;
+  color: #000000;
 }
 
 .modal-time {
-  font-size: 13px;
-  color: #6b7280;
-  margin-top: 4px;
+  font-size: 14px;
+  color: #5F5F5F;
+  margin-top: 6px;
 }
 
 .modal-body {
-  padding: 16px;
+  padding: 0 16px 16px;
+}
+
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-label {
+  font-size: 14px;
+  color: #5F5F5F;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.input {
+  width: 100%;
+  height: 40px;
+  background-color: #F5F5F5;
+  border: none;
+  border-radius: 4px;
+  padding: 0 12px;
+  font-size: 15px;
+  color: #000000;
 }
 
 .modal-footer {
   display: flex;
-  padding: 12px 16px;
-  border-top: 1px solid #f3f4f6;
-  gap: 8px;
+  border-top: 1px solid #F0F0F0;
 }
 
 .modal-footer .btn {
   flex: 1;
-  height: 36px;
+  height: 44px;
+  line-height: 44px;
+  font-size: 17px;
+  border-radius: 0;
+  background-color: #FFFFFF;
+  border: none;
+}
+
+.modal-footer .btn-primary {
+  color: #07C160;
+  font-weight: 500;
+}
+
+.modal-footer .btn-secondary {
+  color: #5F5F5F;
+  border-right: 1px solid #F0F0F0;
+}
+
+.modal-footer .btn-danger {
+  color: #FA5151;
+}
+
+/* 加载状态 */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+}
+
+.loading-text {
+  color: #5F5F5F;
+  font-size: 15px;
+}
+
+/* 空状态 */
+.empty-state {
+  padding: 40px;
+  text-align: center;
+}
+
+.empty-text {
+  color: #A6A6A6;
+  font-size: 15px;
+}
+
+/* 底部按钮 */
+.safe-area-bottom {
+  padding: 16px;
+  background-color: #F6F6F6;
+}
+
+.btn-full {
+  width: 100%;
+  height: 44px;
+  line-height: 44px;
+  font-size: 17px;
+  border-radius: 8px;
+}
+
+.btn-secondary {
+  background-color: #FFFFFF;
+  color: #5F5F5F;
+  border: 1px solid #E5E5E5;
+}
+
+/* 间距类 */
+.mt-16 {
+  margin-top: 16px;
+}
+
+.mx-16 {
+  margin-left: 16px;
+  margin-right: 16px;
+}
+
+.p-16 {
+  padding: 16px;
+}
+
+/* Flex辅助类 */
+.flex {
+  display: flex;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+/* 字体辅助类 */
+.font-medium {
+  font-weight: 500;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+.text-sm {
+  font-size: 14px;
+}
+
+.text-secondary {
+  color: #5F5F5F;
 }

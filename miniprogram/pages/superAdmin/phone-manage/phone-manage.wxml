@@ -73,11 +73,13 @@
           <image class="user-avatar" src="{{item.avatarUrl || '/images/default-avatar.png'}}"></image>
           <view class="user-details">
             <view class="user-name">{{item.nickName}}</view>
-            <view class="user-phone">手机号: {{item.phone}}</view>
-            <view class="user-role">角色: {{item.role === 'superAdmin' ? '超级管理员' : (item.role === 'admin' ? '管理员' : (item.role === 'auditor' ? '审计员' : '普通用户'))}}</view>
+            <view class="user-meta">
+              <text class="user-phone">{{item.phone}}</text>
+              <text class="user-role-tag role-{{item.role}}">{{item.role === 'superAdmin' ? '超管' : (item.role === 'admin' ? '区管' : (item.role === 'auditor' ? '盟管' : '用户'))}}</text>
+            </view>
           </view>
         </view>
-        <button class="reset-btn" bindtap="resetUserIdentity" data-id="{{item._id}}" data-index="{{index}}">重置身份</button>
+        <view class="reset-btn-sm" catchtap="resetUserIdentity" data-id="{{item._id}}" data-index="{{index}}">重置</view>
       </view>
     </view>
   </view>
