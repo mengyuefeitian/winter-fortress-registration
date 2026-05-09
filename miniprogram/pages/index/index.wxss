@@ -23,3 +23,58 @@
   width: 32px;
   height: 32px;
 }
+
+/* 分区引导卡片 */
+.zone-guide-card {
+  margin: 12px 16px 0;
+  padding: 16px;
+  background-color: #FFF8E1;
+  border-radius: 10px;
+  border-left: 4px solid #FF9800;
+}
+
+.zone-guide-text {
+  display: block;
+  font-size: 14px;
+  color: #E65100;
+  font-weight: 500;
+}
+
+.zone-guide-desc {
+  display: block;
+  font-size: 13px;
+  color: #F57C00;
+  margin-top: 6px;
+}
+
+.zone-guide-empty {
+  text-align: center;
+}
+
+.zone-guide-btn {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 8px 20px;
+  background-color: #FF9800;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 6px;
+}
+
+/* 分享按钮 */
+.btn-share {
+  display: inline-block;
+  padding: 8px 24px;
+  background-color: #4A90D9;
+  color: #FFFFFF;
+  font-size: 13px;
+  border-radius: 20px;
+  border: none;
+  line-height: 1.6;
+  height: auto;
+}
+
+.btn-share::after {
+  border: none;
+}
