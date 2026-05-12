@@ -1,0 +1,121 @@
+<!-- pages/superAdmin/user-identity/user-identity.wxml -->
+<view class="page">
+  <!-- 搜索和添加 -->
+  <view class="section">
+    <view class="section-title">用户身份管理</view>
+    <view class="section-desc">查看所有用户的分区身份归属，添加或移除区管</view>
+
+    <!-- 搜索框 -->
+    <view class="search-bar">
+      <input class="search-input" placeholder="搜索昵称或手机号" value="{{searchKeyword}}" bindinput="onSearchKeywordInput" bindconfirm="doSearch" confirm-type="search" />
+      <button class="btn btn-primary btn-sm" bindtap="doSearch">搜索</button>
+      <button wx:if="{{searchMode}}" class="btn btn-ghost btn-sm" bindtap="clearSearch">清除</button>
+    </view>
+
+    <!-- 添加区管按钮 -->
+    <button class="btn btn-success" bindtap="openAddAdminModal">添加区管</button>
+
+    <!-- 搜索结果 -->
+    <view wx:if="{{searchMode}}" class="user-section">
+      <view class="result-count">找到 {{searchResults.length}} 个用户</view>
+      <view wx:if="{{searchResults.length === 0}}" class="empty-state">
+        <text class="empty-text">未找到匹配的用户</text>
+      </view>
+      <view wx:else class="user-list">
+        <view wx:for="{{searchResults}}" wx:key="_id" class="user-card">
+          <view class="user-header">
+            <image class="avatar" src="{{item.avatarUrl || '/images/default-avatar.png'}}" />
+            <view class="user-info">
+              <text class="user-name">{{item.nickName}}</text>
+              <text class="user-phone">{{item.phone || '未绑定手机'}}</text>
+              <text class="user-global-role role-{{item.role}}">{{item.role === 'superAdmin' ? '超管' : (item.role === 'admin' ? '区管' : (item.role === 'auditor' ? '盟管' : '用户'))}}</text>
+            </view>
+          </view>
+          <view class="zone-roles">
+            <text class="zone-roles-label">分区身份：</text>
+            <view wx:if="{{item.zoneRoles.length === 0}}" class="no-zone-role">无分区身份</view>
+            <view wx:else class="zone-role-list">
+              <view wx:for="{{item.zoneRoles}}" wx:for-item="zr" wx:key="zoneId" class="zone-role-item">
+                <text class="zone-name">{{zr.zoneName}}</text>
+                <text class="zone-role-tag role-{{zr.role}}">{{zr.role === 'admin' ? '区管' : '盟管'}}</text>
+                <text wx:if="{{zr.alliances}}" class="zone-alliances">({{zr.alliances.join(', ')}})</text>
+                <text class="remove-btn" bindtap="removeUserRole" data-userid="{{item._id}}" data-zoneid="{{zr.zoneId}}" data-role="{{zr.role}}">移除</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 用户列表（分页） -->
+    <view wx:if="{{!searchMode}}">
+      <view class="list-header">用户总数: {{usersTotal}} 人</view>
+
+      <view wx:if="{{users.length === 0}}" class="empty-state">
+        <text class="empty-text">暂无用户数据</text>
+      </view>
+
+      <view wx:else class="user-list">
+        <view wx:for="{{users}}" wx:key="_id" class="user-card">
+          <view class="user-header">
+            <image class="avatar" src="{{item.avatarUrl || '/images/default-avatar.png'}}" />
+            <view class="user-info">
+              <text class="user-name">{{item.nickName}}</text>
+              <text class="user-phone">{{item.phone || '未绑定手机'}}</text>
+              <text class="user-global-role role-{{item.role}}">{{item.role === 'superAdmin' ? '超管' : (item.role === 'admin' ? '区管' : (item.role === 'auditor' ? '盟管' : '用户'))}}</text>
+            </view>
+          </view>
+          <view class="zone-roles">
+            <text class="zone-roles-label">分区身份：</text>
+            <view wx:if="{{item.zoneRoles.length === 0}}" class="no-zone-role">无分区身份</view>
+            <view wx:else class="zone-role-list">
+              <view wx:for="{{item.zoneRoles}}" wx:for-item="zr" wx:key="zoneId" class="zone-role-item">
+                <text class="zone-name">{{zr.zoneName}}</text>
+                <text class="zone-role-tag role-{{zr.role}}">{{zr.role === 'admin' ? '区管' : '盟管'}}</text>
+                <text wx:if="{{zr.alliances}}" class="zone-alliances">({{zr.alliances.join(', ')}})</text>
+                <text class="remove-btn" bindtap="removeUserRole" data-userid="{{item._id}}" data-zoneid="{{zr.zoneId}}" data-role="{{zr.role}}">移除</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 加载更多 -->
+      <view wx:if="{{hasMoreUsers}}" class="load-more">
+        <button class="btn btn-primary" bindtap="loadMoreUsers" disabled="{{usersLoading}}">
+          {{usersLoading ? '加载中...' : '加载更多'}}
+        </button>
+      </view>
+      <view wx:elif="{{users.length > 0}}" class="list-footer">
+        <text>已显示全部 {{users.length}} 位用户</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 添加区管弹窗 -->
+  <view wx:if="{{showAddAdminModal}}" class="modal-overlay" bindtap="closeAddAdminModal">
+    <view class="modal-content" catchtap="stopPropagation">
+      <view class="modal-header">
+        <text class="modal-title">添加区管</text>
+        <text class="modal-close" bindtap="closeAddAdminModal">✕</text>
+      </view>
+      <view class="modal-body">
+        <view class="form-item">
+          <text class="form-label">目标分区</text>
+          <picker bindchange="onAddAdminZoneChange" range="{{zones}}" range-key="zoneName" value="{{addAdminZoneIndex}}">
+            <view class="picker-value">{{zones[addAdminZoneIndex].zoneName || '请选择分区'}}</view>
+          </picker>
+        </view>
+        <view class="form-item">
+          <text class="form-label">手机号</text>
+          <input class="form-input" placeholder="输入用户手机号" value="{{addAdminPhone}}" bindinput="onAddAdminPhoneInput" type="number" maxlength="11" />
+        </view>
+        <view class="form-hint">用户首次登录并绑定此手机号后，将自动成为该分区区管</view>
+      </view>
+      <view class="modal-footer">
+        <button class="btn btn-ghost" bindtap="closeAddAdminModal">取消</button>
+        <button class="btn btn-success" bindtap="confirmAddAdmin">确认添加</button>
+      </view>
+    </view>
+  </view>
+</view>

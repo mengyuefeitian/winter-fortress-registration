@@ -4,11 +4,23 @@ const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const auth = require('../../../utils/auth')
 
+const PAGE_SIZE = 20
+
 Page({
   data: {
     newPhone: '',
     superAdmins: [],
     users: [],
+    // 分页状态
+    usersPage: 0,
+    hasMoreUsers: true,
+    usersLoading: false,
+    usersTotal: 0,
+    // 模糊搜索
+    searchKeyword: '',
+    searchResults: [],
+    searchMode: false,
+    // 手机号搜索
     userSearchPhone: '',
     searchPhone: '',
     searchResult: null
@@ -64,7 +76,6 @@ Page({
         let nickName = null
         if (admin.userId) {
           try {
-            // userId 现在统一是 openid，直接用 where 查询
             const userRes = await wxdb.collection('users').where({ openid: admin.userId }).get()
             if (userRes.data && userRes.data.length > 0) {
               nickName = userRes.data[0].nickName
@@ -91,21 +102,117 @@ Page({
     }
   },
 
-  // 加载绑定了手机号的用户列表
-  loadUsersWithPhone: async function () {
+  // 加载绑定了手机号的用户列表（分页）
+  loadUsersWithPhone: async function (loadMore = false) {
+    if (this.data.usersLoading) return
+    if (loadMore && !this.data.hasMoreUsers) return
+
     try {
+      this.setData({ usersLoading: true })
+
       const wxdb = wx.cloud.database()
-      const res = await wxdb.collection('users').where({
-        phone: wxdb.command.neq(null)
-      }).get()
+      const _ = wxdb.command
+
+      const page = loadMore ? this.data.usersPage + 1 : 0
+      const skip = page * PAGE_SIZE
+
+      // 获取用户列表
+      const res = await wxdb.collection('users')
+        .where({ phone: _.neq(null) })
+        .orderBy('createTime', 'desc')
+        .skip(skip)
+        .limit(PAGE_SIZE)
+        .get()
+
+      // 获取总数
+      const countRes = await wxdb.collection('users')
+        .where({ phone: _.neq(null) })
+        .count()
+
+      const users = loadMore
+        ? this.data.users.concat(res.data)
+        : res.data
 
       this.setData({
-        users: res.data || []
+        users: users,
+        usersPage: page,
+        usersTotal: countRes.total,
+        hasMoreUsers: res.data.length === PAGE_SIZE,
+        usersLoading: false
       })
 
     } catch (err) {
       console.error('加载用户列表失败:', err)
+      this.setData({ usersLoading: false })
     }
+  },
+
+  // 加载更多用户
+  loadMoreUsers: function () {
+    this.loadUsersWithPhone(true)
+  },
+
+  // 搜索关键词输入
+  onSearchKeywordInput: function (e) {
+    this.setData({ searchKeyword: e.detail.value })
+  },
+
+  // 执行模糊搜索
+  doSearch: async function () {
+    const keyword = this.data.searchKeyword.trim()
+    if (!keyword) {
+      this.setData({
+        searchMode: false,
+        searchResults: []
+      })
+      return
+    }
+
+    try {
+      util.showLoading('搜索中...')
+
+      const wxdb = wx.cloud.database()
+      const _ = wxdb.command
+
+      // 构建正则表达式（支持昵称和手机号模糊匹配）
+      const regex = wxdb.RegExp({
+        regexp: keyword,
+        options: 'i'
+      })
+
+      const res = await wxdb.collection('users')
+        .where(_.or([
+          { nickName: regex },
+          { phone: regex }
+        ]))
+        .limit(50)
+        .get()
+
+      this.setData({
+        searchMode: true,
+        searchResults: res.data || []
+      })
+
+      util.hideLoading()
+
+      if (res.data.length === 0) {
+        util.showInfo('未找到匹配的用户')
+      }
+
+    } catch (err) {
+      util.hideLoading()
+      console.error('搜索失败:', err)
+      util.showError('搜索失败')
+    }
+  },
+
+  // 清空搜索
+  clearSearchKeyword: function () {
+    this.setData({
+      searchKeyword: '',
+      searchMode: false,
+      searchResults: []
+    })
   },
 
   // 输入手机号
@@ -188,7 +295,6 @@ Page({
       util.hideLoading()
       util.showSuccess('重置成功')
 
-      // 清空搜索结果并重新加载
       this.setData({
         searchResult: null,
         searchPhone: ''
@@ -204,13 +310,11 @@ Page({
   // 添加超管手机号
   addSuperAdminPhone: async function () {
     try {
-      // 验证手机号
       if (!util.validatePhone(this.data.newPhone)) {
         util.showInfo('请输入正确的手机号')
         return
       }
 
-      // 检查是否已存在
       const existing = this.data.superAdmins.find(admin => admin.phone === this.data.newPhone)
       if (existing) {
         util.showInfo('该手机号已是超管')
@@ -219,22 +323,15 @@ Page({
 
       util.showLoading('正在添加...')
 
-      // 检查是否有对应用户
       const user = await db.getUserByPhone(this.data.newPhone)
       const userId = user ? user._id : null
 
-      // 添加超管
       await db.addSuperAdmin(this.data.newPhone, userId)
 
       util.hideLoading()
       util.showSuccess('添加成功')
 
-      // 重置输入
-      this.setData({
-        newPhone: ''
-      })
-
-      // 重新加载列表
+      this.setData({ newPhone: '' })
       this.loadSuperAdmins()
 
     } catch (err) {
@@ -260,9 +357,7 @@ Page({
 
       const superAdmins = this.data.superAdmins.filter((_, i) => i !== index)
 
-      this.setData({
-        superAdmins: superAdmins
-      })
+      this.setData({ superAdmins: superAdmins })
 
       util.hideLoading()
       util.showSuccess('删除成功')
@@ -277,7 +372,8 @@ Page({
   resetUserIdentity: async function (e) {
     const userId = e.currentTarget.dataset.id
     const index = e.currentTarget.dataset.index
-    const user = this.data.users[index]
+    const userList = this.data.searchMode ? this.data.searchResults : this.data.users
+    const user = userList[index]
 
     const confirm = await util.showConfirm('确认重置', `确定要重置用户 "${user.nickName}" 的身份吗？\n这将清空其绑定的手机号 "${user.phone}"，用户需要重新登录并绑定手机号。`)
 
@@ -291,8 +387,11 @@ Page({
       util.hideLoading()
       util.showSuccess('重置成功')
 
-      // 重新加载用户列表
-      this.loadUsersWithPhone()
+      if (this.data.searchMode) {
+        this.doSearch()
+      } else {
+        this.loadUsersWithPhone()
+      }
 
     } catch (err) {
       util.hideLoading()

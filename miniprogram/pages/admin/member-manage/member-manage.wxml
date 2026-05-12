@@ -5,6 +5,27 @@
     <zone-selector value="{{selectedZone}}" zones="{{zones}}" loaded="{{true}}" bind:change="onZoneChange" />
   </view>
 
+  <!-- 区管列表 -->
+  <view class="section">
+    <view class="section-title">区管成员</view>
+    <view wx:if="{{admins.length === 0}}" class="empty-state">
+      <text class="empty-text">暂无区管成员</text>
+    </view>
+    <view wx:else class="member-list">
+      <view wx:for="{{admins}}" wx:key="_id" class="member-card">
+        <view class="member-info">
+          <text class="member-name">{{item.nickName}}</text>
+          <view class="member-tags">
+            <view class="tag tag-warning">区管</view>
+          </view>
+        </view>
+        <view class="member-actions">
+          <text class="text-xs text-weak">区管无法在本页面移除</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
   <!-- 盟管列表 -->
   <view class="section">
     <view class="section-title">盟管成员</view>

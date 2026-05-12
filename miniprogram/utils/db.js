@@ -242,22 +242,50 @@ async function reviewAdminApplication(applicationId, status, reviewedBy, approve
   })
 }
 
-// 更新分区创建者（用于区管绑定分区）
-async function updateZoneCreator(zoneId, creatorId) {
+// 添加区管（支持多区管）
+async function addZoneAdmin(zoneId, userId) {
   const db = getDb()
-  return await db.collection('zones').doc(zoneId).update({
+  const _ = db.command
+
+  const zone = await db.collection('zones').doc(zoneId).get()
+  if (!zone.data) {
+    throw new Error('分区不存在')
+  }
+
+  // 获取现有区管列表（向后兼容）
+  let existingAdminIds = zone.data.adminIds || []
+  if (existingAdminIds.length === 0 && zone.data.creatorId) {
+    existingAdminIds = [zone.data.creatorId]
+  }
+
+  // 已是该分区区管，跳过
+  if (existingAdminIds.includes(userId)) {
+    return { skipped: true, message: '用户已是该分区区管' }
+  }
+
+  // 添加到 adminIds 数组
+  await db.collection('zones').doc(zoneId).update({
     data: {
-      creatorId: creatorId,
+      adminIds: _.push(userId),
+      // 保留 creatorId 作为第一个区管（向后兼容）
+      creatorId: zone.data.creatorId || userId,
       updateTime: db.serverDate()
     }
   })
+
+  return { success: true, message: '添加区管成功' }
+}
+
+// 旧函数名保留（向后兼容调用）
+async function updateZoneCreator(zoneId, creatorId) {
+  return await addZoneAdmin(zoneId, creatorId)
 }
 
 /**
  * 分区相关操作
  */
 
-// 创建分区
+// 创建分区（支持多区管）
 async function createZone(zoneCode, zoneName, creatorId) {
   const db = getDb()
   // 检查分区编号是否已存在
@@ -270,7 +298,8 @@ async function createZone(zoneCode, zoneName, creatorId) {
     data: {
       zoneCode: zoneCode,
       zoneName: zoneName,
-      creatorId: creatorId,
+      creatorId: creatorId,  // 保留（向后兼容）
+      adminIds: [creatorId], // 新字段：支持多区管
       status: 'active',
       createTime: db.serverDate()
     }
@@ -307,18 +336,21 @@ async function getAllZones() {
   return allZones
 }
 
-// 获取管理员创建的分区
+// 获取管理员创建的分区（支持多区管）
 async function getZonesByCreator(creatorId) {
   const db = getDb()
+  const _ = db.command
   let allZones = []
   let offset = 0
   const batchSize = 20
 
   while (true) {
-    const res = await db.collection('zones').where({
-      creatorId: creatorId,
-      status: 'active'
-    }).orderBy('createTime', 'desc').skip(offset).limit(batchSize).get()
+    // 查询 adminIds 包含该用户，或 creatorId 等于该用户（向后兼容）
+    const res = await db.collection('zones').where(_.or([
+      { adminIds: creatorId },
+      { creatorId: creatorId }
+    ]).and({ status: 'active' }))
+    .orderBy('createTime', 'desc').skip(offset).limit(batchSize).get()
     allZones = allZones.concat(res.data)
     if (res.data.length < batchSize) break
     offset += batchSize
@@ -487,9 +519,10 @@ async function getZoneMembers(zoneId) {
   }
 
   const zone = await db.collection('zones').doc(zoneId).get()
-  const adminIds = []
-  if (zone.data.creatorId) {
-    adminIds.push(zone.data.creatorId)
+  // 获取区管列表（支持多区管，向后兼容）
+  let adminIds = zone.data.adminIds || []
+  if (adminIds.length === 0 && zone.data.creatorId) {
+    adminIds = [zone.data.creatorId]
   }
 
   const admins = []
@@ -536,24 +569,43 @@ async function removeMember(userId, role, zoneId) {
     }
   }
 
-  // 清理分区创建者绑定
+  // 清理分区区管绑定（支持多区管）
   const zone = await db.collection('zones').doc(zoneId).get()
-  if (zone.data.creatorId === userId) {
-    await db.collection('zones').doc(zoneId).update({
-      data: {
-        creatorId: null,
-        updateTime: db.serverDate()
+  let existingAdminIds = zone.data.adminIds || []
+  if (existingAdminIds.length === 0 && zone.data.creatorId) {
+    existingAdminIds = [zone.data.creatorId]
+  }
+
+  if (existingAdminIds.includes(userId) || zone.data.creatorId === userId) {
+    // 从 adminIds 数组中移除
+    const updateData = {
+      adminIds: _.pull(userId),
+      updateTime: db.serverDate()
+    }
+
+    // 如果 userId 是 creatorId，且有其他区管，更新 creatorId 为第一个其他区管
+    if (zone.data.creatorId === userId) {
+      const remainingAdmins = existingAdminIds.filter(id => id !== userId)
+      if (remainingAdmins.length > 0) {
+        updateData.creatorId = remainingAdmins[0]
+      } else {
+        updateData.creatorId = null
       }
+    }
+
+    await db.collection('zones').doc(zoneId).update({
+      data: updateData
     })
   }
 
   // 检查用户在其他分区是否仍有身份绑定，决定是否重置全局角色
   let shouldResetRole = true
 
-  // 检查是否仍是其他分区的创建者（区管）
-  const otherZones = await db.collection('zones').where({
-    creatorId: userId
-  }).get()
+  // 检查是否仍是其他分区的区管（支持多区管）
+  const otherZones = await db.collection('zones').where(_.or([
+    { adminIds: userId },
+    { creatorId: userId }
+  ]).and({ status: 'active' })).get()
   if (otherZones.data.length > 0) {
     shouldResetRole = false
   }

@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "成员管理",
+  "navigationBarTitleText": "用户身份管理",
   "usingComponents": {
     "zone-selector": "/components/zone-selector/zone-selector"
   }

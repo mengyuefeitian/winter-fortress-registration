@@ -41,13 +41,43 @@
     <view class="section-title">用户身份管理</view>
     <view class="section-desc">重置用户身份将清空其绑定的手机号，用户需要重新登录并绑定手机号</view>
 
-    <!-- 按手机号查找 -->
+    <!-- 模糊搜索 -->
     <view class="search-box">
-      <input class="search-input" placeholder="输入手机号查找用户" value="{{searchPhone}}" bindinput="onSearchPhoneInput" type="number" maxlength="11" />
+      <input class="search-input" placeholder="搜索昵称或手机号" value="{{searchKeyword}}" bindinput="onSearchKeywordInput" bindconfirm="doSearch" confirm-type="search" />
+      <button class="search-btn" bindtap="doSearch">搜索</button>
+      <button wx:if="{{searchMode}}" class="clear-btn" bindtap="clearSearchKeyword">清除</button>
+    </view>
+
+    <!-- 搜索结果 -->
+    <view wx:if="{{searchMode}}" class="search-results">
+      <view class="result-count">找到 {{searchResults.length}} 个用户</view>
+      <view wx:if="{{searchResults.length === 0}}" class="empty-state">
+        <view class="empty-text">未找到匹配的用户</view>
+      </view>
+      <view wx:else class="user-list">
+        <view wx:for="{{searchResults}}" wx:key="_id" class="user-card">
+          <view class="user-info">
+            <image class="user-avatar" src="{{item.avatarUrl || '/images/default-avatar.png'}}"></image>
+            <view class="user-details">
+              <view class="user-name">{{item.nickName}}</view>
+              <view class="user-meta">
+                <text wx:if="{{item.phone}}" class="user-phone">{{item.phone}}</text>
+                <text class="user-role-tag role-{{item.role}}">{{item.role === 'superAdmin' ? '超管' : (item.role === 'admin' ? '区管' : (item.role === 'auditor' ? '盟管' : '用户'))}}</text>
+              </view>
+            </view>
+          </view>
+          <view wx:if="{{item.phone}}" class="reset-btn-sm" catchtap="resetUserIdentity" data-id="{{item._id}}" data-index="{{index}}">重置</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 按手机号精确查找 -->
+    <view wx:if="{{!searchMode}}" class="search-box mt-16">
+      <input class="search-input" placeholder="输入完整手机号查找" value="{{searchPhone}}" bindinput="onSearchPhoneInput" type="number" maxlength="11" />
       <button class="search-btn" bindtap="searchByPhone">查找</button>
     </view>
 
-    <view wx:if="{{searchResult}}" class="search-result">
+    <view wx:if="{{!searchMode && searchResult}}" class="search-result">
       <view class="result-card">
         <view class="result-info">
           <text class="result-label">找到用户：</text>
@@ -63,23 +93,40 @@
       </view>
     </view>
 
-    <view wx:if="{{users.length === 0 && !searchResult}}" class="empty-state">
-      <view class="empty-text">暂无绑定手机号的用户</view>
-    </view>
+    <!-- 用户列表（分页） -->
+    <view wx:if="{{!searchMode && !searchResult}}">
+      <view class="list-header">
+        <text>已绑定手机号用户 ({{usersTotal}}人)</text>
+      </view>
 
-    <view wx:if="{{users.length > 0 && !searchResult}}" class="user-list">
-      <view wx:for="{{users}}" wx:key="_id" class="user-card">
-        <view class="user-info">
-          <image class="user-avatar" src="{{item.avatarUrl || '/images/default-avatar.png'}}"></image>
-          <view class="user-details">
-            <view class="user-name">{{item.nickName}}</view>
-            <view class="user-meta">
-              <text class="user-phone">{{item.phone}}</text>
-              <text class="user-role-tag role-{{item.role}}">{{item.role === 'superAdmin' ? '超管' : (item.role === 'admin' ? '区管' : (item.role === 'auditor' ? '盟管' : '用户'))}}</text>
+      <view wx:if="{{users.length === 0}}" class="empty-state">
+        <view class="empty-text">暂无绑定手机号的用户</view>
+      </view>
+
+      <view wx:else class="user-list">
+        <view wx:for="{{users}}" wx:key="_id" class="user-card">
+          <view class="user-info">
+            <image class="user-avatar" src="{{item.avatarUrl || '/images/default-avatar.png'}}"></image>
+            <view class="user-details">
+              <view class="user-name">{{item.nickName}}</view>
+              <view class="user-meta">
+                <text class="user-phone">{{item.phone}}</text>
+                <text class="user-role-tag role-{{item.role}}">{{item.role === 'superAdmin' ? '超管' : (item.role === 'admin' ? '区管' : (item.role === 'auditor' ? '盟管' : '用户'))}}</text>
+              </view>
             </view>
           </view>
+          <view class="reset-btn-sm" catchtap="resetUserIdentity" data-id="{{item._id}}" data-index="{{index}}">重置</view>
         </view>
-        <view class="reset-btn-sm" catchtap="resetUserIdentity" data-id="{{item._id}}" data-index="{{index}}">重置</view>
+      </view>
+
+      <!-- 加载更多 -->
+      <view wx:if="{{hasMoreUsers}}" class="load-more">
+        <button class="load-more-btn" bindtap="loadMoreUsers" disabled="{{usersLoading}}">
+          {{usersLoading ? '加载中...' : '加载更多'}}
+        </button>
+      </view>
+      <view wx:elif="{{users.length > 0}}" class="list-footer">
+        <text>已显示全部 {{users.length}} 位用户</text>
       </view>
     </view>
   </view>

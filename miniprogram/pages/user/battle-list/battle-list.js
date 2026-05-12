@@ -49,14 +49,9 @@ Page({
       const isSuperAdmin = role === 'superAdmin'
       const canCreate = isSuperAdmin || role === 'admin'
 
-      // 加载分区列表（超管看所有区，区管只看自己创建的区）
-      const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
-      let zones
-      if (isSuperAdmin) {
-        zones = await db.getAllZones()
-      } else {
-        zones = await db.getZonesByCreator(userId)
-      }
+      // 所有用户（包括区管）都应该能选择所有分区来报名国战
+      // 区管的"创建配置"权限不应限制分区选择
+      const zones = await db.getAllZones()
 
       let currentZone = zones.length > 0 ? zones[0] : null
       if (app.globalData.currentZone) {
@@ -77,20 +72,11 @@ Page({
       }
 
       let configs
-      if (isSuperAdmin) {
-        // 超管也需要选择分区后才能查看，只显示当前分区的配置
-        if (currentZone) {
-          configs = await db.getBattleConfigs(currentZone._id)
-          configs = configs.map(c => ({ ...c, zoneName: currentZone.zoneName }))
-        } else {
-          configs = []
-        }
+      if (currentZone) {
+        configs = await db.getBattleConfigs(currentZone._id)
+        configs = configs.map(c => ({ ...c, zoneName: currentZone.zoneName }))
       } else {
-        if (currentZone) {
-          configs = await db.getBattleConfigs(currentZone._id)
-        } else {
-          configs = []
-        }
+        configs = []
       }
 
       this.setData({

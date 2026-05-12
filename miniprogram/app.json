@@ -28,7 +28,8 @@
     "pages/superAdmin/phone-manage/phone-manage",
     "pages/superAdmin/alliance-manage/alliance-manage",
     "pages/superAdmin/auto-clear/auto-clear",
-    "pages/superAdmin/member-manage/member-manage"
+    "pages/superAdmin/member-manage/member-manage",
+    "pages/superAdmin/user-identity/user-identity"
   ],
   "window": {
     "navigationBarBackgroundColor": "#1a1a2e",

@@ -1,0 +1,9 @@
+{
+  "name": "manageUserIdentity",
+  "version": "1.0.0",
+  "description": "管理用户身份（添加区管、预绑定、获取分区角色）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

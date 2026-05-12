@@ -19,7 +19,14 @@ Page({
 
   onShow: function () {
     if (app.globalData.roleReady) {
-      this.loadApplications()
+      // 区管审核页面需要确保 availableZones 已加载
+      if (this.data.applyType === 'allianceManager' && this.data.availableZones.length === 0) {
+        this.loadAvailableZones().then(() => {
+          this.loadApplications()
+        })
+      } else {
+        this.loadApplications()
+      }
     }
   },
 
@@ -35,7 +42,7 @@ Page({
   },
 
   // 检查权限
-  checkPermission: function (options) {
+  checkPermission: async function (options) {
     const role = app.globalData.role || 'user'
     const applyType = options && options.applyType
 
@@ -68,7 +75,7 @@ Page({
         title: this.data.pageTitle
       })
     }
-    this.loadAvailableZones()
+    await this.loadAvailableZones()
     this.loadApplications()
   },
 
@@ -238,6 +245,14 @@ Page({
           }
         }
 
+        // 区管数据隔离：只显示自己管理分区的盟管申请
+        if (role === 'admin' && this.data.applyType === 'allianceManager') {
+          const availableZoneIds = this.data.availableZones.map(z => z._id)
+          if (applicantZoneId && !availableZoneIds.includes(applicantZoneId)) {
+            continue // 跳过不属于自己管理的分区申请
+          }
+        }
+
         // 匹配分区索引
         if (applicantZoneId) {
           const foundZoneIndex = allZones.findIndex(z => z._id === applicantZoneId)
@@ -252,6 +267,7 @@ Page({
         applications.push({
           ...application,
           userId: userInfo._id,
+          userOpenid: userId, // 保存原始 openid 用于数据修复
           nickName: userInfo.nickName,
           avatarUrl: userInfo.avatarUrl,
           selectingZone: false,
@@ -262,7 +278,9 @@ Page({
           applicantZoneIndex: applicantZoneIndex,
           applicantZoneId: applicantZoneId,
           formattedTime: application.createTime ? util.formatDate(application.createTime, 'YYYY-MM-DD HH:mm') : '',
-          valid: userInfo._id !== null
+          valid: userInfo._id !== null,
+          // 显示申请时的分区信息
+          applicantZoneName: application.zoneName || ''
         })
       }
 
@@ -304,9 +322,19 @@ Page({
         formattedReviewTime: application.reviewTime ? util.formatDate(application.reviewTime, 'YYYY-MM-DD HH:mm') : ''
       }))
 
+      // 区管数据隔离：过滤已审核记录，只显示自己管理分区的盟管审核记录
+      let filteredReviewedApplications = reviewedApplications
+      if (role === 'admin' && this.data.applyType === 'allianceManager') {
+        const availableZoneIds = this.data.availableZones.map(z => z._id)
+        filteredReviewedApplications = reviewedApplications.filter(app => {
+          // 已审核的盟管申请应该有 zoneId 字段
+          return app.zoneId && availableZoneIds.includes(app.zoneId)
+        })
+      }
+
       this.setData({
         applications: applications,
-        reviewedApplications: reviewedApplications
+        reviewedApplications: filteredReviewedApplications
       })
 
       util.hideLoading()
@@ -340,13 +368,34 @@ Page({
   // 确认批准区管（带分区绑定）
   confirmApproveZoneManager: async function (e) {
     const applicationId = e.currentTarget.dataset.id
-    const userId = e.currentTarget.dataset.userid
+    let userId = e.currentTarget.dataset.userid
+    const userOpenid = e.currentTarget.dataset.useropenid
     const index = e.currentTarget.dataset.index
 
     // 校验 userId 是否有效
     if (!userId) {
-      util.showError('用户数据异常，无法批准')
-      return
+      // userId 为空时，尝试从 openid 获取真实的 _id
+      if (userOpenid) {
+        util.showLoading('正在获取用户信息...')
+        try {
+          const userRecord = await db.getUserByOpenid(userOpenid)
+          if (userRecord && userRecord._id) {
+            userId = userRecord._id
+            util.hideLoading()
+          } else {
+            util.hideLoading()
+            util.showError('用户数据异常，无法找到用户记录')
+            return
+          }
+        } catch (err) {
+          util.hideLoading()
+          util.showError('获取用户信息失败：' + (err.message || '未知错误'))
+          return
+        }
+      } else {
+        util.showError('用户数据异常，无法批准')
+        return
+      }
     }
 
     const selectedZone = this.data.applications[index].selectedZone
@@ -374,7 +423,8 @@ Page({
       console.log('updateUserRole 结果:', updateResult)
 
       // 更新分区创建者（让区管能管理该分区）
-      await db.updateZoneCreator(selectedZone._id, userId)
+      const zoneUpdateResult = await db.updateZoneCreator(selectedZone._id, userId)
+      console.log('updateZoneCreator 结果:', zoneUpdateResult)
 
       // 从待审核列表移除
       const applications = this.data.applications.filter((_, i) => i !== index)
@@ -623,12 +673,34 @@ Page({
   // 确认批准分区开通
   confirmApproveZoneCreation: async function (e) {
     const applicationId = e.currentTarget.dataset.id
-    const userId = e.currentTarget.dataset.userid
+    let userId = e.currentTarget.dataset.userid
+    const userOpenid = e.currentTarget.dataset.useropenid
     const index = e.currentTarget.dataset.index
 
+    // 校验 userId 是否有效
     if (!userId) {
-      util.showError('用户数据异常，无法批准')
-      return
+      // userId 为空时，尝试从 openid 获取真实的 _id
+      if (userOpenid) {
+        util.showLoading('正在获取用户信息...')
+        try {
+          const userRecord = await db.getUserByOpenid(userOpenid)
+          if (userRecord && userRecord._id) {
+            userId = userRecord._id
+            util.hideLoading()
+          } else {
+            util.hideLoading()
+            util.showError('用户数据异常，无法找到用户记录')
+            return
+          }
+        } catch (err) {
+          util.hideLoading()
+          util.showError('获取用户信息失败：' + (err.message || '未知错误'))
+          return
+        }
+      } else {
+        util.showError('用户数据异常，无法批准')
+        return
+      }
     }
 
     const application = this.data.applications[index]

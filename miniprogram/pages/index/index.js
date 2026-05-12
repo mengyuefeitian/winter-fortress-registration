@@ -48,8 +48,9 @@ Page({
       // 用户已选择分区则不再提示
       if (this.data.currentZone) return
 
-      // 检查是否已提示过
-      const notified = wx.getStorageSync('zoneCreationNotified')
+      // 检查是否已提示过（按用户ID区分）
+      const notifiedKey = `zoneCreationNotified_${userId}`
+      const notified = wx.getStorageSync(notifiedKey)
       if (notified) return
 
       const wxdb = wx.cloud.database()
@@ -57,7 +58,7 @@ Page({
         userId: userId,
         status: 'rejected',
         rejectType: 'zoneAlreadyExists'
-      }).orderBy('reviewTime', 'desc').get()
+      }).orderBy('reviewTime', 'desc').limit(1).get()
 
       if (res.data && res.data.length > 0) {
         const latest = res.data[0]
@@ -66,13 +67,25 @@ Page({
           const now = new Date()
           const daysDiff = (now - reviewDate) / (1000 * 60 * 60 * 24)
           if (daysDiff <= 7) {
-            // 标记已提示，避免重复弹窗
-            wx.setStorageSync('zoneCreationNotified', true)
+            // 显示通知
             wx.showModal({
               title: '分区开通通知',
               content: latest.rejectReason,
               showCancel: false,
-              confirmText: '我知道了'
+              confirmText: '我知道了',
+              success: async () => {
+                // 用户确认后，彻底删除该记录，不再重复通知
+                try {
+                  await wxdb.collection('admins').doc(latest._id).remove()
+                  // 同时标记本地缓存，防止同一账号多端登录时重复通知
+                  wx.setStorageSync(notifiedKey, true)
+                  console.log('已删除分区开通拒绝记录:', latest._id)
+                } catch (err) {
+                  console.error('删除通知记录失败:', err)
+                  // 删除失败时至少标记缓存
+                  wx.setStorageSync(notifiedKey, true)
+                }
+              }
             })
           }
         }
@@ -180,9 +193,9 @@ Page({
   },
 
   // 更新角色信息和功能入口显示
-  updateRoleInfo: function () {
-    const role = app.globalData.role || 'user'
-    const roleDisplayName = auth.getRoleDisplayName(role)
+  updateRoleInfo: async function () {
+    const globalRole = app.globalData.role || 'user'
+    let roleDisplayName = auth.getRoleDisplayName(globalRole)
     let userInfo = app.globalData.userInfo
     const phone = app.globalData.phone
     const isLoggedIn = !!(userInfo && app.globalData.openid)
@@ -212,22 +225,26 @@ Page({
       return
     }
 
-    // 根据角色设置功能入口显示
-    // 权限层级: user < auditor < admin < superAdmin
-    // 超管拥有所有角色的权限，应该显示所有功能入口
-    const isUser = role === 'user'
-    const isAdmin = role === 'admin'
-    const isAuditor = role === 'auditor'
-    const isSuperAdmin = role === 'superAdmin'
+    // 计算用户在当前分区的有效角色
+    let effectiveRole = globalRole
+    if (this.data.currentZone && globalRole !== 'superAdmin') {
+      effectiveRole = await this.computeCurrentZoneRole(this.data.currentZone)
+      roleDisplayName = auth.getRoleDisplayName(effectiveRole)
+    }
+
+    // 根据有效角色设置功能入口显示
+    const isUser = effectiveRole === 'user'
+    const isAdmin = effectiveRole === 'admin'
+    const isAuditor = effectiveRole === 'auditor'
+    const isSuperAdmin = effectiveRole === 'superAdmin'
     const isAdminOrAbove = isAdmin || isAuditor || isSuperAdmin
     const isSuperAdminOrAdmin = isSuperAdmin || isAdmin
-    // 普通用户和盟管可以申请区管（角色升级）
     const canApplyZoneManager = isUser || isAuditor
 
     this.setData({
       isLoggedIn: true,
       userInfo: userInfo || this.data.userInfo,
-      currentRole: role,
+      currentRole: effectiveRole,
       roleDisplayName: roleDisplayName,
       // 普通用户功能（所有角色都可见）
       showFortressRegistration: true,
@@ -247,22 +264,36 @@ Page({
     })
   },
 
+  // 计算用户在当前分区的有效角色
+  computeCurrentZoneRole: async function (zone) {
+    const globalRole = app.globalData.role || 'user'
+    const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+
+    // 超管在任何分区都是超管
+    if (globalRole === 'superAdmin') return 'superAdmin'
+
+    // 检查是否是该分区的区管
+    const isZoneManager = await this.checkIsZoneManagerInZone(userId, zone)
+    if (isZoneManager) return 'admin'
+
+    // 检查是否是该分区的盟管
+    const isAuditor = await this.checkIsAuditorInZone(userId, zone)
+    if (isAuditor) return 'auditor'
+
+    // 默认普通用户
+    return 'user'
+  },
+
   // 加载区域列表
   loadZones: async function () {
     try {
       const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
       const role = app.globalData.role || 'user'
 
-      // 超级管理员可以看到所有分区，管理员只能看到自己创建的
-      let zones
-      if (role === 'superAdmin') {
-        zones = await db.getAllZones()
-      } else if (role === 'admin') {
-        zones = await db.getZonesByCreator(userId)
-      } else {
-        // 普通用户和盟管可以看到所有分区
-        zones = await db.getAllZones()
-      }
+      // 首页分区选择：所有角色（包括区管）都可以看到所有分区
+      // 区管在首页选择分区用于普通用户功能（报名等）
+      // 区管控制台才限制为只显示自己管理的分区
+      let zones = await db.getAllZones()
 
       if (!zones || zones.length === 0) {
         this.setData({
@@ -307,6 +338,11 @@ Page({
         zonesLoaded: true
       })
 
+      // 分区加载完成后更新角色显示
+      if (currentZone) {
+        await this.updateRoleInfo()
+      }
+
     } catch (err) {
       console.error('加载区域失败:', err)
       this.setData({
@@ -320,7 +356,7 @@ Page({
   },
 
   // 区域选择变化（由组件内部处理全局状态同步）
-  onZoneChange: function (e) {
+  onZoneChange: async function (e) {
     const zone = e.detail.zone
     if (zone) {
       this.setData({
@@ -328,6 +364,8 @@ Page({
       })
       // 用户选择了分区，清除通知标记
       wx.removeStorageSync('zoneCreationNotified')
+      // 分区切换后重新计算角色
+      await this.updateRoleInfo()
     }
   },
 
@@ -476,16 +514,21 @@ Page({
     await this.checkAndShowApplyDialog('zoneManager')
   },
 
-  // 检查用户是否是指定分区的区管（分区创建者）
-  // 注意：creatorId 存储的是 MongoDB _id，不是 openid
+  // 检查用户是否是指定分区的区管（支持多区管）
+  // 注意：adminIds/creatorId 存储的是 MongoDB _id，不是 openid
   checkIsZoneManagerInZone: async function (userId, zone) {
     if (!userId || !zone) return false
     try {
       const wxdb = wx.cloud.database()
+      const _ = wxdb.command
+      // 查询 adminIds 包含 userId 或 creatorId 等于 userId（向后兼容）
       const res = await wxdb.collection('zones').where({
         _id: zone._id,
-        creatorId: userId
-      }).count()
+        status: 'active'
+      }).where(_.or([
+        { adminIds: userId },
+        { creatorId: userId }
+      ])).count()
       return res.total > 0
     } catch (err) {
       return false

@@ -7,7 +7,8 @@ Page({
   data: {
     zones: [],
     selectedZone: null,
-    auditors: []
+    auditors: [],
+    admins: []
   },
 
   onLoad: function () {
@@ -81,8 +82,8 @@ Page({
   loadMembers: async function (zoneId) {
     try {
       util.showLoading('加载成员...')
-      const { auditors } = await db.getZoneMembers(zoneId)
-      this.setData({ auditors })
+      const { auditors, admins } = await db.getZoneMembers(zoneId)
+      this.setData({ auditors, admins })
       util.hideLoading()
     } catch (err) {
       util.hideLoading()

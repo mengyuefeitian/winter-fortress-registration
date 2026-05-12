@@ -1,0 +1,9 @@
+{
+  "name": "migrate-zone-admin-ids",
+  "version": "1.0.0",
+  "description": "迁移 zones.creatorId 到 adminIds 数组",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

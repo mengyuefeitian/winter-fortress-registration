@@ -1,0 +1,9 @@
+{
+  "name": "repair-zone-creator",
+  "version": "1.0.0",
+  "description": "修复区管分区绑定问题",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

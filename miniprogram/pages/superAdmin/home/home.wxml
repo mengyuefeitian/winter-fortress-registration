@@ -87,6 +87,12 @@
         <text class="function-desc">查看和管理区管盟管</text>
       </view>
     </view>
+    <view class="function-card-compact" bindtap="goToUserIdentity">
+      <view class="function-content">
+        <text class="function-name">用户身份管理</text>
+        <text class="function-desc">查看用户分区归属、添加区管</text>
+      </view>
+    </view>
   </view>
 
   <!-- 统计数据 -->

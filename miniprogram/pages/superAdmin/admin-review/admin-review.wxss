@@ -26,6 +26,14 @@
   color: #999;
 }
 
+/* 申请人分区信息 */
+.applicant-zone-info {
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  background-color: #E8F4FD;
+  border-radius: 4px;
+}
+
 /* 卡片样式 - 最紧凑布局 */
 .card {
   width: 100%;

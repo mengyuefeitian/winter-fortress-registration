@@ -163,6 +163,12 @@ Page({
     })
   },
 
+  goToUserIdentity: function () {
+    wx.navigateTo({
+      url: '/pages/superAdmin/user-identity/user-identity'
+    })
+  },
+
   // 分享
   onShareAppMessage: function () {
     return {

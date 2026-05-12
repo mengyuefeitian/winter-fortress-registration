@@ -33,6 +33,11 @@
 
       <!-- 区管申请按钮（仅有效申请可审核） -->
       <view wx:if="{{item.valid && item.applyType === 'zoneManager' && !item.selectingZone}}" class="card-footer">
+        <!-- 显示申请人选择的分区 -->
+        <view wx:if="{{item.applicantZoneName}}" class="applicant-zone-info">
+          <text class="text-xs text-secondary">申请人选择分区：</text>
+          <text class="text-xs text-primary">{{item.applicantZoneName}}</text>
+        </view>
         <button class="btn btn-success" bindtap="startSelectZone"
                 data-id="{{item._id}}" data-userid="{{item.userId}}" data-index="{{appIndex}}">批准</button>
         <button class="btn btn-danger" bindtap="rejectApplication"
@@ -46,7 +51,7 @@
         <view wx:else class="picker-compact text-weak">暂无可用分区</view>
         <view class="select-actions">
           <button class="btn btn-success" bindtap="confirmApproveZoneManager"
-                  data-id="{{item._id}}" data-userid="{{item.userId}}" data-index="{{appIndex}}">确认</button>
+                  data-id="{{item._id}}" data-userid="{{item.userId}}" data-useropenid="{{item.userOpenid}}" data-index="{{appIndex}}">确认</button>
           <button class="btn btn-ghost" bindtap="cancelSelectZone" data-index="{{appIndex}}">取消</button>
         </view>
       </view>
@@ -90,7 +95,7 @@
         <!-- 批准前填写分区编号和名称 -->
         <view wx:if="{{!item.creatingZone}}" class="card-footer" style="margin-top: 8px;">
           <button class="btn btn-success" bindtap="startCreateZone"
-                  data-id="{{item._id}}" data-userid="{{item.userId}}" data-index="{{appIndex}}" data-zonename="{{item.zoneName}}">批准</button>
+                  data-id="{{item._id}}" data-userid="{{item.userId}}" data-useropenid="{{item.userOpenid}}" data-index="{{appIndex}}" data-zonename="{{item.zoneName}}">批准</button>
           <button class="btn btn-danger" bindtap="rejectApplication"
                   data-id="{{item._id}}" data-index="{{appIndex}}">拒绝</button>
         </view>
@@ -105,7 +110,7 @@
           </view>
           <view class="select-actions">
             <button class="btn btn-success" bindtap="confirmApproveZoneCreation"
-                    data-id="{{item._id}}" data-userid="{{item.userId}}" data-index="{{appIndex}}">确认创建</button>
+                    data-id="{{item._id}}" data-userid="{{item.userId}}" data-useropenid="{{item.userOpenid}}" data-index="{{appIndex}}">确认创建</button>
             <button class="btn btn-ghost" bindtap="cancelCreateZone" data-index="{{appIndex}}">取消</button>
           </view>
         </view>

@@ -42,7 +42,7 @@ exports.main = async (event, context) => {
   }
 }
 
-// 创建分区
+// 创建分区（支持多区管）
 async function createZone(data) {
   // 检查分区编号是否已存在
   const existingRes = await db.collection('zones').where({
@@ -58,7 +58,8 @@ async function createZone(data) {
     data: {
       zoneCode: data.zoneCode,
       zoneName: data.zoneName,
-      creatorId: data.creatorId,
+      creatorId: data.creatorId,  // 保留（向后兼容）
+      adminIds: [data.creatorId], // 新字段：支持多区管
       status: 'active',
       createTime: db.serverDate()
     }
@@ -70,12 +71,13 @@ async function createZone(data) {
   }
 }
 
-// 获取管理员创建的分区
+// 获取管理员创建的分区（支持多区管）
 async function getZonesByCreator(creatorId) {
-  const res = await db.collection('zones').where({
-    creatorId: creatorId,
-    status: 'active'
-  }).orderBy('createTime', 'desc').get()
+  const res = await db.collection('zones').where(_.or([
+    { adminIds: creatorId },
+    { creatorId: creatorId }
+  ]).and({ status: 'active' }))
+  .orderBy('createTime', 'desc').get()
 
   return {
     data: res.data
