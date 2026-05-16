@@ -30,6 +30,8 @@ exports.main = async (event, context) => {
         return await unbindAllianceAuditor(data.allianceId, data.auditorId)
       case 'getAlliancesByZone':
         return await getAlliancesByZone(data.zoneId)
+      case 'removeMember':
+        return await removeMember(data.userId, data.role, data.zoneId)
       default:
         return {
           err: 'Unknown action'
@@ -187,4 +189,77 @@ async function unbindAllianceAuditor(allianceId, auditorId) {
   })
 
   return { success: true }
+}
+
+// 移除成员（服务端版本，绕过客户端权限限制）
+async function removeMember(userId, role, zoneId) {
+  // 1. 清理该分区所有联盟的盟管绑定
+  const alliances = await db.collection('alliances').where({
+    zoneId: zoneId
+  }).get()
+
+  for (const alliance of alliances.data) {
+    let ids = alliance.auditorIds || []
+    if (alliance.auditorId && !alliance.auditorIds) {
+      ids = [alliance.auditorId]
+    }
+    if (ids.includes(userId) || alliance.auditorId === userId) {
+      await db.collection('alliances').doc(alliance._id).update({
+        data: {
+          auditorIds: _.pull(userId),
+          auditorId: null,
+          updateTime: db.serverDate()
+        }
+      })
+    }
+  }
+
+  // 2. 清理分区区管绑定（支持多区管）
+  const zone = await db.collection('zones').doc(zoneId).get()
+  let existingAdminIds = zone.data.adminIds || []
+  if (existingAdminIds.length === 0 && zone.data.creatorId) {
+    existingAdminIds = [zone.data.creatorId]
+  }
+
+  if (existingAdminIds.includes(userId) || zone.data.creatorId === userId) {
+    const updateData = {
+      adminIds: _.pull(userId),
+      updateTime: db.serverDate()
+    }
+
+    if (zone.data.creatorId === userId) {
+      const remainingAdmins = existingAdminIds.filter(id => id !== userId)
+      if (remainingAdmins.length > 0) {
+        updateData.creatorId = remainingAdmins[0]
+      } else {
+        updateData.creatorId = null
+      }
+    }
+
+    await db.collection('zones').doc(zoneId).update({
+      data: updateData
+    })
+  }
+
+  // 3. 检查用户在其他分区是否仍有身份绑定，决定是否重置全局角色
+  let shouldResetRole = true
+
+  const otherZones = await db.collection('zones').where(_.or([
+    { adminIds: userId },
+    { creatorId: userId }
+  ]).and({ status: 'active' })).get()
+  if (otherZones.data.length > 0) {
+    shouldResetRole = false
+  }
+
+  if (shouldResetRole) {
+    const otherAlliances = await db.collection('alliances').where({
+      auditorIds: userId
+    }).get()
+    if (otherAlliances.data.length > 0) {
+      shouldResetRole = false
+    }
+  }
+
+  return { success: true, shouldResetRole }
 }

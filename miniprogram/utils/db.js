@@ -546,81 +546,25 @@ async function getZoneMembers(zoneId) {
 // 移除成员（重置为普通用户）
 async function removeMember(userId, role, zoneId) {
   const db = getDb()
-  const _ = db.command
 
-  // 清理该分区所有联盟的盟管绑定（无论传入的 role 是什么，都清理 auditor 绑定）
-  const alliances = await db.collection('alliances').where({
-    zoneId: zoneId
-  }).get()
-
-  for (const alliance of alliances.data) {
-    let ids = alliance.auditorIds || []
-    if (alliance.auditorId && !alliance.auditorIds) {
-      ids = [alliance.auditorId]
-    }
-    if (ids.includes(userId) || alliance.auditorId === userId) {
-      await db.collection('alliances').doc(alliance._id).update({
-        data: {
-          auditorIds: _.pull(userId),
-          auditorId: null,
-          updateTime: db.serverDate()
-        }
-      })
-    }
-  }
-
-  // 清理分区区管绑定（支持多区管）
-  const zone = await db.collection('zones').doc(zoneId).get()
-  let existingAdminIds = zone.data.adminIds || []
-  if (existingAdminIds.length === 0 && zone.data.creatorId) {
-    existingAdminIds = [zone.data.creatorId]
-  }
-
-  if (existingAdminIds.includes(userId) || zone.data.creatorId === userId) {
-    // 从 adminIds 数组中移除
-    const updateData = {
-      adminIds: _.pull(userId),
-      updateTime: db.serverDate()
-    }
-
-    // 如果 userId 是 creatorId，且有其他区管，更新 creatorId 为第一个其他区管
-    if (zone.data.creatorId === userId) {
-      const remainingAdmins = existingAdminIds.filter(id => id !== userId)
-      if (remainingAdmins.length > 0) {
-        updateData.creatorId = remainingAdmins[0]
-      } else {
-        updateData.creatorId = null
+  // alliances/zones 集合为"仅创建者可写"，客户端写入会被权限拒绝
+  // 通过云函数执行受限写入操作
+  const res = await wx.cloud.callFunction({
+    name: 'manageZone',
+    data: {
+      action: 'removeMember',
+      data: {
+        userId: userId,
+        role: role,
+        zoneId: zoneId
       }
     }
+  })
 
-    await db.collection('zones').doc(zoneId).update({
-      data: updateData
-    })
-  }
+  const result = res.result || {}
 
-  // 检查用户在其他分区是否仍有身份绑定，决定是否重置全局角色
-  let shouldResetRole = true
-
-  // 检查是否仍是其他分区的区管（支持多区管）
-  const otherZones = await db.collection('zones').where(_.or([
-    { adminIds: userId },
-    { creatorId: userId }
-  ]).and({ status: 'active' })).get()
-  if (otherZones.data.length > 0) {
-    shouldResetRole = false
-  }
-
-  // 检查是否仍是其他联盟的盟管
-  if (shouldResetRole) {
-    const otherAlliances = await db.collection('alliances').where({
-      auditorIds: userId
-    }).get()
-    if (otherAlliances.data.length > 0) {
-      shouldResetRole = false
-    }
-  }
-
-  if (shouldResetRole) {
+  // 云函数返回 shouldResetRole 标志，客户端处理 users/admins 集合（所有人可读写）
+  if (result.shouldResetRole) {
     await db.collection('users').doc(userId).update({
       data: {
         role: 'user',
@@ -628,7 +572,6 @@ async function removeMember(userId, role, zoneId) {
       }
     })
 
-    // 清理 admins 集合中该用户的已通过记录，否则无法重新申请
     const userDoc = await db.collection('users').doc(userId).get()
     const openid = userDoc.data && userDoc.data.openid
     if (openid) {
