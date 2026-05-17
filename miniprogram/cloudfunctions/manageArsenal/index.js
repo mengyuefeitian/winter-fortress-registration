@@ -155,10 +155,13 @@ async function verifyAuditorAlliance(userId, allianceId) {
 
 // 创建活动配置
 async function createConfig(data) {
+  console.log('=== createConfig ENTRY POINT ===')
   const wxContext = await cloud.getWXContext()
   const openid = wxContext.OPENID
+  console.log('=== OPENID:', openid, '===')
   const roleInfo = await verifyRole(openid)
   const { role, userId } = roleInfo
+  console.log('=== ROLE:', role, 'USER_ID:', userId, '===')
 
   const { activityType, date, timeValue, corps, zoneId, zoneName, allianceId, allianceName } = data
 
