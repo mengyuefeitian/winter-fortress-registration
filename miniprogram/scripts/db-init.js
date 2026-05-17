@@ -30,7 +30,11 @@ const COLLECTIONS = [
   'alliances',
   'timeSlots',
   'registrations',
-  'superAdmins'
+  'superAdmins',
+  'arsenalConfigs',
+  'arsenalRegistrations',
+  'canyonConfigs',
+  'canyonRegistrations'
 ]
 
 // 创建集合的函数（在小程序端执行）

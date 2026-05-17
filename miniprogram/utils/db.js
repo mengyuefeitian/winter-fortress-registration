@@ -1350,6 +1350,289 @@ async function getBattleRegistrationCount(configId) {
 }
 
 /**
+ * 兵营/峡谷报名相关操作
+ */
+
+// 兵营/峡谷活动类型常量
+const ARSENAL_ACTIVITY_TYPES = ['arsenal', 'canyon']
+
+// 创建兵营配置
+async function createArsenalConfig(data) {
+  const res = await wx.cloud.callFunction({
+    name: 'manageArsenal',
+    data: {
+      action: 'createConfig',
+      data: {
+        ...data,
+        activityType: 'arsenal'
+      }
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '创建兵营配置失败')
+  }
+  return res.result
+}
+
+// 获取兵营配置列表
+async function getArsenalConfigs(filters = {}) {
+  const filterData = { activityType: 'arsenal' }
+  if (filters.zoneId) filterData.zoneId = filters.zoneId
+  if (filters.allianceId) filterData.allianceId = filters.allianceId
+  if (filters.date) filterData.date = filters.date
+  if (filters.creatorId) filterData.creatorId = filters.creatorId
+
+  const res = await wx.cloud.callFunction({
+    name: 'manageArsenal',
+    data: {
+      action: 'getConfigs',
+      data: filterData
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '获取兵营配置列表失败')
+  }
+  return res.result.data || []
+}
+
+// 删除兵营配置
+async function deleteArsenalConfig(configId) {
+  const res = await wx.cloud.callFunction({
+    name: 'manageArsenal',
+    data: {
+      action: 'deleteConfig',
+      data: { configId }
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '删除兵营配置失败')
+  }
+  return res.result
+}
+
+// 创建峡谷配置
+async function createCanyonConfig(data) {
+  const res = await wx.cloud.callFunction({
+    name: 'manageArsenal',
+    data: {
+      action: 'createConfig',
+      data: {
+        ...data,
+        activityType: 'canyon'
+      }
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '创建峡谷配置失败')
+  }
+  return res.result
+}
+
+// 获取峡谷配置列表
+async function getCanyonConfigs(filters = {}) {
+  const filterData = { activityType: 'canyon' }
+  if (filters.zoneId) filterData.zoneId = filters.zoneId
+  if (filters.allianceId) filterData.allianceId = filters.allianceId
+  if (filters.date) filterData.date = filters.date
+  if (filters.creatorId) filterData.creatorId = filters.creatorId
+
+  const res = await wx.cloud.callFunction({
+    name: 'manageArsenal',
+    data: {
+      action: 'getConfigs',
+      data: filterData
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '获取峡谷配置列表失败')
+  }
+  return res.result.data || []
+}
+
+// 删除峡谷配置
+async function deleteCanyonConfig(configId) {
+  const res = await wx.cloud.callFunction({
+    name: 'manageArsenal',
+    data: {
+      action: 'deleteConfig',
+      data: { configId }
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '删除峡谷配置失败')
+  }
+  return res.result
+}
+
+/**
+ * 兵营报名记录相关操作
+ */
+
+// 创建兵营报名记录
+async function createArsenalRegistration(data) {
+  const res = await wx.cloud.callFunction({
+    name: 'manageArsenal',
+    data: {
+      action: 'createRegistration',
+      data: {
+        ...data,
+        activityType: 'arsenal'
+      }
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '兵营报名失败')
+  }
+  return res.result
+}
+
+// 获取兵营配置的报名列表
+async function getArsenalRegistrations(configId) {
+  const res = await wx.cloud.callFunction({
+    name: 'manageArsenal',
+    data: {
+      action: 'getRegistrations',
+      data: { configId, activityType: 'arsenal' }
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '获取兵营报名列表失败')
+  }
+  return res.result.data || []
+}
+
+// 取消兵营报名
+async function cancelArsenalRegistration(registrationId) {
+  const res = await wx.cloud.callFunction({
+    name: 'manageArsenal',
+    data: {
+      action: 'cancelRegistration',
+      data: { registrationId, activityType: 'arsenal' }
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '取消兵营报名失败')
+  }
+  return res.result
+}
+
+// 获取用户的兵营报名记录
+async function getArsenalRegistrationsByUser(userId) {
+  const res = await wx.cloud.callFunction({
+    name: 'manageArsenal',
+    data: {
+      action: 'getRegistrationsByUser',
+      data: { userId, activityType: 'arsenal' }
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '获取用户兵营报名记录失败')
+  }
+  return res.result.data || []
+}
+
+/**
+ * 峡谷报名记录相关操作
+ */
+
+// 创建峡谷报名记录
+async function createCanyonRegistration(data) {
+  const res = await wx.cloud.callFunction({
+    name: 'manageArsenal',
+    data: {
+      action: 'createRegistration',
+      data: {
+        ...data,
+        activityType: 'canyon'
+      }
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '峡谷报名失败')
+  }
+  return res.result
+}
+
+// 获取峡谷配置的报名列表
+async function getCanyonRegistrations(configId) {
+  const res = await wx.cloud.callFunction({
+    name: 'manageArsenal',
+    data: {
+      action: 'getRegistrations',
+      data: { configId, activityType: 'canyon' }
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '获取峡谷报名列表失败')
+  }
+  return res.result.data || []
+}
+
+// 取消峡谷报名
+async function cancelCanyonRegistration(registrationId) {
+  const res = await wx.cloud.callFunction({
+    name: 'manageArsenal',
+    data: {
+      action: 'cancelRegistration',
+      data: { registrationId, activityType: 'canyon' }
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '取消峡谷报名失败')
+  }
+  return res.result
+}
+
+// 获取用户的峡谷报名记录
+async function getCanyonRegistrationsByUser(userId) {
+  const res = await wx.cloud.callFunction({
+    name: 'manageArsenal',
+    data: {
+      action: 'getRegistrationsByUser',
+      data: { userId, activityType: 'canyon' }
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '获取用户峡谷报名记录失败')
+  }
+  return res.result.data || []
+}
+
+/**
+ * 兵营/峡谷统计
+ */
+
+// 获取兵营统计数据
+async function getArsenalStats(configId) {
+  const res = await wx.cloud.callFunction({
+    name: 'manageArsenal',
+    data: {
+      action: 'getStats',
+      data: { configId, activityType: 'arsenal' }
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '获取兵营统计失败')
+  }
+  return res.result.data
+}
+
+// 获取峡谷统计数据
+async function getCanyonStats(configId) {
+  const res = await wx.cloud.callFunction({
+    name: 'manageArsenal',
+    data: {
+      action: 'getStats',
+      data: { configId, activityType: 'canyon' }
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '获取峡谷统计失败')
+  }
+  return res.result.data
+}
+
+/**
  * 意见反馈
  */
 async function createFeedback(userId, nickName, type, content, contactInfo, imageUrls) {
@@ -1477,5 +1760,30 @@ module.exports = {
   getBattleRegistrationCount,
 
   // 意见反馈
-  createFeedback
+  createFeedback,
+
+  // 兵营/峡谷配置
+  ARSENAL_ACTIVITY_TYPES,
+  createArsenalConfig,
+  getArsenalConfigs,
+  deleteArsenalConfig,
+  createCanyonConfig,
+  getCanyonConfigs,
+  deleteCanyonConfig,
+
+  // 兵营报名
+  createArsenalRegistration,
+  getArsenalRegistrations,
+  cancelArsenalRegistration,
+  getArsenalRegistrationsByUser,
+
+  // 峡谷报名
+  createCanyonRegistration,
+  getCanyonRegistrations,
+  cancelCanyonRegistration,
+  getCanyonRegistrationsByUser,
+
+  // 兵营/峡谷统计
+  getArsenalStats,
+  getCanyonStats
 }
