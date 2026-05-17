@@ -42,10 +42,10 @@ Page({
     this.waitForRoleReady()
   },
 
-  onShow: function () {
+  onShow: async function () {
     // 每次显示时重新加载分区和配置（角色已就绪）
     if (app.globalData.roleReady) {
-      this.loadZones()
+      await this.loadZones()
       this.loadConfigs()
     }
   },
@@ -62,7 +62,7 @@ Page({
   },
 
   // 检查权限
-  checkPermission: function () {
+  checkPermission: async function () {
     const role = app.globalData.role || 'user'
     if (!auth.isAdminOrAbove(role)) {
       util.showError('权限不足')
@@ -72,7 +72,7 @@ Page({
       return
     }
     this.initRole()
-    this.loadZones()
+    await this.loadZones()
     this.loadConfigs()
   },
 
@@ -186,6 +186,7 @@ Page({
       currentZone: currentZone,
       canCreate: hasDate && hasZone
     })
+    this.loadConfigs()
   },
 
   // 格式化日期
@@ -294,18 +295,13 @@ Page({
       this.setData({ loading: true })
 
       const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
-      const role = app.globalData.role || 'admin'
 
-      // 区管只能看到自己创建的配置，超管需要选择分区后才能查看
+      // 区管和超管都按分区查看所有配置，避免重复创建
       let configs
-      if (role === 'superAdmin') {
-        if (this.data.currentZone) {
-          configs = await db.getPositionConfigs({ zoneId: this.data.currentZone._id })
-        } else {
-          configs = []
-        }
+      if (this.data.currentZone) {
+        configs = await db.getPositionConfigs({ zoneId: this.data.currentZone._id })
       } else {
-        configs = await db.getPositionConfigs({ creatorId: userId })
+        configs = []
       }
 
       // 获取每个配置的报名人数

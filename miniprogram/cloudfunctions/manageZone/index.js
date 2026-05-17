@@ -22,6 +22,10 @@ exports.main = async (event, context) => {
         return await getAllZones()
       case 'delete':
         return await deleteZone(data.zoneId)
+      case 'updateZone':
+        return await updateZone(data.zoneId, data.zoneCode, data.zoneName)
+      case 'addZoneAdmin':
+        return await addZoneAdminById(data.zoneId, data.userId)
       case 'updateAllianceName':
         return await updateAllianceName(data.allianceId, data.name)
       case 'bindAllianceAuditor':
@@ -102,6 +106,49 @@ async function deleteZone(zoneId) {
   await db.collection('zones').doc(zoneId).update({
     data: {
       status: 'inactive',
+      updateTime: db.serverDate()
+    }
+  })
+
+  return {
+    success: true
+  }
+}
+
+async function addZoneAdminById(zoneId, userId) {
+  const zone = await db.collection('zones').doc(zoneId).get()
+  if (!zone.data) throw new Error('分区不存在')
+
+  const existingAdminIds = zone.data.adminIds || (zone.data.creatorId ? [zone.data.creatorId] : [])
+  if (existingAdminIds.includes(userId)) {
+    return { success: true, skipped: true }
+  }
+
+  await db.collection('zones').doc(zoneId).update({
+    data: {
+      adminIds: _.push(userId),
+      updateTime: db.serverDate()
+    }
+  })
+
+  return { success: true }
+}
+
+async function updateZone(zoneId, zoneCode, zoneName) {
+  const dupRes = await db.collection('zones').where({
+    zoneCode: zoneCode,
+    status: 'active',
+    _id: _.neq(zoneId)
+  }).count()
+
+  if (dupRes.total > 0) {
+    throw new Error('分区编号已存在，请使用其他编号')
+  }
+
+  await db.collection('zones').doc(zoneId).update({
+    data: {
+      zoneCode: zoneCode,
+      zoneName: zoneName,
       updateTime: db.serverDate()
     }
   })

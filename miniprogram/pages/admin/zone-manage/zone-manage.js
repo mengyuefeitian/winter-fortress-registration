@@ -224,28 +224,22 @@ Page({
         return
       }
 
-      // 检查分区编号是否重复（排除自己）
-      const wxdb = wx.cloud.database()
-      const existingRes = await wxdb.collection('zones').where({
-        zoneCode: zoneCode,
-        status: 'active',
-        _id: wxdb.command.neq(this.data.editZoneId)
-      }).count()
-
-      if (existingRes.total > 0) {
-        util.showInfo('分区编号已存在，请使用其他编号')
-        return
-      }
-
       util.showLoading('正在保存...')
 
-      await wxdb.collection('zones').doc(this.data.editZoneId).update({
+      const updateRes = await wx.cloud.callFunction({
+        name: 'manageZone',
         data: {
-          zoneCode: zoneCode,
-          zoneName: this.data.editZoneName,
-          updateTime: wxdb.serverDate()
+          action: 'updateZone',
+          data: {
+            zoneId: this.data.editZoneId,
+            zoneCode: zoneCode,
+            zoneName: this.data.editZoneName
+          }
         }
       })
+      if (!updateRes.result || !updateRes.result.success) {
+        throw new Error((updateRes.result && updateRes.result.err) || '修改失败')
+      }
 
       util.hideLoading()
       util.showSuccess('修改成功')
@@ -258,12 +252,17 @@ Page({
 
     } catch (err) {
       util.hideLoading()
-      util.showError('修改失败')
+      util.showError(err.message || '修改失败')
     }
   },
 
-  // 删除分区
+  // 删除分区（仅超管）
   deleteZone: async function (e) {
+    if (app.globalData.role !== 'superAdmin') {
+      util.showError('只有超级管理员才能删除分区')
+      return
+    }
+
     const zoneId = e.currentTarget.dataset.id
     const index = e.currentTarget.dataset.index
 
@@ -274,13 +273,16 @@ Page({
     try {
       util.showLoading('正在删除...')
 
-      const wxdb = wx.cloud.database()
-      await wxdb.collection('zones').doc(zoneId).update({
+      const deleteRes = await wx.cloud.callFunction({
+        name: 'manageZone',
         data: {
-          status: 'inactive',
-          updateTime: wxdb.serverDate()
+          action: 'delete',
+          data: { zoneId: zoneId }
         }
       })
+      if (!deleteRes.result || !deleteRes.result.success) {
+        throw new Error((deleteRes.result && deleteRes.result.err) || '删除失败')
+      }
 
       const zones = this.data.zones.filter((_, i) => i !== index)
 
@@ -293,7 +295,7 @@ Page({
 
     } catch (err) {
       util.hideLoading()
-      util.showError('删除失败')
+      util.showError(err.message || '删除失败')
     }
   },
 

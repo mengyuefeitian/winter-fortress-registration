@@ -48,6 +48,17 @@ async function createRegistration(data) {
     throw new Error('该时间段报名人数已满')
   }
 
+  // 检查同一时间段内昵称是否重复
+  const existingNick = await db.collection('registrations').where({
+    timeSlotId: data.timeSlotId,
+    nickName: data.nickName,
+    status: 'active'
+  }).get()
+
+  if (existingNick.data.length > 0) {
+    throw new Error('该时间段已存在相同昵称的报名，请更换昵称')
+  }
+
   // 创建报名记录
   const result = await db.collection('registrations').add({
     data: {
