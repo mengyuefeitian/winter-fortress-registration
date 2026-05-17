@@ -7,6 +7,7 @@
     "pages/user/position-registration/position-registration",
     "pages/user/battle-list/battle-list",
     "pages/user/battle-registration/battle-registration",
+    "pages/user/canyon-registration/canyon-registration",
     "pages/user/battle-statistics/battle-statistics",
     "pages/user/battle-allocation/battle-allocation",
     "pages/user/arsenal-registration/arsenal-registration",

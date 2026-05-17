@@ -1,0 +1,107 @@
+/* pages/user/canyon-registration/canyon-registration.wxss */
+
+/* 复用堡垒报名页面样式 */
+@import "../registration/registration.wxss";
+
+/* 峡谷特定样式 - 配置卡片 */
+.config-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.config-card {
+  background-color: #FFFFFF;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #E5E5E5;
+  transition: all 0.2s ease;
+}
+
+.config-card:active {
+  background-color: #F5F5F5;
+}
+
+.config-card.full {
+  background-color: #F5F5F5;
+  opacity: 0.5;
+}
+
+.config-card.selected {
+  border-color: #07C160;
+  background-color: #F0FFF0;
+}
+
+/* 已报名配置 - 蓝色边框+浅蓝背景 */
+.config-card.my-config {
+  border-color: #4A90D9;
+  background-color: #F0F4FA;
+  opacity: 1;
+}
+
+.config-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.config-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-value {
+  font-size: 14px;
+  color: #5F5F5F;
+}
+
+.time-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #000000;
+}
+
+.corps-tag {
+  display: inline-block;
+  background-color: #4A90D9;
+  color: #FFFFFF;
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.config-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.config-count {
+  font-size: 14px;
+  color: #5F5F5F;
+  font-weight: 500;
+}
+
+/* 位置选项样式覆盖 - 参战/替补 */
+.position-option.active {
+  background-color: #07C160;
+  border-color: #07C160;
+}
+
+.position-option.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* 报名位置标签 - 参战/替补 */
+.registration-position.combat {
+  background-color: #FFE8E8;
+  color: #FA5151;
+}
+
+.registration-position.substitute {
+  background-color: #F0FFF0;
+  color: #07C160;
+}
