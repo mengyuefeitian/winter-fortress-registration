@@ -246,9 +246,9 @@ Page({
         timeValue: this.data.selectedTime,
         corps: this.data.selectedCorps,
         zoneId: this.data.selectedZone._id,
-        zoneName: this.data.selectedZone.zoneName,
+        zoneName: this.data.selectedZone.zoneName || '',
         allianceId: this.data.selectedAlliance._id,
-        allianceName: this.data.selectedAlliance.allianceName,
+        allianceName: this.data.selectedAlliance.allianceName || '',
         activityType: this.data.selectedActivityType === '兵工厂' ? 'arsenal' : 'canyon'
       }
 

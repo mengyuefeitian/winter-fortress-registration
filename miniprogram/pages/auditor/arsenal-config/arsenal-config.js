@@ -186,16 +186,30 @@ Page({
 
       util.showLoading('正在添加...')
 
+      // 确保所有字段都有值，避免 undefined 传给云函数
+      if (!this.data.zoneId || this.data.zoneId === 'undefined') {
+        util.hideLoading()
+        util.showInfo('缺少分区信息，请刷新页面重试')
+        return
+      }
+      if (!this.data.allianceId || this.data.allianceId === 'undefined') {
+        util.hideLoading()
+        util.showInfo('缺少联盟信息，请刷新页面重试')
+        return
+      }
+
       const configData = {
         date: this.data.selectedDate,
         timeValue: this.data.selectedTime,
         corps: this.data.selectedCorps,
         zoneId: this.data.zoneId,
-        zoneName: this.data.zoneName,
+        zoneName: this.data.zoneName || '',
         allianceId: this.data.allianceId,
-        allianceName: this.data.allianceName,
+        allianceName: this.data.allianceName || '',
         activityType: this.data.selectedActivityType === '兵工厂' ? 'arsenal' : 'canyon'
       }
+
+      console.log('auditor addConfig configData:', JSON.stringify(configData))
 
       if (this.data.selectedActivityType === '兵工厂') {
         await db.createArsenalConfig(configData)

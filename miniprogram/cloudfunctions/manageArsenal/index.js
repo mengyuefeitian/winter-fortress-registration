@@ -145,12 +145,20 @@ async function createConfig(data) {
 
   const { activityType, date, timeValue, corps, zoneId, zoneName, allianceId, allianceName } = data
 
+  // 详细日志：打印收到的所有参数
+  console.log('createConfig called with:', JSON.stringify({
+    activityType, date, timeValue, corps, zoneId, zoneName, allianceId, allianceName, role, userId
+  }))
+
   if (!activityType || !date || !timeValue || !corps) {
-    throw new Error('缺少必要参数')
+    throw new Error('缺少必要参数: ' + JSON.stringify({ activityType, date, timeValue, corps }))
   }
 
   // 盟管需要验证联盟绑定
-  if (role === 'auditor' && allianceId) {
+  if (role === 'auditor') {
+    if (!allianceId) {
+      throw new Error('盟管需要指定联盟ID')
+    }
     await verifyAuditorAlliance(userId, allianceId)
   }
 
