@@ -103,50 +103,32 @@ async function verifyRole(openid) {
 
   const user = userRes.data[0]
   const userId = user._id
-  console.log('Found user, _id:', userId, 'role:', user.role)
+  const userRole = user.role || 'user'
+  console.log('Found user, _id:', userId, 'role:', userRole)
 
-  // 检查是否为超级管理员（superAdmins.userId 存的是 users 集合的 _id）
-  const superAdminRes = await db.collection('superAdmins').where({
-    userId: userId
-  }).get()
-  console.log('superAdmins query result count:', superAdminRes.data.length)
-
-  if (superAdminRes.data.length > 0) {
-    console.log('User is superAdmin')
-    return { role: 'superAdmin', userId: userId, openid: openid }
+  // 检查 superAdmin（users.role 为 superAdmin 且 superAdmins 集合有记录）
+  if (userRole === 'superAdmin') {
+    const superAdminRes = await db.collection('superAdmins').where({
+      userId: userId
+    }).get()
+    console.log('superAdmins query result count:', superAdminRes.data.length)
+    if (superAdminRes.data.length > 0) {
+      return { role: 'superAdmin', userId: userId, openid: openid }
+    }
+    console.log('User role is superAdmin but not in superAdmins collection')
   }
 
-  // 检查是否为区管或盟管（admins.userId 存的是 openid）
-  const adminRes = await db.collection('admins').where({
-    userId: openid,
-    status: 'approved'
-  }).get()
-  console.log('admins query result count:', adminRes.data.length)
-
-  if (adminRes.data.length > 0) {
-    const adminRecord = adminRes.data[0]
-    const role = adminRecord.approvedRole || 'admin'
-    console.log('User is admin/auditor, role:', role)
-    return { role: role, userId: userId, openid: openid }
+  // 检查 admin/auditor（直接用 users.role，不依赖 admins 集合）
+  if (userRole === 'admin' || userRole === 'auditor') {
+    return { role: userRole, userId: userId, openid: openid }
   }
 
-  console.log('No role found, throwing 权限不足')
+  console.log('User role is "' + userRole + '", throwing 权限不足')
   throw new Error('权限不足')
 }
 
-// 验证盟管是否绑定到指定联盟
+// 验证盟管是否绑定到指定联盟（通过 alliances 集合中的 auditorIds）
 async function verifyAuditorAlliance(openid, allianceId) {
-  const adminRes = await db.collection('admins').where({
-    userId: openid,
-    status: 'approved',
-    approvedRole: 'auditor'
-  }).get()
-
-  if (adminRes.data.length === 0) {
-    throw new Error('权限不足')
-  }
-
-  // 检查盟管是否绑定到该联盟（通过 alliances 集合中的 auditorIds）
   const allianceRes = await db.collection('alliances').where({
     _id: allianceId,
     auditorIds: openid
