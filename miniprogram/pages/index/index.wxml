@@ -24,7 +24,7 @@
       <!-- 堡垒报名 -->
       <view class="function-card" bindtap="goToFortressRegistration" wx:if="{{showFortressRegistration}}">
         <view class="function-icon">
-          <image src="/images/icon-registration.png" style="width: 32px; height: 32px;" />
+          <image src="/images/logo-fortress.svg" style="width: 32px; height: 32px;" />
         </view>
         <view class="function-content">
           <text class="function-name">堡垒报名</text>
@@ -46,7 +46,7 @@
       <!-- 国战报名 -->
       <view class="function-card" bindtap="goToBattleRegistration" wx:if="{{showBattleRegistration}}">
         <view class="function-icon">
-          <image src="/images/icon-battle.png" style="width: 32px; height: 32px;" />
+          <image src="/images/logo-battle.svg" style="width: 32px; height: 32px;" />
         </view>
         <view class="function-content">
           <text class="function-name">国战报名</text>
@@ -57,7 +57,7 @@
       <!-- 兵工厂报名 -->
       <view class="function-card" bindtap="goToArsenalRegistration" wx:if="{{showBattleRegistration}}">
         <view class="function-icon">
-          <image src="/images/icon-registration.png" style="width: 32px; height: 32px;" />
+          <image src="/images/logo-arsenal.svg" style="width: 32px; height: 32px;" />
         </view>
         <view class="function-content">
           <text class="function-name">兵工厂报名</text>
@@ -68,7 +68,7 @@
       <!-- 峡谷会战报名 -->
       <view class="function-card" bindtap="goToCanyonRegistration" wx:if="{{showBattleRegistration}}">
         <view class="function-icon">
-          <image src="/images/icon-battle.png" style="width: 32px; height: 32px;" />
+          <image src="/images/logo-canyon.svg" style="width: 32px; height: 32px;" />
         </view>
         <view class="function-content">
           <text class="function-name">峡谷会战报名</text>
@@ -125,7 +125,7 @@
       <!-- 堡垒报名 -->
       <view class="function-card" bindtap="goToFortressRegistration" wx:if="{{showFortressRegistration}}">
         <view class="function-icon">
-          <image src="/images/icon-registration.png" style="width: 32px; height: 32px;" />
+          <image src="/images/logo-fortress.svg" style="width: 32px; height: 32px;" />
         </view>
         <view class="function-content">
           <text class="function-name">堡垒报名</text>
@@ -147,7 +147,7 @@
       <!-- 国战报名 -->
       <view class="function-card" bindtap="goToBattleRegistration" wx:if="{{showBattleRegistration}}">
         <view class="function-icon">
-          <image src="/images/icon-battle.png" style="width: 32px; height: 32px;" />
+          <image src="/images/logo-battle.svg" style="width: 32px; height: 32px;" />
         </view>
         <view class="function-content">
           <text class="function-name">国战报名</text>
@@ -158,7 +158,7 @@
       <!-- 兵工厂报名 -->
       <view class="function-card" bindtap="goToArsenalRegistration" wx:if="{{showBattleRegistration}}">
         <view class="function-icon">
-          <image src="/images/icon-registration.png" style="width: 32px; height: 32px;" />
+          <image src="/images/logo-arsenal.svg" style="width: 32px; height: 32px;" />
         </view>
         <view class="function-content">
           <text class="function-name">兵工厂报名</text>
@@ -169,7 +169,7 @@
       <!-- 峡谷会战报名 -->
       <view class="function-card" bindtap="goToCanyonRegistration" wx:if="{{showBattleRegistration}}">
         <view class="function-icon">
-          <image src="/images/icon-battle.png" style="width: 32px; height: 32px;" />
+          <image src="/images/logo-canyon.svg" style="width: 32px; height: 32px;" />
         </view>
         <view class="function-content">
           <text class="function-name">峡谷会战报名</text>
