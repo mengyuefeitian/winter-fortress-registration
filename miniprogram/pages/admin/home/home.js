@@ -127,7 +127,7 @@ Page({
 
   goToArsenalConfig: function () {
     wx.navigateTo({
-      url: '/pages/auditor/arsenal-config/arsenal-config'
+      url: '/pages/admin/arsenal-config/arsenal-config'
     })
   },
 

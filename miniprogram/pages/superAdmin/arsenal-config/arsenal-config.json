@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "活动配置",
+  "usingComponents": {
+    "zone-selector": "/components/zone-selector/zone-selector"
+  }
+}

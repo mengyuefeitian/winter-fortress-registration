@@ -1,0 +1,99 @@
+<!--pages/superAdmin/arsenal-config/arsenal-config.wxml-->
+<view class="page">
+  <!-- 配置表单 -->
+  <view class="card">
+    <!-- 第一行：分区 + 联盟 -->
+    <view class="form-row">
+      <view class="form-col">
+        <text class="form-label">分区</text>
+        <zone-selector wx:if="{{zones.length > 0}}" value="{{selectedZone}}" zones="{{zones}}" loaded="{{true}}" bind:change="onZoneChange" />
+        <view wx:else class="picker-compact disabled">无分区</view>
+      </view>
+      <view class="form-col">
+        <text class="form-label">联盟</text>
+        <picker wx:if="{{selectedZone && alliances.length > 0}}" range="{{alliances}}" range-key="allianceName" value="{{allianceIndex}}" bindchange="onAllianceChange">
+          <view class="picker-compact">{{selectedAlliance ? selectedAlliance.allianceName : '请选择'}}<image class="picker-compact-arrow" src="/images/icon-arrow-down.png"></image></view>
+        </picker>
+        <view wx:else class="picker-compact disabled">请先选分区</view>
+      </view>
+    </view>
+
+    <!-- 第二行：日期 + 时间 -->
+    <view class="form-row">
+      <view class="form-col">
+        <text class="form-label">日期</text>
+        <picker mode="date" value="{{selectedDate}}" start="{{minDate}}" end="{{maxDate}}" bindchange="onDateChange">
+          <view class="picker-compact">{{selectedDate || '今日'}}<image class="picker-compact-arrow" src="/images/icon-arrow-down.png"></image></view>
+        </picker>
+      </view>
+      <view class="form-col">
+        <text class="form-label">时间</text>
+        <picker range="{{TIME_OPTIONS}}" value="{{selectedTimeIndex}}" bindchange="onTimeChange">
+          <view class="picker-compact">{{selectedTime}}<image class="picker-compact-arrow" src="/images/icon-arrow-down.png"></image></view>
+        </picker>
+      </view>
+    </view>
+
+    <!-- 第三行：活动类型 -->
+    <view class="form-row tags-row">
+      <text class="form-label">活动类型</text>
+      <view class="tag-options">
+        <view wx:for="{{ACTIVITY_TYPE_OPTIONS}}" wx:key="*this"
+              class="tag-option activity-type-tag {{selectedActivityType === item ? 'active' : ''}}"
+              bindtap="onActivityTypeSelect" data-type="{{item}}">
+          {{item}}
+        </view>
+      </view>
+    </view>
+
+    <!-- 第四行：军团 -->
+    <view class="form-row tags-row">
+      <text class="form-label">军团</text>
+      <view class="tag-options">
+        <view wx:for="{{CORPS_OPTIONS}}" wx:key="*this"
+              class="tag-option corps-tag {{selectedCorps === item ? 'active' : ''}}"
+              bindtap="onCorpsSelect" data-corps="{{item}}">
+          {{item}}
+        </view>
+      </view>
+    </view>
+
+    <!-- 添加按钮 -->
+    <button class="btn btn-primary btn-full" bindtap="addConfig">添加配置</button>
+  </view>
+
+  <!-- 已有配置列表 -->
+  <view class="section-header">
+    <text class="section-title">配置列表</text>
+    <text class="section-count">{{configs.length}}个</text>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{!loading && configs.length === 0}}">
+    <text class="empty-text">暂无配置，请添加</text>
+  </view>
+
+  <!-- 配置列表 -->
+  <view wx:if="{{!loading && configs.length > 0}}" class="slot-list">
+    <view wx:for="{{configs}}" wx:key="_id" class="slot-card">
+      <view class="slot-content">
+        <view class="slot-header">
+          <view class="slot-time">
+            {{item.timeValue}}
+            <text class="slot-tag activity-type-tag">{{item.activityTypeLabel}}</text>
+            <text class="slot-tag corps-tag">{{item.corps}}</text>
+          </view>
+        </view>
+        <view wx:if="{{item.date}}" class="slot-date">日期: {{item.date}}</view>
+        <view class="slot-actions">
+          <button class="delete-btn" bindtap="deleteConfig" data-id="{{item._id}}" data-index="{{index}}">删除</button>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

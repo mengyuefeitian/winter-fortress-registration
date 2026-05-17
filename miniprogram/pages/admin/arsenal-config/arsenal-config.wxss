@@ -1,0 +1,2 @@
+/* pages/admin/arsenal-config/arsenal-config.wxss */
+@import '../auditor/arsenal-config/arsenal-config.wxss';

@@ -165,7 +165,7 @@ Page({
 
   goToArsenalConfig: function () {
     wx.navigateTo({
-      url: '/pages/auditor/arsenal-config/arsenal-config'
+      url: '/pages/superAdmin/arsenal-config/arsenal-config'
     })
   },
 
