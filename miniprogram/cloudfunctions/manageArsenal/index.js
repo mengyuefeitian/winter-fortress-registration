@@ -88,24 +88,31 @@ exports.main = async (event, context) => {
 
 // 验证用户角色（auditor/admin/superAdmin）
 async function verifyRole(openid) {
+  console.log('verifyRole called with openid:', openid)
+
   // 先通过 openid 查 users 集合拿到用户文档
   const userRes = await db.collection('users').where({
     openid: openid
   }).get()
 
+  console.log('users query result count:', userRes.data.length)
+
   if (userRes.data.length === 0) {
-    throw new Error('用户不存在')
+    throw new Error('用户不存在 (openid: ' + openid + ')')
   }
 
   const user = userRes.data[0]
   const userId = user._id
+  console.log('Found user, _id:', userId, 'role:', user.role)
 
   // 检查是否为超级管理员（superAdmins.userId 存的是 users 集合的 _id）
   const superAdminRes = await db.collection('superAdmins').where({
     userId: userId
   }).get()
+  console.log('superAdmins query result count:', superAdminRes.data.length)
 
   if (superAdminRes.data.length > 0) {
+    console.log('User is superAdmin')
     return { role: 'superAdmin', userId: userId, openid: openid }
   }
 
@@ -114,14 +121,16 @@ async function verifyRole(openid) {
     userId: openid,
     status: 'approved'
   }).get()
+  console.log('admins query result count:', adminRes.data.length)
 
   if (adminRes.data.length > 0) {
     const adminRecord = adminRes.data[0]
-    // approvedRole 为 'admin'(区管) 或 'auditor'(盟管)
     const role = adminRecord.approvedRole || 'admin'
+    console.log('User is admin/auditor, role:', role)
     return { role: role, userId: userId, openid: openid }
   }
 
+  console.log('No role found, throwing 权限不足')
   throw new Error('权限不足')
 }
 
