@@ -93,46 +93,18 @@ Page({
   // 加载分区列表（区管只能看到自己管理的分区）
   loadZones: async function () {
     try {
-      const openid = app.globalData.openid
-      const userInfoId = app.globalData.userInfo ? app.globalData.userInfo._id : null
+      this.setData({ loading: true })
+      const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+      const role = app.globalData.role || 'admin'
 
-      // 用两种 ID 分别查询（adminIds 存的是 _id，admins.userId 存的是 openid）
-      let zones = []
-      if (userInfoId) {
-        zones = await db.getZonesByCreator(userInfoId)
-      }
-      // 如果用 _id 没查到，尝试用 openid 查（兼容早期数据）
-      if ((!zones || zones.length === 0) && openid) {
-        const zonesByOpenid = await db.getZonesByCreator(openid)
-        if (zonesByOpenid && zonesByOpenid.length > 0) {
-          zones = zonesByOpenid
-        }
+      let zones
+      if (role === 'superAdmin') {
+        zones = await db.getAllZones()
+      } else {
+        zones = await db.getZonesByCreator(userId)
       }
 
-      // 如果 still 没找到，从 admins 集合查找关联的 zoneId
-      if (!zones || zones.length === 0) {
-        try {
-          const wxdb = wx.cloud.database()
-          // admins.userId 存的是 openid，用 openid 查询
-          const queryId = openid || userInfoId
-          if (queryId) {
-            const adminRes = await wxdb.collection('admins').where({
-              userId: queryId,
-              status: 'approved',
-              approvedRole: 'admin'
-            }).get()
-            if (adminRes.data.length > 0) {
-              const zoneIds = [...new Set(adminRes.data.map(a => a.zoneId).filter(Boolean))]
-              if (zoneIds.length > 0) {
-                const zoneRes = await Promise.all(zoneIds.map(id => wxdb.collection('zones').doc(id).get()))
-                zones = zoneRes.filter(r => r.data && r.data.status !== 'inactive').map(r => r.data)
-              }
-            }
-          }
-        } catch (err) {
-          console.error('从 admins 集合查找分区失败:', err)
-        }
-      }
+      console.log('admin arsenal-config loadZones, userId:', userId, 'role:', role, 'zones count:', zones ? zones.length : 0)
 
       if (zones && zones.length > 0) {
         let selectedZone = zones[0]
@@ -151,6 +123,7 @@ Page({
         })
         this.loadAlliances(selectedZone._id)
       } else {
+        console.log('No zones found for userId:', userId)
         this.setData({
           zones: [],
           selectedZone: null,
