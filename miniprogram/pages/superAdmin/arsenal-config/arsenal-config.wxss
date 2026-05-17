@@ -1,2 +1,262 @@
 /* pages/superAdmin/arsenal-config/arsenal-config.wxss */
-@import '../auditor/arsenal-config/arsenal-config.wxss';
+/* 微信设计语言 - 紧凑布局 */
+
+.page {
+  padding: 12px;
+  background-color: #F6F6F6;
+  min-height: 100vh;
+}
+
+.card {
+  background-color: #FFFFFF;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.form-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.form-col {
+  flex: 1;
+}
+
+.form-col-full {
+  flex: 1;
+  width: 100%;
+}
+
+.form-label {
+  font-size: 13px;
+  color: #5F5F5F;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.picker {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #F5F5F5;
+  border-radius: 4px;
+  padding: 8px 12px;
+  height: 32px;
+  font-size: 14px;
+  color: #000000;
+}
+
+.picker.disabled {
+  color: #A6A6A6;
+}
+
+.picker-compact {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #F5F5F5;
+  border-radius: 4px;
+  padding: 8px 12px;
+  height: 32px;
+  font-size: 14px;
+  color: #000000;
+}
+
+.picker-compact.disabled {
+  color: #A6A6A6;
+}
+
+.picker-compact-arrow {
+  width: 12px;
+  height: 12px;
+  margin-left: 8px;
+}
+
+.tags-row {
+  flex-direction: column;
+}
+
+.tag-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.tag-option {
+  background-color: #F5F5F5;
+  border: 1px solid #E5E5E5;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: #5F5F5F;
+}
+
+.tag-option.active {
+  background-color: #07C160;
+  border-color: #07C160;
+  color: #FFFFFF;
+}
+
+.btn {
+  font-size: 15px;
+  border-radius: 4px;
+  height: 40px;
+  line-height: 40px;
+  border: none;
+}
+
+.btn-primary {
+  background-color: #07C160;
+  color: #FFFFFF;
+}
+
+.btn-full {
+  width: 100%;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 12px 0 8px;
+  padding-left: 4px;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: #5F5F5F;
+}
+
+.section-count {
+  font-size: 13px;
+  color: #A6A6A6;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+
+.loading-text {
+  color: #A6A6A6;
+  font-size: 14px;
+}
+
+.empty-state {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+
+.empty-text {
+  color: #A6A6A6;
+  font-size: 14px;
+}
+
+.slot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.slot-card {
+  background-color: #FFFFFF;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  gap: 12px;
+}
+
+.slot-content {
+  flex: 1;
+}
+
+.slot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.slot-time {
+  font-size: 16px;
+  font-weight: 500;
+  color: #000000;
+}
+
+.slot-tag {
+  display: inline-block;
+  background-color: #07C160;
+  color: #FFFFFF;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 4px;
+}
+
+.slot-tag.fortress-tag {
+  background-color: #4A90D9;
+}
+
+.slot-count {
+  font-size: 14px;
+  color: #5F5F5F;
+}
+
+.slot-date {
+  font-size: 13px;
+  color: #A6A6A6;
+  margin-top: 4px;
+}
+
+.slot-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.delete-btn {
+  background-color: #FA5151;
+  color: #FFFFFF;
+  font-size: 13px;
+  padding: 0 10px;
+  height: 28px;
+  line-height: 28px;
+  border-radius: 4px;
+}
+
+/* 活动类型标签 */
+.activity-type-tag {
+  background-color: #F5F5F5;
+  border: 1px solid #E5E5E5;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: #5F5F5F;
+}
+
+.activity-type-tag.active {
+  background-color: #4A90D9;
+  border-color: #4A90D9;
+  color: #FFFFFF;
+}
+
+/* 军团标签 */
+.corps-tag {
+  background-color: #F5F5F5;
+  border: 1px solid #E5E5E5;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: #5F5F5F;
+}
+
+.corps-tag.active {
+  background-color: #576B95;
+  border-color: #576B95;
+  color: #FFFFFF;
+}
