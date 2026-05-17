@@ -21,6 +21,7 @@
     "pages/admin/member-manage/member-manage",
     "pages/auditor/home/home",
     "pages/auditor/config/config",
+    "pages/auditor/arsenal-config/arsenal-config",
     "pages/auditor/statistics/statistics",
     "pages/superAdmin/home/home",
     "pages/superAdmin/admin-review/admin-review",
