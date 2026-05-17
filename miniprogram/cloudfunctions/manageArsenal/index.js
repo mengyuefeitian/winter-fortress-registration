@@ -88,16 +88,28 @@ exports.main = async (event, context) => {
 
 // 验证用户角色（auditor/admin/superAdmin）
 async function verifyRole(openid) {
-  // 检查是否为超级管理员
+  // 先通过 openid 查 users 集合拿到用户文档
+  const userRes = await db.collection('users').where({
+    openid: openid
+  }).get()
+
+  if (userRes.data.length === 0) {
+    throw new Error('用户不存在')
+  }
+
+  const user = userRes.data[0]
+  const userId = user._id
+
+  // 检查是否为超级管理员（superAdmins.userId 存的是 users 集合的 _id）
   const superAdminRes = await db.collection('superAdmins').where({
-    userId: openid
+    userId: userId
   }).get()
 
   if (superAdminRes.data.length > 0) {
-    return { role: 'superAdmin', userId: openid }
+    return { role: 'superAdmin', userId: userId, openid: openid }
   }
 
-  // 检查是否为区管或盟管（admins 集合中 approved 状态）
+  // 检查是否为区管或盟管（admins.userId 存的是 openid）
   const adminRes = await db.collection('admins').where({
     userId: openid,
     status: 'approved'
@@ -107,16 +119,16 @@ async function verifyRole(openid) {
     const adminRecord = adminRes.data[0]
     // approvedRole 为 'admin'(区管) 或 'auditor'(盟管)
     const role = adminRecord.approvedRole || 'admin'
-    return { role: role, userId: openid }
+    return { role: role, userId: userId, openid: openid }
   }
 
   throw new Error('权限不足')
 }
 
 // 验证盟管是否绑定到指定联盟
-async function verifyAuditorAlliance(userId, allianceId) {
+async function verifyAuditorAlliance(openid, allianceId) {
   const adminRes = await db.collection('admins').where({
-    userId: userId,
+    userId: openid,
     status: 'approved',
     approvedRole: 'auditor'
   }).get()
@@ -128,7 +140,7 @@ async function verifyAuditorAlliance(userId, allianceId) {
   // 检查盟管是否绑定到该联盟（通过 alliances 集合中的 auditorIds）
   const allianceRes = await db.collection('alliances').where({
     _id: allianceId,
-    auditorIds: userId
+    auditorIds: openid
   }).get()
 
   if (allianceRes.data.length === 0) {
@@ -142,7 +154,8 @@ async function verifyAuditorAlliance(userId, allianceId) {
 async function createConfig(data) {
   const wxContext = await cloud.getWXContext()
   const openid = wxContext.OPENID
-  const { role, userId } = await verifyRole(openid)
+  const roleInfo = await verifyRole(openid)
+  const { role, userId } = roleInfo
 
   const { activityType, date, timeValue, corps, zoneId, zoneName, allianceId, allianceName } = data
 
@@ -160,7 +173,7 @@ async function createConfig(data) {
     if (!allianceId) {
       throw new Error('盟管需要指定联盟ID')
     }
-    await verifyAuditorAlliance(userId, allianceId)
+    await verifyAuditorAlliance(openid, allianceId)
   }
 
   const collectionName = getCollectionNames(activityType).config
@@ -428,7 +441,12 @@ async function cancelRegistration(data) {
   // 验证用户是否为该报名记录的创建者
   const wxContext2 = await cloud.getWXContext()
   const openid2 = wxContext2.OPENID
-  if (registration.userId !== openid2) {
+  // 报名记录的 userId 可能是 users._id 或 openid，两种都尝试
+  const userRes = await db.collection('users').where({ openid: openid2 }).get()
+  const isOwner = userRes.data.length > 0
+    ? (registration.userId === userRes.data[0]._id || registration.userId === openid2)
+    : (registration.userId === openid2)
+  if (!isOwner) {
     throw new Error('无权取消此报名')
   }
 
