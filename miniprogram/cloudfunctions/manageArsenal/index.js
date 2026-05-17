@@ -140,14 +140,15 @@ async function verifyAuditorAlliance(userId, allianceId) {
 
 // 创建活动配置
 async function createConfig(data) {
-  const { openid } = await cloud.getWXContext()
+  const wxContext = await cloud.getWXContext()
+  const openid = wxContext.OPENID
   const { role, userId } = await verifyRole(openid)
 
   const { activityType, date, timeValue, corps, zoneId, zoneName, allianceId, allianceName } = data
 
   // 详细日志：打印收到的所有参数
   console.log('createConfig called with:', JSON.stringify({
-    activityType, date, timeValue, corps, zoneId, zoneName, allianceId, allianceName, role, userId
+    activityType, date, timeValue, corps, zoneId, zoneName, allianceId, allianceName, role, userId, openid: openid
   }))
 
   if (!activityType || !date || !timeValue || !corps) {
@@ -425,8 +426,9 @@ async function cancelRegistration(data) {
   }
 
   // 验证用户是否为该报名记录的创建者
-  const { openid } = await cloud.getWXContext()
-  if (registration.userId !== openid) {
+  const wxContext2 = await cloud.getWXContext()
+  const openid2 = wxContext2.OPENID
+  if (registration.userId !== openid2) {
     throw new Error('无权取消此报名')
   }
 
