@@ -21,8 +21,9 @@
     <button class="login-btn" bindtap="goToLogin">去登录</button>
   </view>
 
-  <!-- 当前分区信息 -->
+  <!-- 当前分区信息 + 联盟选择 - 紧凑布局 -->
   <view class="card">
+    <!-- 当前分区提示（不可切换） -->
     <view wx:if="{{selectedZone}}" class="zone-info-row">
       <text class="form-label">分区：</text>
       <text class="zone-name-text">{{selectedZone.zoneName}}</text>
@@ -30,10 +31,26 @@
     <view wx:elif="{{!selectedZone}}" class="zone-info-row">
       <text class="text-secondary text-sm">请先在首页选择您的分区</text>
     </view>
+
+    <!-- 联盟选择 -->
+    <view wx:if="{{selectedZone}}" class="form-row">
+      <view class="form-col" style="width: 100%;">
+        <text class="form-label">联盟</text>
+        <picker wx:if="{{alliances.length > 0}}" bindchange="onAllianceChange" value="{{allianceIndex >= 0 ? allianceIndex : 0}}" range="{{alliances}}" range-key="allianceName">
+          <view class="picker-compact">
+            <text>{{selectedAlliance ? selectedAlliance.allianceName : '请选择联盟'}}</text>
+            <image class="picker-compact-arrow" src="/images/icon-arrow-down.png"></image>
+          </view>
+        </picker>
+        <view wx:else class="picker-compact disabled">
+          <text class="picker-placeholder">该分区暂无联盟</text>
+        </view>
+      </view>
+    </view>
   </view>
 
   <!-- 活动配置列表 -->
-  <view wx:if="{{selectedZone}}" class="card">
+  <view wx:if="{{selectedAlliance}}" class="card">
     <view class="section-header">
       <text class="section-title">选择活动</text>
       <text class="section-count">{{configs.length}}个</text>

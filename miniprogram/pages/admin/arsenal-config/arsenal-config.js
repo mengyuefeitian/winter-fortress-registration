@@ -95,7 +95,29 @@ Page({
     try {
       const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
 
-      const zones = await db.getZonesByCreator(userId)
+      let zones = await db.getZonesByCreator(userId)
+
+      // 如果用户没有被分配到任何分区，尝试从 admins 集合查找关联的 zoneId
+      if (!zones || zones.length === 0) {
+        try {
+          const wxdb = wx.cloud.database()
+          const adminRes = await wxdb.collection('admins').where({
+            userId: userId,
+            status: 'approved',
+            approvedRole: 'admin'
+          }).get()
+          if (adminRes.data.length > 0) {
+            // 收集关联的 zoneId
+            const zoneIds = [...new Set(adminRes.data.map(a => a.zoneId).filter(Boolean))]
+            if (zoneIds.length > 0) {
+              const zoneRes = await Promise.all(zoneIds.map(id => wxdb.collection('zones').doc(id).get()))
+              zones = zoneRes.filter(r => r.data && r.data.status !== 'inactive').map(r => r.data)
+            }
+          }
+        } catch (err) {
+          console.error('从 admins 集合查找分区失败:', err)
+        }
+      }
 
       if (zones && zones.length > 0) {
         let selectedZone = zones[0]

@@ -25,6 +25,11 @@ Page({
     nickName: '',
     isLoggedIn: false,
     selectedZone: null,
+
+    alliances: [],
+    allianceIndex: -1,
+    selectedAlliance: null,
+
     configs: [],
     selectedConfig: null,
     registrations: [],
@@ -133,6 +138,8 @@ Page({
       if (!zone) {
         this.setData({
           selectedZone: null,
+          alliances: [],
+          selectedAlliance: null,
           configs: [],
           selectedConfig: null,
           loading: false
@@ -141,16 +148,80 @@ Page({
       }
 
       this.setData({ selectedZone: zone })
-      await this.loadConfigs()
+      await this.loadAlliances(zone._id)
     } catch (err) {
       console.error('加载分区失败:', err)
       this.setData({ loading: false })
     }
   },
 
+  // 加载联盟列表
+  loadAlliances: async function (zoneId) {
+    try {
+      const alliances = await db.getAlliancesByZone(zoneId)
+
+      if (alliances && alliances.length > 0) {
+        const lastAllianceId = wx.getStorageSync('lastAllianceId')
+        let selectedAlliance = null
+        let allianceIndex = -1
+
+        if (lastAllianceId) {
+          const foundIndex = alliances.findIndex(a => a._id === lastAllianceId)
+          if (foundIndex >= 0) {
+            selectedAlliance = alliances[foundIndex]
+            allianceIndex = foundIndex
+          }
+        }
+
+        this.setData({
+          alliances: alliances,
+          selectedAlliance: selectedAlliance,
+          allianceIndex: allianceIndex,
+          loading: false
+        })
+
+        if (selectedAlliance) {
+          this.loadConfigs()
+        }
+      } else {
+        this.setData({
+          alliances: [],
+          selectedAlliance: null,
+          allianceIndex: -1,
+          loading: false
+        })
+      }
+    } catch (err) {
+      console.error('加载联盟失败:', err)
+      this.setData({ loading: false })
+    }
+  },
+
+  // 联盟选择变化
+  onAllianceChange: function (e) {
+    const index = e.detail.value
+    const alliance = this.data.alliances[index]
+
+    wx.setStorageSync('lastAllianceId', alliance._id)
+
+    this.setData({
+      allianceIndex: index,
+      selectedAlliance: alliance,
+      selectedConfig: null,
+      registrations: []
+    })
+
+    this.loadConfigs()
+  },
+
   loadConfigs: async function () {
     try {
-      const configs = await db.getArsenalConfigs({})
+      if (!this.data.selectedAlliance) {
+        this.setData({ configs: [], loading: false })
+        return
+      }
+
+      const configs = await db.getArsenalConfigs({ allianceId: this.data.selectedAlliance._id })
 
       const today = this.getTodayString()
       const activeConfigs = configs.filter(cfg => {

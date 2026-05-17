@@ -86,6 +86,11 @@ Page({
       try {
         const alliance = await db.getAllianceById(allianceId)
         if (alliance) {
+          if (!alliance.zoneId) {
+            util.showError('联盟数据异常，缺少分区信息')
+            wx.navigateBack()
+            return
+          }
           this.setData({
             zoneId: alliance.zoneId,
             allianceName: alliance.allianceName,

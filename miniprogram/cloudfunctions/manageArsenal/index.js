@@ -192,8 +192,7 @@ async function getConfigs(data) {
     throw new Error('缺少活动类型参数')
   }
 
-  const collectionName = getCollectionNames(activityType).config
-
+  // 确保 query 对象至少有一个条件，避免全 undefined 报错
   const query = {
     status: 'active'
   }
@@ -207,6 +206,8 @@ async function getConfigs(data) {
   if (date) {
     query.date = date
   }
+
+  const collectionName = getCollectionNames(activityType).config
 
   // 分页获取所有记录（>100 时循环拉取）
   let allData = []
