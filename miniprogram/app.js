@@ -27,6 +27,10 @@ App({
     this.globalData.db = wx.cloud.database()
     this.globalData.dbReady = true
 
+    // 确保所有集合已创建（包括兵工厂/峡谷报名相关集合）
+    const dbInit = require('./scripts/db-init')
+    dbInit.initDatabase()
+
     // 检查是否首次启动
     const hasLaunched = wx.getStorageSync('hasLaunched')
     this.globalData.firstLaunch = !hasLaunched

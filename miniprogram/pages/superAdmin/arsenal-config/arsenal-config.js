@@ -211,10 +211,6 @@ Page({
   // 添加配置
   addConfig: async function () {
     try {
-      if (!this.data.selectedAlliance) {
-        util.showInfo('请先选择联盟')
-        return
-      }
       if (!this.data.selectedDate) {
         util.showInfo('请选择日期')
         return
@@ -233,6 +229,17 @@ Page({
       }
 
       util.showLoading('正在添加...')
+
+      if (!this.data.selectedZone || !this.data.selectedZone._id) {
+        util.hideLoading()
+        util.showInfo('请先选择分区')
+        return
+      }
+      if (!this.data.selectedAlliance || !this.data.selectedAlliance._id) {
+        util.hideLoading()
+        util.showInfo('请先选择联盟')
+        return
+      }
 
       const configData = {
         date: this.data.selectedDate,

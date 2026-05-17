@@ -43,11 +43,22 @@ async function initDatabase() {
 
   for (const collection of COLLECTIONS) {
     try {
-      // 尝试访问集合，如果不存在会自动创建
-      await db.collection(collection).limit(1).get()
-      console.log(`集合 ${collection} 已就绪`)
+      // 先尝试创建集合（如果已存在会自动跳过）
+      await db.createCollection(collection)
+      console.log(`集合 ${collection} 已创建`)
     } catch (err) {
-      console.error(`集合 ${collection} 初始化失败:`, err)
+      // 集合已存在时会报错，这是正常的
+      if (err.errMsg && err.errMsg.includes('already exists')) {
+        console.log(`集合 ${collection} 已存在`)
+      } else {
+        // 尝试访问集合确认其可用性
+        try {
+          await db.collection(collection).limit(1).get()
+          console.log(`集合 ${collection} 已就绪`)
+        } catch (err2) {
+          console.error(`集合 ${collection} 初始化失败:`, err2)
+        }
+      }
     }
   }
 }

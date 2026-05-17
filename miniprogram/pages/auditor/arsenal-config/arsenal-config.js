@@ -158,6 +158,10 @@ Page({
         util.showInfo('缺少联盟信息')
         return
       }
+      if (!this.data.zoneId) {
+        util.showInfo('缺少分区信息')
+        return
+      }
       if (!this.data.selectedDate) {
         util.showInfo('请选择日期')
         return
