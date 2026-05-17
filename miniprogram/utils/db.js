@@ -242,43 +242,19 @@ async function reviewAdminApplication(applicationId, status, reviewedBy, approve
   })
 }
 
-// 添加区管（支持多区管）
-async function addZoneAdmin(zoneId, userId) {
-  const db = getDb()
-  const _ = db.command
-
-  const zone = await db.collection('zones').doc(zoneId).get()
-  if (!zone.data) {
-    throw new Error('分区不存在')
-  }
-
-  // 获取现有区管列表（向后兼容）
-  let existingAdminIds = zone.data.adminIds || []
-  if (existingAdminIds.length === 0 && zone.data.creatorId) {
-    existingAdminIds = [zone.data.creatorId]
-  }
-
-  // 已是该分区区管，跳过
-  if (existingAdminIds.includes(userId)) {
-    return { skipped: true, message: '用户已是该分区区管' }
-  }
-
-  // 添加到 adminIds 数组
-  await db.collection('zones').doc(zoneId).update({
+// 通过云函数添加区管到分区（绕过 creator-only 写权限）
+async function updateZoneCreator(zoneId, userId) {
+  const res = await wx.cloud.callFunction({
+    name: 'manageZone',
     data: {
-      adminIds: _.push(userId),
-      // 保留 creatorId 作为第一个区管（向后兼容）
-      creatorId: zone.data.creatorId || userId,
-      updateTime: db.serverDate()
+      action: 'addZoneAdmin',
+      data: { zoneId, userId }
     }
   })
-
-  return { success: true, message: '添加区管成功' }
-}
-
-// 旧函数名保留（向后兼容调用）
-async function updateZoneCreator(zoneId, creatorId) {
-  return await addZoneAdmin(zoneId, creatorId)
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.err) || '添加区管失败')
+  }
+  return res.result
 }
 
 /**
@@ -562,6 +538,9 @@ async function removeMember(userId, role, zoneId) {
   })
 
   const result = res.result || {}
+  if (result.err) {
+    throw new Error(result.err || '移除成员失败')
+  }
 
   // 云函数返回 shouldResetRole 标志，客户端处理 users/admins 集合（所有人可读写）
   if (result.shouldResetRole) {
@@ -607,35 +586,33 @@ const BATTLE_POSITION_OPTIONS = ['车头', '车身']
 
 // 创建时间段
 async function createTimeSlot(zoneId, allianceId, timeValue, slotIndex, date, tag, fortress) {
-  const db = getDb()
   const displayName = slotIndex > 1 ? `${timeValue}-${slotIndex}` : timeValue
-
-  return await db.collection('timeSlots').add({
+  const res = await wx.cloud.callFunction({
+    name: 'manageTimeSlot',
     data: {
-      zoneId: zoneId,
-      allianceId: allianceId,
-      timeValue: timeValue,
-      slotIndex: slotIndex,
-      displayName: displayName,
-      date: date || '',
-      tag: tag || '',
-      fortress: fortress || '',
-      remark: '', // 保留 remark 字段兼容旧数据
-      maxCount: 15,
-      status: 'active',
-      createTime: db.serverDate()
+      action: 'create',
+      data: { zoneId, allianceId, timeValue, slotIndex, displayName, date: date || '', tag: tag || '', fortress: fortress || '' }
     }
   })
+  if (!res.result || res.result.err) {
+    throw new Error((res.result && res.result.err) || '创建时间段失败')
+  }
+  return { _id: res.result._id }
 }
 
 // 获取联盟的时间段列表
 async function getTimeSlotsByAlliance(allianceId) {
-  const db = getDb()
-  const res = await db.collection('timeSlots').where({
-    allianceId: allianceId,
-    status: 'active'
-  }).orderBy('timeValue', 'asc').orderBy('slotIndex', 'asc').get()
-  return res.data
+  const res = await wx.cloud.callFunction({
+    name: 'manageTimeSlot',
+    data: {
+      action: 'getByAlliance',
+      data: { allianceId }
+    }
+  })
+  if (!res.result || res.result.err) {
+    throw new Error((res.result && res.result.err) || '获取时间段失败')
+  }
+  return res.result.data
 }
 
 // 获取时间段某个基础时间的最大序号
@@ -723,42 +700,26 @@ async function updateTimeSlotTagViaCloud(timeSlotId, tag, fortress) {
  * 报名相关操作
  */
 
-// 创建报名记录
+// 创建报名记录（通过云函数，避免客户端写入后立即读取的最终一致性延迟）
 async function createRegistration(data) {
-  const db = getDb()
-  // 检查时间段是否已满
-  const count = await getRegistrationCount(data.timeSlotId)
-  const timeSlot = await getTimeSlotById(data.timeSlotId)
-
-  if (count >= timeSlot.maxCount) {
-    throw new Error('该时间段报名人数已满')
-  }
-
-  // 检查同一时间段内昵称是否重复
-  const existingNick = await db.collection('registrations')
-    .where({
-      timeSlotId: data.timeSlotId,
-      nickName: data.nickName,
-      status: 'active'
-    })
-    .get()
-
-  if (existingNick.data.length > 0) {
-    throw new Error('该时间段已存在相同昵称的报名，请更换昵称')
-  }
-
-  return await db.collection('registrations').add({
+  const res = await wx.cloud.callFunction({
+    name: 'register',
     data: {
-      zoneId: data.zoneId,
-      allianceId: data.allianceId,
-      timeSlotId: data.timeSlotId,
-      userId: data.userId,
-      nickName: data.nickName,
-      position: data.position,
-      status: 'active',
-      createTime: db.serverDate()
+      action: 'create',
+      data: {
+        zoneId: data.zoneId,
+        allianceId: data.allianceId,
+        timeSlotId: data.timeSlotId,
+        userId: data.userId,
+        nickName: data.nickName,
+        position: data.position
+      }
     }
   })
+  if (!res.result || res.result.err) {
+    throw new Error((res.result && res.result.err) || '报名失败')
+  }
+  return { _id: res.result._id }
 }
 
 // 获取时间段报名人数
@@ -771,14 +732,19 @@ async function getRegistrationCount(timeSlotId) {
   return res.total
 }
 
-// 获取时间段报名列表
+// 获取时间段报名列表（通过云函数，避免最终一致性延迟）
 async function getRegistrationsByTimeSlot(timeSlotId) {
-  const db = getDb()
-  const res = await db.collection('registrations').where({
-    timeSlotId: timeSlotId,
-    status: 'active'
-  }).orderBy('createTime', 'asc').get()
-  return res.data
+  const res = await wx.cloud.callFunction({
+    name: 'register',
+    data: {
+      action: 'getByTimeSlot',
+      data: { timeSlotId }
+    }
+  })
+  if (!res.result || res.result.err) {
+    throw new Error((res.result && res.result.err) || '获取报名列表失败')
+  }
+  return res.result.data
 }
 
 // 获取用户的报名记录
@@ -904,42 +870,26 @@ async function createPositionConfig(data) {
   })
 }
 
-// 获取官职配置列表
+// 获取官职配置列表（通过云函数读取，避免客户端写入后查询的3-5分钟最终一致性延迟）
 async function getPositionConfigs(filters = {}) {
-  const db = getDb()
-  const query = { status: 'active' }
+  const filterData = {}
+  if (filters.zoneId) filterData.zoneId = filters.zoneId
+  if (filters.creatorId) filterData.creatorId = filters.creatorId
+  if (filters.allianceId) filterData.allianceId = filters.allianceId
+  if (filters.date) filterData.date = filters.date
+  if (filters.positionType) filterData.positionType = filters.positionType
 
-  if (filters.date) {
-    query.date = filters.date
+  const res = await wx.cloud.callFunction({
+    name: 'managePosition',
+    data: {
+      action: 'getConfigs',
+      data: filterData
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '获取配置列表失败')
   }
-  if (filters.creatorId) {
-    query.creatorId = filters.creatorId
-  }
-  if (filters.positionType) {
-    query.positionType = filters.positionType
-  }
-  if (filters.zoneId) {
-    query.zoneId = filters.zoneId
-  }
-
-  let allConfigs = []
-  let offset = 0
-  const batchSize = 20
-  while (true) {
-    const res = await db.collection('positionConfigs')
-      .where(query)
-      .orderBy('date', 'asc')
-      .orderBy('createTime', 'desc')
-      .skip(offset)
-      .limit(batchSize)
-      .get()
-    allConfigs = allConfigs.concat(res.data)
-    if (res.data.length < batchSize) break
-    offset += batchSize
-    if (offset > 500) break
-  }
-
-  return allConfigs
+  return res.result.data || []
 }
 
 // 根据ID获取官职配置
@@ -949,20 +899,19 @@ async function getPositionConfigById(configId) {
   return res.data
 }
 
-// 删除官职配置（同时删除相关报名记录）
+// 删除官职配置（通过云函数绕过 creator-only 写权限，同时删除相关报名记录）
 async function deletePositionConfig(configId) {
-  const db = getDb()
-  // 先删除该配置的所有报名记录
-  await db.collection('positionRegistrations').where({
-    configId: configId
-  }).remove()
-  // 再软删除配置
-  return await db.collection('positionConfigs').doc(configId).update({
+  const res = await wx.cloud.callFunction({
+    name: 'managePosition',
     data: {
-      status: 'inactive',
-      updateTime: db.serverDate()
+      action: 'deleteConfig',
+      data: { configId }
     }
   })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '删除配置失败')
+  }
+  return res.result
 }
 
 // 根据起始时间生成时间段列表（每30分钟一格，到24:00）
@@ -1129,32 +1078,34 @@ async function cancelPositionRegistration(registrationId) {
   })
 }
 
-// 删除官职报名记录（区管操作）
+// 删除官职报名记录（通过云函数绕过 creator-only 写权限，区管/超管操作）
 async function deletePositionRegistration(registrationId) {
-  const db = getDb()
-  return await db.collection('positionRegistrations').doc(registrationId).update({
+  const res = await wx.cloud.callFunction({
+    name: 'managePosition',
     data: {
-      status: 'deleted',
-      updateTime: db.serverDate()
+      action: 'deleteRegistration',
+      data: { registrationId }
     }
   })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '删除报名失败')
+  }
+  return res.result
 }
 
-// 清空官职配置的所有报名记录
+// 清空官职配置的所有报名记录（通过云函数绕过 creator-only 写权限）
 async function clearPositionRegistrations(configId) {
-  const db = getDb()
-  const registrations = await getPositionRegistrationsByConfig(configId)
-
-  for (const reg of registrations) {
-    await db.collection('positionRegistrations').doc(reg._id).update({
-      data: {
-        status: 'cleared',
-        updateTime: db.serverDate()
-      }
-    })
+  const res = await wx.cloud.callFunction({
+    name: 'managePosition',
+    data: {
+      action: 'clearRegistrations',
+      data: { configId }
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '清空报名失败')
   }
-
-  return registrations.length
+  return (res.result.data && res.result.data.clearedCount) || 0
 }
 
 /**

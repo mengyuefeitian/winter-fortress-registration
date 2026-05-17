@@ -41,7 +41,7 @@
         <view class="zone-actions">
           <button class="action-btn edit-btn" bindtap="editZone" data-zone="{{item}}" wx:if="{{isSuperAdmin}}">修改编号</button>
           <button class="action-btn config-btn" bindtap="goToAllianceConfig" data-zone="{{item}}">配置联盟</button>
-          <button class="action-btn delete-btn" bindtap="deleteZone" data-id="{{item._id}}" data-index="{{index}}">删除</button>
+          <button class="action-btn delete-btn" bindtap="deleteZone" data-id="{{item._id}}" data-index="{{index}}" wx:if="{{isSuperAdmin}}">删除</button>
         </view>
       </view>
     </view>

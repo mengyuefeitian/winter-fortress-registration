@@ -72,8 +72,8 @@ Page({
           const res = await wxdb.collection('zones').where({
             status: 'active'
           }).orderBy('createTime', 'desc').limit(100).get()
-          if (res.list.length > 0) {
-            selectedZone = res.list[0]
+          if (res.data.length > 0) {
+            selectedZone = res.data[0]
             app.globalData.currentZone = selectedZone
             wx.setStorageSync('lastZoneId', selectedZone._id)
           }

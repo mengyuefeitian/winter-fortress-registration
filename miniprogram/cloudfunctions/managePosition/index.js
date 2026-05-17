@@ -97,8 +97,18 @@ async function getConfigs(data) {
   if (data.allianceId) {
     query.allianceId = data.allianceId
   }
+  if (data.date) {
+    query.date = data.date
+  }
+  if (data.positionType) {
+    query.positionType = data.positionType
+  }
 
-  const res = await db.collection('positionConfigs').where(query).orderBy('createTime', 'desc').get()
+  const res = await db.collection('positionConfigs')
+    .where(query)
+    .orderBy('date', 'asc')
+    .orderBy('createTime', 'desc')
+    .get()
 
   return {
     success: true,

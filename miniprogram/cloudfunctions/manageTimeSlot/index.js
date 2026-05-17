@@ -46,6 +46,8 @@ async function createTimeSlot(data) {
       timeValue: data.timeValue,
       slotIndex: data.slotIndex,
       displayName: data.displayName,
+      date: data.date || '',
+      tag: data.tag || '',
       remark: data.remark || '',
       fortress: data.fortress || '',
       maxCount: data.maxCount || 15,
