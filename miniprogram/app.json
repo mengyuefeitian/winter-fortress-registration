@@ -9,6 +9,7 @@
     "pages/user/battle-registration/battle-registration",
     "pages/user/battle-statistics/battle-statistics",
     "pages/user/battle-allocation/battle-allocation",
+    "pages/user/arsenal-registration/arsenal-registration",
     "pages/user/feedback/feedback",
     "pages/user/apply-alliance-manager/apply-alliance-manager",
     "pages/user/my-registrations/my-registrations",

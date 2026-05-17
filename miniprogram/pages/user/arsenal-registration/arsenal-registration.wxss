@@ -1,0 +1,24 @@
+@import "../registration/registration.wxss";
+
+.position-option.active {
+  background-color: #4A90D9;
+  border-color: #4A90D9;
+}
+
+.position-option.active .position-name {
+  color: #FFFFFF;
+}
+
+.position-position.combat {
+  background-color: #FFE8E8;
+  color: #FA5151;
+}
+
+.position-position.substitute {
+  background-color: #F0FFF0;
+  color: #07C160;
+}
+
+.activity-type-tag {
+  background-color: #6BB3F0;
+}

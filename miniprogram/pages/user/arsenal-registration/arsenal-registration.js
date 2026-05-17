@@ -1,0 +1,352 @@
+// pages/user/arsenal-registration/arsenal-registration.js
+const app = getApp()
+const util = require('../../../utils/util')
+const db = require('../../../utils/db')
+
+const POSITION_OPTIONS = [
+  { label: '参战', value: 'combat' },
+  { label: '替补', value: 'substitute' }
+]
+
+const ACTIVITY_TYPE_LABELS = {
+  'arsenal': '兵工厂',
+  'canyon': '峡谷会战'
+}
+
+const CAPACITY_LIMITS = {
+  combat: 30,
+  substitute: 10
+}
+
+Page({
+  data: {
+    POSITION_OPTIONS: POSITION_OPTIONS,
+    selectedPosition: 'combat',
+    nickName: '',
+    isLoggedIn: false,
+    selectedZone: null,
+    configs: [],
+    selectedConfig: null,
+    registrations: [],
+    loading: true,
+    showTip: false
+  },
+
+  onLoad: function (options) {
+    if (options && options.zoneId) {
+      this._pendingZoneId = options.zoneId
+    }
+    this.waitForUserInfoReady()
+  },
+
+  waitForUserInfoReady: function () {
+    if (app.globalData.userInfo) {
+      this.checkLoginAndLoadData()
+    } else {
+      setTimeout(() => {
+        this.waitForUserInfoReady()
+      }, 100)
+    }
+  },
+
+  onShow: function () {
+    if (app.globalData.userInfo) {
+      this.checkLoginAndLoadData()
+    }
+  },
+
+  toggleTip: function () {
+    this.setData({ showTip: !this.data.showTip })
+  },
+
+  checkLoginAndLoadData: function () {
+    const userInfo = app.globalData.userInfo
+
+    if (userInfo && userInfo.nickName) {
+      this.setData({
+        isLoggedIn: true,
+        nickName: userInfo.nickName
+      })
+    } else {
+      this.setData({
+        isLoggedIn: false,
+        nickName: ''
+      })
+    }
+
+    this.loadConfigsFromCurrentZone()
+  },
+
+  loadConfigsFromCurrentZone: async function () {
+    try {
+      this.setData({ loading: true })
+
+      let zone = app.globalData.currentZone
+
+      if (!zone && this._pendingZoneId) {
+        const wxdb = wx.cloud.database()
+        try {
+          const res = await wxdb.collection('zones').doc(this._pendingZoneId).get()
+          if (res.data && res.data.status !== 'inactive') {
+            zone = res.data
+            app.globalData.currentZone = zone
+            wx.setStorageSync('lastZoneId', zone._id)
+            this._pendingZoneId = null
+          }
+        } catch (err) {
+          console.error('从分享链接恢复分区失败:', err)
+        }
+      }
+
+      if (!zone) {
+        const lastZoneId = wx.getStorageSync('lastZoneId')
+        if (lastZoneId) {
+          const wxdb = wx.cloud.database()
+          try {
+            const res = await wxdb.collection('zones').doc(lastZoneId).get()
+            if (res.data && res.data.status !== 'inactive') {
+              zone = res.data
+              app.globalData.currentZone = zone
+            }
+          } catch (err) {
+            console.error('从本地存储恢复分区失败:', err)
+          }
+        }
+      }
+
+      if (!zone) {
+        const wxdb = wx.cloud.database()
+        try {
+          const res = await wxdb.collection('zones').where({
+            status: 'active'
+          }).orderBy('createTime', 'desc').limit(100).get()
+          if (res.list.length > 0) {
+            zone = res.list[0]
+            app.globalData.currentZone = zone
+            wx.setStorageSync('lastZoneId', zone._id)
+          }
+        } catch (err) {
+          console.error('加载分区列表失败:', err)
+        }
+      }
+
+      if (!zone) {
+        this.setData({
+          selectedZone: null,
+          configs: [],
+          selectedConfig: null,
+          loading: false
+        })
+        return
+      }
+
+      this.setData({ selectedZone: zone })
+      await this.loadConfigs()
+    } catch (err) {
+      console.error('加载分区失败:', err)
+      this.setData({ loading: false })
+    }
+  },
+
+  loadConfigs: async function () {
+    try {
+      const configs = await db.getArsenalConfigs({})
+
+      const today = this.getTodayString()
+      const activeConfigs = configs.filter(cfg => {
+        if (!cfg.date) return true
+        return cfg.date >= today
+      })
+
+      const currentUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+
+      const processed = await Promise.all(activeConfigs.map(async (cfg) => {
+        const stats = await this.getConfigStats(cfg._id)
+        const combatCount = stats.combat || 0
+        const substituteCount = stats.substitute || 0
+        const combatFull = combatCount >= CAPACITY_LIMITS.combat
+        const substituteFull = substituteCount >= CAPACITY_LIMITS.substitute
+        const totalCount = combatCount + substituteCount
+        const totalCapacity = CAPACITY_LIMITS.combat + CAPACITY_LIMITS.substitute
+
+        return {
+          ...cfg,
+          combatCount,
+          substituteCount,
+          totalCount,
+          totalCapacity,
+          combatFull,
+          substituteFull,
+          isFull: combatFull && substituteFull,
+          isMyConfig: currentUserId ? (stats.myRegistrations || []).some(r => r.userId === currentUserId) : false,
+          myPositions: currentUserId ? (stats.myRegistrations || []).filter(r => r.userId === currentUserId).map(r => r.position) : []
+        }
+      }))
+
+      this.setData({
+        configs: processed,
+        loading: false
+      })
+    } catch (err) {
+      console.error('加载配置失败:', err)
+      this.setData({ loading: false })
+    }
+  },
+
+  getConfigStats: async function (configId) {
+    try {
+      const stats = await db.getArsenalStats(configId)
+      return stats || { combat: 0, substitute: 0, myRegistrations: [] }
+    } catch (err) {
+      console.error('获取配置统计失败:', err)
+      return { combat: 0, substitute: 0, myRegistrations: [] }
+    }
+  },
+
+  getTodayString: function () {
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = String(today.getMonth() + 1).padStart(2, '0')
+    const day = String(today.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  },
+
+  selectConfig: async function (e) {
+    const index = e.currentTarget.dataset.index
+    const config = this.data.configs[index]
+
+    if (config.isFull && !config.isMyConfig) {
+      util.showInfo('该活动报名人数已满')
+      return
+    }
+
+    await this.loadRegistrations(config._id)
+
+    this.setData({
+      selectedConfig: config
+    })
+  },
+
+  loadRegistrations: async function (configId) {
+    try {
+      const registrations = await db.getArsenalRegistrations(configId)
+
+      const currentUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+
+      const processed = registrations.map(r => ({
+        ...r,
+        isMine: currentUserId && r.userId === currentUserId
+      }))
+
+      processed.sort((a, b) => {
+        if (a.position === 'combat' && b.position !== 'combat') return -1
+        if (a.position !== 'combat' && b.position === 'combat') return 1
+        return 0
+      })
+
+      this.setData({
+        registrations: processed
+      })
+    } catch (err) {
+      console.error('加载报名列表失败:', err)
+    }
+  },
+
+  onNickNameInput: function (e) {
+    this.setData({
+      nickName: e.detail.value
+    })
+  },
+
+  selectPosition: function (e) {
+    const position = e.currentTarget.dataset.position
+    this.setData({
+      selectedPosition: position
+    })
+  },
+
+  submitRegistration: async function () {
+    try {
+      if (!this.data.isLoggedIn) {
+        wx.showModal({
+          title: '提示',
+          content: '请先登录后再报名',
+          confirmText: '去登录',
+          success: (res) => {
+            if (res.confirm) {
+              wx.navigateTo({
+                url: '/pages/login/login'
+              })
+            }
+          }
+        })
+        return
+      }
+
+      const zone = this.data.selectedZone || app.globalData.currentZone
+      if (!zone) {
+        util.showInfo('请先在首页选择分区')
+        return
+      }
+
+      if (!this.data.selectedConfig) {
+        util.showInfo('请选择活动')
+        return
+      }
+
+      if (!this.data.nickName) {
+        util.showInfo('请输入昵称')
+        return
+      }
+
+      if (this.data.selectedConfig.isFull) {
+        util.showInfo('该活动报名人数已满')
+        return
+      }
+
+      util.showLoading('正在报名...')
+
+      const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+
+      await db.createArsenalRegistration({
+        configId: this.data.selectedConfig._id,
+        userId: userId,
+        nickName: this.data.nickName,
+        position: this.data.selectedPosition
+      })
+
+      util.hideLoading()
+      util.showSuccess('报名成功')
+
+      this.setData({
+        selectedConfig: null,
+        registrations: []
+      })
+
+      this.loadConfigs()
+    } catch (err) {
+      util.hideLoading()
+      util.showError(err.message || '报名失败')
+    }
+  },
+
+  goToLogin: function () {
+    wx.navigateTo({
+      url: '/pages/login/login'
+    })
+  },
+
+  onShareAppMessage: function () {
+    const zone = this.data.selectedZone || app.globalData.currentZone
+    const path = zone
+      ? `/pages/user/arsenal-registration/arsenal-registration?zoneId=${zone._id}`
+      : '/pages/user/arsenal-registration/arsenal-registration'
+    const title = zone
+      ? `兵工厂报名 - ${zone.zoneName}`
+      : '兵工厂报名 - 无尽冬日'
+    return {
+      title: title,
+      path: path
+    }
+  }
+})
