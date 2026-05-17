@@ -32,6 +32,86 @@
       },
       "triggers": [],
       "handlerType": "event"
+    },
+    {
+      "name": "manageArsenal",
+      "handler": "index.main",
+      "config": {
+        "timeout": 10,
+        "envVariables": {}
+      },
+      "triggers": [],
+      "handlerType": "event"
+    },
+    {
+      "name": "manageAdmin",
+      "handler": "index.main",
+      "config": {
+        "timeout": 10,
+        "envVariables": {}
+      },
+      "triggers": [],
+      "handlerType": "event"
+    },
+    {
+      "name": "managePosition",
+      "handler": "index.main",
+      "config": {
+        "timeout": 10,
+        "envVariables": {}
+      },
+      "triggers": [],
+      "handlerType": "event"
+    },
+    {
+      "name": "manageTimeSlot",
+      "handler": "index.main",
+      "config": {
+        "timeout": 10,
+        "envVariables": {}
+      },
+      "triggers": [],
+      "handlerType": "event"
+    },
+    {
+      "name": "register",
+      "handler": "index.main",
+      "config": {
+        "timeout": 10,
+        "envVariables": {}
+      },
+      "triggers": [],
+      "handlerType": "event"
+    },
+    {
+      "name": "getStatistics",
+      "handler": "index.main",
+      "config": {
+        "timeout": 10,
+        "envVariables": {}
+      },
+      "triggers": [],
+      "handlerType": "event"
+    },
+    {
+      "name": "clearExpiredData",
+      "handler": "index.main",
+      "config": {
+        "timeout": 60,
+        "envVariables": {}
+      },
+      "triggers": [],
+      "handlerType": "event"
+    },
+    {
+      "name": "manageUserIdentity",
+      "handler": "index.main",
+      "config": {
+        "timeout": 10,
+        "envVariables": {}
+      },
+      "triggers": [],
+      "handlerType": "event"
     }
   ],
   "collections": [
