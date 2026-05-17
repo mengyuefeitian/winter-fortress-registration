@@ -14,6 +14,28 @@ const DEFAULT_CAPACITY = {
   substitute: 10
 }
 
+// 确保所需集合存在（云函数端可创建集合）
+const ARSENAL_COLLECTIONS = ['arsenalConfigs', 'arsenalRegistrations', 'canyonConfigs', 'canyonRegistrations']
+
+async function ensureCollections() {
+  for (const name of ARSENAL_COLLECTIONS) {
+    try {
+      await db.createCollection(name)
+    } catch (err) {
+      // 集合已存在会报错，忽略
+      if (err.errMsg && err.errMsg.includes('collection name has been used')) {
+        // 已存在，正常
+      } else if (err.errMsg && err.errMsg.includes('already exist')) {
+        // 已存在，正常
+      } else if (err.errCode === -502005 || (err.errMsg && err.errMsg.includes('not exists'))) {
+        // 重试一次
+        try { await db.createCollection(name) } catch (_) {}
+      }
+      // 其他错误也忽略，不影响主流程
+    }
+  }
+}
+
 // 活动类型对应的集合名称映射
 function getCollectionNames(activityType) {
   if (activityType === 'arsenal') {
@@ -28,6 +50,9 @@ function getCollectionNames(activityType) {
 // 云函数入口函数
 exports.main = async (event, context) => {
   const { action, data } = event
+
+  // 首次调用时自动创建集合
+  await ensureCollections()
 
   try {
     switch (action) {

@@ -12,6 +12,10 @@
  *    - timeSlots
  *    - registrations
  *    - superAdmins
+ *    - arsenalConfigs
+ *    - arsenalRegistrations
+ *    - canyonConfigs
+ *    - canyonRegistrations
  * 4. 为每个集合添加索引（参考 cloudbaserc.json）
  *
  * 5. 添加超级管理员手机号：
@@ -43,22 +47,11 @@ async function initDatabase() {
 
   for (const collection of COLLECTIONS) {
     try {
-      // 先尝试创建集合（如果已存在会自动跳过）
-      await db.createCollection(collection)
-      console.log(`集合 ${collection} 已创建`)
+      // 尝试访问集合，如果不存在会报错
+      await db.collection(collection).limit(1).get()
+      console.log(`集合 ${collection} 已就绪`)
     } catch (err) {
-      // 集合已存在时会报错，这是正常的
-      if (err.errMsg && err.errMsg.includes('already exists')) {
-        console.log(`集合 ${collection} 已存在`)
-      } else {
-        // 尝试访问集合确认其可用性
-        try {
-          await db.collection(collection).limit(1).get()
-          console.log(`集合 ${collection} 已就绪`)
-        } catch (err2) {
-          console.error(`集合 ${collection} 初始化失败:`, err2)
-        }
-      }
+      console.error(`集合 ${collection} 不存在或未初始化，请在云开发控制台手动创建`)
     }
   }
 }

@@ -1,8 +1,8 @@
 ---
-status: fixing
+status: awaiting_human_verify
 trigger: "Debug two errors in arsenal-canyon-registration: Error 1 - collection not exists (arsenalConfigs), Error 2 - query params all undefined"
 created: 2026-05-17T12:00:00Z
-updated: 2026-05-17T12:15:00Z
+updated: 2026-05-17T12:20:00Z
 ---
 
 ## Current Focus
