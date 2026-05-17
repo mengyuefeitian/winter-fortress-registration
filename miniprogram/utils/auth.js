@@ -18,9 +18,9 @@ function getRoleDisplayName(role) {
 // 角色权限映射
 const ROLE_PERMISSIONS = {
   user: ['fortressRegistration', 'positionRegistration', 'applyAllianceManager', 'applyZoneManager', 'myRegistrations'],
-  auditor: ['fortressTimeManage', 'positionTimeManage', 'clearData', 'statistics'],
-  admin: ['fortressTimeManage', 'positionTimeManage', 'clearData', 'statistics', 'allianceConfig', 'reviewAllianceManager', 'positionManage'],
-  superAdmin: ['zoneManage', 'reviewZoneManager', 'superAdminManage', 'fortressTimeManage', 'positionTimeManage', 'clearData', 'statistics', 'allianceConfig', 'reviewAllianceManager', 'positionManage']
+  auditor: ['fortressTimeManage', 'positionTimeManage', 'clearData', 'statistics', 'activityManage'],
+  admin: ['fortressTimeManage', 'positionTimeManage', 'clearData', 'statistics', 'allianceConfig', 'reviewAllianceManager', 'positionManage', 'activityManage'],
+  superAdmin: ['zoneManage', 'reviewZoneManager', 'superAdminManage', 'fortressTimeManage', 'positionTimeManage', 'clearData', 'statistics', 'allianceConfig', 'reviewAllianceManager', 'positionManage', 'activityManage']
 }
 
 // 检查是否有权限访问某个功能
@@ -94,6 +94,11 @@ function canManageSuperAdmin(role) {
   return role === 'superAdmin'
 }
 
+// 检查是否可以管理活动（兵工厂&峡谷）
+function canManageActivity(role) {
+  return role === 'auditor' || role === 'admin' || role === 'superAdmin'
+}
+
 module.exports = {
   hasPermission,
   isAdminOrAbove,
@@ -111,5 +116,6 @@ module.exports = {
   canReviewAllianceManager,
   canReviewZoneManager,
   canManagePosition,
-  canManageSuperAdmin
+  canManageSuperAdmin,
+  canManageActivity
 }

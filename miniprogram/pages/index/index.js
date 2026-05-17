@@ -419,6 +419,22 @@ Page({
     })
   },
 
+  // 兵工厂报名
+  goToArsenalRegistration: function () {
+    if (!this.ensureLogin()) return
+    wx.navigateTo({
+      url: '/pages/user/arsenal-registration/arsenal-registration'
+    })
+  },
+
+  // 峡谷会战报名
+  goToCanyonRegistration: function () {
+    if (!this.ensureLogin()) return
+    wx.navigateTo({
+      url: '/pages/user/canyon-registration/canyon-registration'
+    })
+  },
+
   // 意见与建议
   goToFeedback: function () {
     wx.navigateTo({

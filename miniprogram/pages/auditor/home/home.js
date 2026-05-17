@@ -16,7 +16,8 @@ Page({
     alliances: [],
     allianceIndex: 0,
     selectedAlliance: null,
-    adminZoneIndex: 0
+    adminZoneIndex: 0,
+    pendingActivityCount: 0
   },
 
   onLoad: function () {
@@ -76,6 +77,7 @@ Page({
     } else {
       this.loadMyAlliances()
     }
+    this.loadPendingActivityCount()
   },
 
   loadUserInfo: function () {
@@ -208,6 +210,18 @@ Page({
       })
     } catch (err) {
       console.error('加载联盟信息失败:', err)
+    }
+  },
+
+  loadPendingActivityCount: async function () {
+    try {
+      const wxdb = wx.cloud.database()
+      const res = await wxdb.collection('admins').where({
+        status: 'pending'
+      }).count()
+      this.setData({ pendingActivityCount: res.total })
+    } catch (err) {
+      console.error('加载待审核活动数量失败:', err)
     }
   },
 

@@ -97,6 +97,68 @@
     </view>
   </view>
 
+  <!-- 兵工厂报名 -->
+  <view class="section-header mt-24">
+    <text class="section-title">兵工厂报名</text>
+  </view>
+
+  <view wx:if="{{arsenalRegistrations.length === 0}}" class="card">
+    <view class="empty-state">
+      <text class="empty-text">暂无兵工厂报名记录</text>
+    </view>
+  </view>
+
+  <view wx:else class="table-container">
+    <view class="table-row table-header-row">
+      <text class="table-cell time-header">时间/日期</text>
+      <text class="table-cell">昵称</text>
+      <text class="table-cell">军团</text>
+      <text class="table-cell action-cell">操作</text>
+    </view>
+    <view wx:for="{{arsenalRegistrations}}" wx:key="_id" class="table-row">
+      <view class="table-cell time-cell">
+        <text class="time-main">{{item.time}}</text>
+        <text wx:if="{{item.date}}" class="time-date-small">{{item.date}}</text>
+      </view>
+      <text class="table-cell">{{item.nickName}}</text>
+      <text class="table-cell">{{item.corps}}</text>
+      <text class="table-cell action-cell">
+        <text class="cancel-btn-small" bindtap="cancelArsenalRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</text>
+      </text>
+    </view>
+  </view>
+
+  <!-- 峡谷会战报名 -->
+  <view class="section-header mt-24">
+    <text class="section-title">峡谷会战报名</text>
+  </view>
+
+  <view wx:if="{{canyonRegistrations.length === 0}}" class="card">
+    <view class="empty-state">
+      <text class="empty-text">暂无峡谷会战报名记录</text>
+    </view>
+  </view>
+
+  <view wx:else class="table-container">
+    <view class="table-row table-header-row">
+      <text class="table-cell time-header">时间/日期</text>
+      <text class="table-cell">昵称</text>
+      <text class="table-cell">军团</text>
+      <text class="table-cell action-cell">操作</text>
+    </view>
+    <view wx:for="{{canyonRegistrations}}" wx:key="_id" class="table-row">
+      <view class="table-cell time-cell">
+        <text class="time-main">{{item.time}}</text>
+        <text wx:if="{{item.date}}" class="time-date-small">{{item.date}}</text>
+      </view>
+      <text class="table-cell">{{item.nickName}}</text>
+      <text class="table-cell">{{item.corps}}</text>
+      <text class="table-cell action-cell">
+        <text class="cancel-btn-small" bindtap="cancelCanyonRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</text>
+      </text>
+    </view>
+  </view>
+
   <!-- 意见反馈 -->
   <view class="section-header mt-24">
     <text class="section-title">帮助与反馈</text>

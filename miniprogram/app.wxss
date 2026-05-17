@@ -741,6 +741,17 @@ page {
   background-color: #e94560;
 }
 
+.badge-red {
+  background-color: #FF6B6B;
+  color: white;
+  border-radius: 10px;
+  padding: 2px 8px;
+  font-size: 12px;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
 .function-icon {
   width: 40px;
   height: 40px;
