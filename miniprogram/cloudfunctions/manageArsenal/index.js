@@ -90,7 +90,6 @@ exports.main = async (event, context) => {
 async function verifyRole(openid) {
   console.log('verifyRole called with openid:', openid)
 
-  // 先通过 openid 查 users 集合拿到用户文档
   const userRes = await db.collection('users').where({
     openid: openid
   }).get()
@@ -106,19 +105,32 @@ async function verifyRole(openid) {
   const userRole = user.role || 'user'
   console.log('Found user, _id:', userId, 'role:', userRole)
 
-  // 检查 superAdmin（users.role 为 superAdmin 且 superAdmins 集合有记录）
+  // 优先检查 superAdmin（通过 phone 匹配，users.role 可能仍是 admin）
+  const superAdminRes = await db.collection('superAdmins').where({
+    userId: userId
+  }).get()
+  console.log('superAdmins by userId query count:', superAdminRes.data.length)
+
+  if (superAdminRes.data.length > 0) {
+    console.log('User is superAdmin (matched by userId)')
+    return { role: 'superAdmin', userId: userId, openid: openid }
+  }
+
+  // 如果 users.role 是 superAdmin 但没通过 userId 匹配到，可能是存的数据格式不同
   if (userRole === 'superAdmin') {
-    const superAdminRes = await db.collection('superAdmins').where({
-      userId: userId
+    // 尝试用 openid 直接匹配（兼容情况）
+    const superAdminRes2 = await db.collection('superAdmins').where({
+      openid: openid
     }).get()
-    console.log('superAdmins query result count:', superAdminRes.data.length)
-    if (superAdminRes.data.length > 0) {
+    console.log('superAdmins by openid query count:', superAdminRes2.data.length)
+    if (superAdminRes2.data.length > 0) {
+      console.log('User is superAdmin (matched by openid)')
       return { role: 'superAdmin', userId: userId, openid: openid }
     }
     console.log('User role is superAdmin but not in superAdmins collection')
   }
 
-  // 检查 admin/auditor（直接用 users.role，不依赖 admins 集合）
+  // admin/auditor 直接用 users.role
   if (userRole === 'admin' || userRole === 'auditor') {
     return { role: userRole, userId: userId, openid: openid }
   }
@@ -127,11 +139,11 @@ async function verifyRole(openid) {
   throw new Error('权限不足')
 }
 
-// 验证盟管是否绑定到指定联盟（通过 alliances 集合中的 auditorIds）
-async function verifyAuditorAlliance(openid, allianceId) {
+// 验证盟管是否绑定到指定联盟（alliances.auditorIds 存的是 users._id）
+async function verifyAuditorAlliance(userId, allianceId) {
   const allianceRes = await db.collection('alliances').where({
     _id: allianceId,
-    auditorIds: openid
+    auditorIds: userId
   }).get()
 
   if (allianceRes.data.length === 0) {
@@ -164,7 +176,7 @@ async function createConfig(data) {
     if (!allianceId) {
       throw new Error('盟管需要指定联盟ID')
     }
-    await verifyAuditorAlliance(openid, allianceId)
+    await verifyAuditorAlliance(userId, allianceId)
   }
 
   const collectionName = getCollectionNames(activityType).config
