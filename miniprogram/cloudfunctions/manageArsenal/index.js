@@ -103,31 +103,31 @@ async function verifyRole(openid) {
   const user = userRes.data[0]
   const userId = user._id
   const userRole = user.role || 'user'
-  console.log('Found user, _id:', userId, 'role:', userRole)
+  const userPhone = user.phone || null
+  console.log('Found user, _id:', userId, 'role:', userRole, 'phone:', userPhone)
 
-  // 优先检查 superAdmin（通过 phone 匹配，users.role 可能仍是 admin）
-  const superAdminRes = await db.collection('superAdmins').where({
-    userId: userId
-  }).get()
-  console.log('superAdmins by userId query count:', superAdminRes.data.length)
-
-  if (superAdminRes.data.length > 0) {
-    console.log('User is superAdmin (matched by userId)')
-    return { role: 'superAdmin', userId: userId, openid: openid }
-  }
-
-  // 如果 users.role 是 superAdmin 但没通过 userId 匹配到，可能是存的数据格式不同
-  if (userRole === 'superAdmin') {
-    // 尝试用 openid 直接匹配（兼容情况）
-    const superAdminRes2 = await db.collection('superAdmins').where({
-      openid: openid
+  // 检查 superAdmin：用 phone 匹配（superAdmins 集合只存了 phone）
+  if (userPhone) {
+    const superAdminPhoneRes = await db.collection('superAdmins').where({
+      phone: userPhone
     }).get()
-    console.log('superAdmins by openid query count:', superAdminRes2.data.length)
-    if (superAdminRes2.data.length > 0) {
-      console.log('User is superAdmin (matched by openid)')
+    console.log('superAdmins by phone query count:', superAdminPhoneRes.data.length)
+    if (superAdminPhoneRes.data.length > 0) {
+      console.log('User is superAdmin (matched by phone)')
       return { role: 'superAdmin', userId: userId, openid: openid }
     }
-    console.log('User role is superAdmin but not in superAdmins collection')
+    // 兼容 phone 为 number 类型的旧数据
+    const phoneNum = parseInt(userPhone, 10)
+    if (!isNaN(phoneNum)) {
+      const superAdminPhoneNumRes = await db.collection('superAdmins').where({
+        phone: phoneNum
+      }).get()
+      console.log('superAdmins by phone number query count:', superAdminPhoneNumRes.data.length)
+      if (superAdminPhoneNumRes.data.length > 0) {
+        console.log('User is superAdmin (matched by phone number)')
+        return { role: 'superAdmin', userId: userId, openid: openid }
+      }
+    }
   }
 
   // admin/auditor 直接用 users.role
