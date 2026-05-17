@@ -108,15 +108,32 @@ Page({
         const alliance = await this.getAllianceById(reg.allianceId)
         const timeSlot = await db.getTimeSlotById(reg.timeSlotId)
 
+        // Format date as YY/MM/DD
+        let formattedDate = ''
+        if (timeSlot && timeSlot.date) {
+          const dateParts = timeSlot.date.split('-')
+          if (dateParts.length === 3) {
+            formattedDate = dateParts[0].slice(-2) + '/' + dateParts[1] + '/' + dateParts[2]
+          }
+        }
+
+        // Truncate alliance name to first 3 chars
+        const allianceName = alliance ? alliance.allianceName : '未知联盟'
+        const shortAllianceName = allianceName.substring(0, 3)
+        const zoneCode = zone ? zone.zoneCode : ''
+
         processedRegistrations.push({
           ...reg,
           zoneName: zone ? zone.zoneName : '未知分区',
-          zoneCode: zone ? zone.zoneCode : '',
+          zoneCode: zoneCode,
           zoneId: reg.zoneId,
-          allianceName: alliance ? alliance.allianceName : '未知联盟',
+          allianceName: allianceName,
+          shortAllianceName: shortAllianceName,
           displayName: timeSlot ? timeSlot.displayName : '未知时间',
           timeTag: timeSlot ? timeSlot.tag : '',
+          timeFortress: timeSlot ? timeSlot.fortress : '',
           timeDate: timeSlot ? timeSlot.date : '',
+          formattedDate: formattedDate,
           formattedTime: util.formatDate(reg.createTime, 'YYYY-MM-DD HH:mm')
         })
       }

@@ -31,7 +31,7 @@
     </view>
     <view class="function-card-compact" bindtap="goToTimeSlotConfig">
       <view class="function-content">
-        <text class="function-name">时间段配置</text>
+        <text class="function-name">堡垒配置</text>
         <text class="function-desc">配置堡垒活动时间</text>
       </view>
     </view>

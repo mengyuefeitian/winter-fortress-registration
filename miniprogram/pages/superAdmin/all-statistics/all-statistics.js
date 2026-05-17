@@ -7,7 +7,7 @@ const auth = require('../../../utils/auth')
 Page({
   data: {
     // 报名类型选择
-    registrationTypes: ['堡垒报名', '官职报名'],
+    registrationTypes: ['堡垒报名', '兵工厂报名', '峡谷报名', '官职报名'],
     regTypeIndex: 0,
     selectedRegType: '堡垒报名',
 
@@ -26,7 +26,17 @@ Page({
     // 官职报名数据
     positionConfigs: [],
     positionStats: [],
-    positionTotal: 0
+    positionTotal: 0,
+
+    // 兵工厂报名数据
+    arsenalConfigs: [],
+    arsenalStats: [],
+    arsenalTotal: 0,
+
+    // 峡谷报名数据
+    canyonConfigs: [],
+    canyonStats: [],
+    canyonTotal: 0
   },
 
   onLoad: function () {
@@ -177,7 +187,83 @@ Page({
           fullSlots: fullSlots,
           remainingSlots: remainingSlots,
           positionStats: [],
-          positionTotal: 0
+          positionTotal: 0,
+          arsenalStats: [],
+          arsenalTotal: 0,
+          canyonStats: [],
+          canyonTotal: 0
+        })
+
+      } else if (this.data.selectedRegType === '兵工厂报名') {
+        // 兵工厂报名统计
+        if (!this.data.selectedZone) {
+          util.hideLoading()
+          return
+        }
+
+        const configs = await db.getArsenalConfigs({ zoneId: this.data.selectedZone._id })
+
+        const arsenalStats = []
+        let arsenalTotal = 0
+
+        for (const config of configs) {
+          const stats = await db.getArsenalStats(config._id)
+          arsenalStats.push({
+            config: config,
+            registrations: stats.registrations || [],
+            count: stats.count || 0
+          })
+          arsenalTotal += stats.count || 0
+        }
+
+        this.setData({
+          arsenalConfigs: configs,
+          arsenalStats: arsenalStats,
+          arsenalTotal: arsenalTotal,
+          timeSlotStats: [],
+          totalRegistrations: 0,
+          fullSlots: 0,
+          remainingSlots: 0,
+          positionStats: [],
+          positionTotal: 0,
+          canyonStats: [],
+          canyonTotal: 0
+        })
+
+      } else if (this.data.selectedRegType === '峡谷报名') {
+        // 峡谷报名统计
+        if (!this.data.selectedZone) {
+          util.hideLoading()
+          return
+        }
+
+        const configs = await db.getCanyonConfigs({ zoneId: this.data.selectedZone._id })
+
+        const canyonStats = []
+        let canyonTotal = 0
+
+        for (const config of configs) {
+          const stats = await db.getCanyonStats(config._id)
+          canyonStats.push({
+            config: config,
+            registrations: stats.registrations || [],
+            count: stats.count || 0
+          })
+          canyonTotal += stats.count || 0
+        }
+
+        this.setData({
+          canyonConfigs: configs,
+          canyonStats: canyonStats,
+          canyonTotal: canyonTotal,
+          timeSlotStats: [],
+          totalRegistrations: 0,
+          fullSlots: 0,
+          remainingSlots: 0,
+          positionStats: [],
+          positionTotal: 0,
+          arsenalStats: [],
+          arsenalTotal: 0
         })
 
       } else {
@@ -237,7 +323,11 @@ Page({
           timeSlotStats: [],
           totalRegistrations: 0,
           fullSlots: 0,
-          remainingSlots: 0
+          remainingSlots: 0,
+          arsenalStats: [],
+          arsenalTotal: 0,
+          canyonStats: [],
+          canyonTotal: 0
         })
       }
 
