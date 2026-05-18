@@ -2,7 +2,12 @@
   "description": "无尽冬日堡垒分配小程序",
   "miniprogramRoot": "miniprogram/",
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      { "type": "glob", "value": "cloudfunctions/**/node_modules/**" },
+      { "type": "glob", "value": "cloudfunctions/**/*.test.*" },
+      { "type": "glob", "value": "scripts/**" },
+      { "type": "glob", "value": "**/.DS_Store" }
+    ],
     "include": []
   },
   "setting": {
