@@ -213,10 +213,11 @@ Page({
 
         for (const config of configs) {
           const stats = await db.getArsenalStats(config._id)
+          const regs = (stats.registrations || []).sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
           arsenalStats.push({
             config: config,
             activityTypeLabel: ACTIVITY_TYPE_LABELS[config.activityType] || config.activityType,
-            registrations: stats.registrations || [],
+            registrations: regs,
             count: stats.totalRegistered || stats.count || 0
           })
           arsenalTotal += stats.totalRegistered || stats.count || 0
@@ -252,10 +253,11 @@ Page({
 
         for (const config of configs) {
           const stats = await db.getCanyonStats(config._id)
+          const regs = (stats.registrations || []).sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
           canyonStats.push({
             config: config,
             activityTypeLabel: ACTIVITY_TYPE_LABELS[config.activityType] || config.activityType,
-            registrations: stats.registrations || [],
+            registrations: regs,
             count: stats.totalRegistered || stats.count || 0
           })
           canyonTotal += stats.totalRegistered || stats.count || 0
@@ -316,7 +318,11 @@ Page({
 
         // 组装统计数据
         const positionStats = configs.map(config => {
-          const regs = regsByConfig[config._id] || []
+          const regs = (regsByConfig[config._id] || []).sort((a, b) => {
+            const aTime = a.timeSlot || ''
+            const bTime = b.timeSlot || ''
+            return aTime < bTime ? -1 : aTime > bTime ? 1 : 0
+          })
           return {
             config: config,
             registrations: regs,
@@ -677,7 +683,7 @@ Page({
           if (stat.registrations.length > 0) {
             ctx.fillStyle = '#666666'
             ctx.font = '24px sans-serif'
-            const sorted = [...stat.registrations].sort((a, b) => (a.position === 'combat' ? -1 : 1) - (b.position === 'combat' ? -1 : 1))
+            const sorted = [...stat.registrations].sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
             const nameStrs = sorted.map((r, i) => `${i + 1}.${r.nickName}(${r.position === 'combat' ? '参战' : '替补'})`)
             for (let i = 0; i < nameStrs.length; i += 3) {
               ctx.fillText(nameStrs.slice(i, i + 3).join(' '), margin + 20, y)
@@ -799,7 +805,7 @@ Page({
           if (stat.registrations.length > 0) {
             ctx.fillStyle = '#666666'
             ctx.font = '24px sans-serif'
-            const sorted = [...stat.registrations].sort((a, b) => (a.position === 'combat' ? -1 : 1) - (b.position === 'combat' ? -1 : 1))
+            const sorted = [...stat.registrations].sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
             const nameStrs = sorted.map((r, i) => `${i + 1}.${r.nickName}(${r.position === 'combat' ? '参战' : '替补'})`)
             for (let i = 0; i < nameStrs.length; i += 3) {
               ctx.fillText(nameStrs.slice(i, i + 3).join(' '), margin + 20, y)

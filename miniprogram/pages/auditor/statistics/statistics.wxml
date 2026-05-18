@@ -102,7 +102,7 @@
           <view wx:for="{{arsenalStats}}" wx:key="*this" class="time-slot-card">
             <view class="slot-header">
               <view class="slot-time">
-                <text class="config-title">{{item.config.activityType}}</text>
+                <text class="config-title">{{item.activityTypeLabel}}</text>
                 <text class="slot-tag">{{item.config.date}}</text>
               </view>
               <view class="slot-status">
@@ -116,6 +116,9 @@
               <view wx:for="{{item.registrations}}" wx:for-item="reg" wx:for-index="regIdx" wx:key="_id" class="registration-item">
                 <view class="reg-order">{{regIdx + 1}}</view>
                 <view class="reg-name">{{reg.nickName}}</view>
+                <view class="reg-position {{reg.position === 'combat' ? 'combat' : 'substitute'}}">
+                  {{reg.position === 'combat' ? '参战' : '替补'}}
+                </view>
               </view>
             </view>
           </view>
@@ -147,7 +150,7 @@
           <view wx:for="{{canyonStats}}" wx:key="*this" class="time-slot-card">
             <view class="slot-header">
               <view class="slot-time">
-                <text class="config-title">{{item.config.activityType}}</text>
+                <text class="config-title">{{item.activityTypeLabel}}</text>
                 <text class="slot-tag">{{item.config.date}}</text>
               </view>
               <view class="slot-status">
@@ -161,6 +164,9 @@
               <view wx:for="{{item.registrations}}" wx:for-item="reg" wx:for-index="regIdx" wx:key="_id" class="registration-item">
                 <view class="reg-order">{{regIdx + 1}}</view>
                 <view class="reg-name">{{reg.nickName}}</view>
+                <view class="reg-position {{reg.position === 'combat' ? 'combat' : 'substitute'}}">
+                  {{reg.position === 'combat' ? '参战' : '替补'}}
+                </view>
               </view>
             </view>
           </view>

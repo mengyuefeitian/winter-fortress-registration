@@ -312,8 +312,8 @@ Page({
       }))
 
       processed.sort((a, b) => {
-        if (a.position === 'combat' && b.position !== 'combat') return -1
-        if (a.position !== 'combat' && b.position === 'combat') return 1
+        if (a.position === 'substitute' && b.position !== 'substitute') return -1
+        if (a.position !== 'substitute' && b.position === 'substitute') return 1
         return 0
       })
 

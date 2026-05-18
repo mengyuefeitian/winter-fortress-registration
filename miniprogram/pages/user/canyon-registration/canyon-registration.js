@@ -311,7 +311,7 @@ Page({
         isMine: currentUserId && r.userId === currentUserId
       }))
 
-      processed.sort((a, b) => (a.position === 'combat' ? -1 : 1) - (b.position === 'combat' ? -1 : 1))
+      processed.sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
 
       this.setData({
         registrations: processed

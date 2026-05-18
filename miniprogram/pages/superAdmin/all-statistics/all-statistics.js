@@ -210,10 +210,11 @@ Page({
 
         for (const config of configs) {
           const stats = await db.getArsenalStats(config._id)
+          const regs = (stats.registrations || []).sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
           arsenalStats.push({
             config: config,
             activityTypeLabel: ACTIVITY_TYPE_LABELS[config.activityType] || config.activityType,
-            registrations: stats.registrations || [],
+            registrations: regs,
             count: stats.count || 0
           })
           arsenalTotal += stats.count || 0
@@ -247,10 +248,11 @@ Page({
 
         for (const config of configs) {
           const stats = await db.getCanyonStats(config._id)
+          const regs = (stats.registrations || []).sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
           canyonStats.push({
             config: config,
             activityTypeLabel: ACTIVITY_TYPE_LABELS[config.activityType] || config.activityType,
-            registrations: stats.registrations || [],
+            registrations: regs,
             count: stats.count || 0
           })
           canyonTotal += stats.count || 0
@@ -310,7 +312,11 @@ Page({
           })
 
           if (regRes.result.success) {
-            const registrations = regRes.result.data
+            const registrations = (regRes.result.data || []).sort((a, b) => {
+              const aTime = a.timeSlot || ''
+              const bTime = b.timeSlot || ''
+              return aTime < bTime ? -1 : aTime > bTime ? 1 : 0
+            })
             positionStats.push({
               config: config,
               registrations: registrations,
@@ -339,7 +345,8 @@ Page({
 
     } catch (err) {
       util.hideLoading()
-      util.showError('加载统计数据失败')
+      console.error('加载统计数据失败:', err)
+      util.showError('加载统计数据失败: ' + (err.message || '未知错误'))
     }
   },
 
@@ -577,7 +584,7 @@ Page({
           if (stat.registrations.length > 0) {
             ctx.fillStyle = '#666666'
             ctx.font = '24px sans-serif'
-            const sorted = [...stat.registrations].sort((a, b) => (a.position === 'combat' ? -1 : 1) - (b.position === 'combat' ? -1 : 1))
+            const sorted = [...stat.registrations].sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
             const nameStrs = sorted.map((r, i) => `${i + 1}.${r.nickName}(${r.position === 'combat' ? '参战' : '替补'})`)
             for (let i = 0; i < nameStrs.length; i += 3) {
               ctx.fillText(nameStrs.slice(i, i + 3).join(' '), margin + 20, y)
@@ -672,7 +679,7 @@ Page({
           if (stat.registrations.length > 0) {
             ctx.fillStyle = '#666666'
             ctx.font = '24px sans-serif'
-            const sorted = [...stat.registrations].sort((a, b) => (a.position === 'combat' ? -1 : 1) - (b.position === 'combat' ? -1 : 1))
+            const sorted = [...stat.registrations].sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
             const nameStrs = sorted.map((r, i) => `${i + 1}.${r.nickName}(${r.position === 'combat' ? '参战' : '替补'})`)
             for (let i = 0; i < nameStrs.length; i += 3) {
               ctx.fillText(nameStrs.slice(i, i + 3).join(' '), margin + 20, y)

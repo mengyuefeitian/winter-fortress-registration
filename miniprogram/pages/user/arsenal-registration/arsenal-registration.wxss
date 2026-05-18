@@ -1,4 +1,4 @@
-@import "../registration/registration.wxss";
+@import "../user/registration/registration.wxss";
 
 .position-option.active {
   background-color: #4A90D9;

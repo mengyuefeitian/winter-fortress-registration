@@ -26,7 +26,9 @@ Page({
     // 峡谷报名数据
     canyonConfigs: [],
     canyonStats: [],
-    canyonTotal: 0
+    canyonTotal: 0,
+
+    ACTIVITY_TYPE_LABELS: { 'arsenal': '兵工厂', 'canyon': '峡谷会战' }
   },
 
   onLoad: function (options) {
@@ -172,9 +174,11 @@ Page({
 
         for (const config of configs) {
           const stats = await db.getArsenalStats(config._id)
+          const regs = (stats.registrations || []).sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
           arsenalStats.push({
             config: config,
-            registrations: stats.registrations || [],
+            activityTypeLabel: this.data.ACTIVITY_TYPE_LABELS[config.activityType] || config.activityType,
+            registrations: regs,
             count: stats.count || 0
           })
           arsenalTotal += stats.count || 0
@@ -214,9 +218,11 @@ Page({
 
         for (const config of configs) {
           const stats = await db.getCanyonStats(config._id)
+          const regs = (stats.registrations || []).sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
           canyonStats.push({
             config: config,
-            registrations: stats.registrations || [],
+            activityTypeLabel: this.data.ACTIVITY_TYPE_LABELS[config.activityType] || config.activityType,
+            registrations: regs,
             count: stats.count || 0
           })
           canyonTotal += stats.count || 0
