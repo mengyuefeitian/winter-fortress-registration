@@ -52,7 +52,6 @@
         <text class="function-name">兵工厂&峡谷</text>
         <text class="function-desc">生成联盟活动时间进行报名</text>
       </view>
-      <view wx:if="{{pendingActivityCount > 0}}" class="badge badge-danger">{{pendingActivityCount}}</view>
     </view>
   </view>
 

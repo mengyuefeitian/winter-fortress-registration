@@ -230,6 +230,7 @@
           <text class="function-name">区管控制台</text>
           <text class="function-desc">管理分区和联盟配置</text>
         </view>
+        <view wx:if="{{pendingAdminReviewCount > 0}}" class="badge badge-danger">{{pendingAdminReviewCount}}</view>
       </view>
 
       <!-- 超管控制台 -->
@@ -241,6 +242,7 @@
           <text class="function-name">超管控制台</text>
           <text class="function-desc">全局管理和审核</text>
         </view>
+        <view wx:if="{{pendingReviewCount > 0}}" class="badge badge-danger">{{pendingReviewCount}}</view>
       </view>
     </view>
 

@@ -22,6 +22,8 @@ Page({
     showAdminConsole: false,
     showAuditorConsole: false,
     showSuperAdminConsole: false,
+    pendingReviewCount: 0,
+    pendingAdminReviewCount: 0,
     // 区域选择
     zones: [],
     currentZone: null,
@@ -260,8 +262,20 @@ Page({
       // 盟管控制台（盟管、区管和超管可见）
       showAuditorConsole: isAdminOrAbove,
       // 超管控制台（仅超管可见）
-      showSuperAdminConsole: isSuperAdmin
+      showSuperAdminConsole: isSuperAdmin,
+      pendingReviewCount: 0,
+      pendingAdminReviewCount: 0
     })
+
+    // 超管加载待审核数量
+    if (isSuperAdmin) {
+      this.loadPendingReviewCount()
+    }
+
+    // 区管加载待审核盟管申请数量
+    if (isAdmin) {
+      this.loadPendingAllianceManagerCount()
+    }
   },
 
   // 计算用户在当前分区的有效角色
@@ -282,6 +296,33 @@ Page({
 
     // 默认普通用户
     return 'user'
+  },
+
+  // 加载待审核数量（超管用）
+  loadPendingReviewCount: async function () {
+    try {
+      const wxdb = wx.cloud.database()
+      const [zoneManagerRes, allianceManagerRes, zoneCreationRes] = await Promise.all([
+        wxdb.collection('admins').where({ applyType: 'zoneManager', status: 'pending' }).count(),
+        wxdb.collection('admins').where({ applyType: 'allianceManager', status: 'pending' }).count(),
+        wxdb.collection('admins').where({ applyType: 'zoneCreation', status: 'pending' }).count()
+      ])
+      const total = zoneManagerRes.total + allianceManagerRes.total + zoneCreationRes.total
+      this.setData({ pendingReviewCount: total })
+    } catch (err) {
+      console.error('加载待审核数量失败:', err)
+    }
+  },
+
+  // 加载待审核盟管申请数量（区管用）
+  loadPendingAllianceManagerCount: async function () {
+    try {
+      const wxdb = wx.cloud.database()
+      const res = await wxdb.collection('admins').where({ applyType: 'allianceManager', status: 'pending' }).count()
+      this.setData({ pendingAdminReviewCount: res.total })
+    } catch (err) {
+      console.error('加载待审核盟管数量失败:', err)
+    }
   },
 
   // 加载区域列表

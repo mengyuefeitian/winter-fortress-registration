@@ -27,7 +27,8 @@ Page({
     allianceName: '',
     zoneName: '',
     configs: [],
-    loading: false
+    loading: false,
+    initialized: false
   },
 
   onLoad: function (options) {
@@ -198,6 +199,7 @@ Page({
         return
       }
 
+      // 检查角色
       const configData = {
         date: this.data.selectedDate,
         timeValue: this.data.selectedTime,
@@ -232,7 +234,9 @@ Page({
     } catch (err) {
       util.hideLoading()
       console.error('添加失败:', err)
-      util.showError('添加失败')
+      // 显示详细错误信息，帮助诊断
+      const errMsg = err.message || err.errMsg || '未知错误'
+      util.showError('添加失败: ' + errMsg)
     }
   },
 

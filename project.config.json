@@ -60,5 +60,6 @@
     "tabSize": 2
   },
   "cloudfunctionRoot": "miniprogram/cloudfunctions/",
-  "simulatorPluginLibVersion": {}
+  "simulatorPluginLibVersion": {},
+  "cloudfunctionTemplateRoot": "cloudfunctionTemplate/"
 }

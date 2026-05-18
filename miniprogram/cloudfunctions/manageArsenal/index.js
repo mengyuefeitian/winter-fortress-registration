@@ -135,8 +135,10 @@ async function verifyRole(openid) {
     return { role: userRole, userId: userId, openid: openid }
   }
 
-  console.log('User role is "' + userRole + '", throwing 权限不足')
-  throw new Error('权限不足')
+  // 权限不足：提供详细日志
+  console.log('PERMISSION DENIED: user _id:', userId, 'role:', userRole, 'phone:', userPhone,
+    'openid:', openid, 'auditorIds:', JSON.stringify(user.auditorIds || []))
+  throw new Error('权限不足（当前角色: ' + userRole + '，需要 auditor/admin/superAdmin）')
 }
 
 // 验证盟管是否绑定到指定联盟（alliances.auditorIds 存的是 users._id）
@@ -394,14 +396,24 @@ async function getRegistrations(data) {
 
   const collectionName = getCollectionNames(activityType).registration
 
-  const res = await db.collection(collectionName).where({
-    configId: configId,
-    status: 'active'
-  }).orderBy('createTime', 'asc').get()
+  // 分页获取所有记录，避免20条限制
+  let allData = []
+  let skip = 0
+  const batchSize = 20
+  while (true) {
+    const res = await db.collection(collectionName).where({
+      configId: configId,
+      status: 'active'
+    }).orderBy('createTime', 'asc').skip(skip).limit(batchSize).get()
+    allData = allData.concat(res.data)
+    if (res.data.length < batchSize) break
+    skip += batchSize
+    if (skip > 500) break
+  }
 
   return {
     success: true,
-    data: res.data
+    data: allData
   }
 }
 
@@ -415,14 +427,24 @@ async function getRegistrationsByUser(data) {
 
   const collectionName = getCollectionNames(activityType).registration
 
-  const res = await db.collection(collectionName).where({
-    userId: userId,
-    status: 'active'
-  }).orderBy('createTime', 'desc').get()
+  // 分页获取所有记录，避免20条限制
+  let allData = []
+  let skip = 0
+  const batchSize = 20
+  while (true) {
+    const res = await db.collection(collectionName).where({
+      userId: userId,
+      status: 'active'
+    }).orderBy('createTime', 'desc').skip(skip).limit(batchSize).get()
+    allData = allData.concat(res.data)
+    if (res.data.length < batchSize) break
+    skip += batchSize
+    if (skip > 500) break
+  }
 
   return {
     success: true,
-    data: res.data
+    data: allData
   }
 }
 
@@ -499,6 +521,21 @@ async function getStats(data) {
   const combatCount = combatCountRes.total
   const substituteCount = substituteCountRes.total
 
+  // 获取报名记录列表（带分页，避免20条限制）
+  let allRegs = []
+  let skip = 0
+  const batchSize = 20
+  while (true) {
+    const res = await db.collection(collectionName).where({
+      configId: configId,
+      status: 'active'
+    }).skip(skip).limit(batchSize).get()
+    allRegs = allRegs.concat(res.data)
+    if (res.data.length < batchSize) break
+    skip += batchSize
+    if (skip > 200) break
+  }
+
   return {
     success: true,
     data: {
@@ -506,7 +543,13 @@ async function getStats(data) {
       combatCount: combatCount,
       substituteCount: substituteCount,
       combatRemaining: DEFAULT_CAPACITY.combat - combatCount,
-      substituteRemaining: DEFAULT_CAPACITY.substitute - substituteCount
+      substituteRemaining: DEFAULT_CAPACITY.substitute - substituteCount,
+      // 兼容前端不同页面的字段名
+      combat: combatCount,
+      substitute: substituteCount,
+      count: totalRes.total,
+      registrations: allRegs,
+      myRegistrations: allRegs
     }
   }
 }

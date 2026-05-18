@@ -9,8 +9,7 @@ Page({
     roleDisplayName: '',
     pendingZoneManagerCount: 0,
     pendingAllianceManagerCount: 0,
-    pendingZoneCreationCount: 0,
-    pendingActivityCount: 0
+    pendingZoneCreationCount: 0
   },
 
   onLoad: function () {
@@ -71,9 +70,6 @@ Page({
         pendingAllianceManagerCount: allianceManagerCount,
         pendingZoneCreationCount: zoneCreationCount
       })
-
-      // 获取活动待审核数量
-      this.loadPendingActivityCount()
     } catch (err) {
       console.error('加载待审核数量失败:', err)
     }
@@ -92,18 +88,6 @@ Page({
     } catch (err) {
       console.error('获取待审核数量失败:', err)
       return 0
-    }
-  },
-
-  loadPendingActivityCount: async function () {
-    try {
-      const wxdb = wx.cloud.database()
-      const res = await wxdb.collection('admins').where({
-        status: 'pending'
-      }).count()
-      this.setData({ pendingActivityCount: res.total })
-    } catch (err) {
-      console.error('加载待审核活动数量失败:', err)
     }
   },
 

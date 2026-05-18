@@ -31,7 +31,8 @@ Page({
     selectedAlliance: null,
 
     configs: [],
-    loading: false
+    loading: false,
+    zonesLoaded: false
   },
 
   onLoad: function () {
@@ -40,7 +41,9 @@ Page({
   },
 
   onShow: function () {
-    if (app.globalData.roleReady) {
+    // 只在从其他页面返回时刷新（例如添加配置后返回）
+    // 首次加载由 onLoad → waitForRoleReady → checkPermission 处理
+    if (app.globalData.roleReady && this.data.zonesLoaded) {
       this.loadZones()
     }
   },
@@ -94,8 +97,20 @@ Page({
   loadZones: async function () {
     try {
       this.setData({ loading: true })
-      const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+
+      // 确保 userInfo 已加载
+      if (!app.globalData.userInfo || !app.globalData.userInfo._id) {
+        console.warn('userInfo not ready, retrying...')
+        this.setData({ loading: false })
+        // 延迟重试
+        setTimeout(() => this.loadZones(), 500)
+        return
+      }
+
+      const userId = app.globalData.userInfo._id
       const role = app.globalData.role || 'admin'
+
+      console.log('admin arsenal-config loadZones, userId:', userId, 'role:', role)
 
       let zones
       if (role === 'superAdmin') {
@@ -104,7 +119,7 @@ Page({
         zones = await db.getZonesByCreator(userId)
       }
 
-      console.log('admin arsenal-config loadZones, userId:', userId, 'role:', role, 'zones count:', zones ? zones.length : 0)
+      console.log('loadZones result, zones count:', zones ? zones.length : 0)
 
       if (zones && zones.length > 0) {
         let selectedZone = zones[0]
@@ -119,22 +134,24 @@ Page({
         this.setData({
           zones: zones,
           selectedZone: selectedZone,
-          loading: false
+          loading: false,
+          zonesLoaded: true
         })
         this.loadAlliances(selectedZone._id)
       } else {
-        console.log('No zones found for userId:', userId)
+        console.log('No zones found for userId:', userId, 'role:', role)
         this.setData({
           zones: [],
           selectedZone: null,
           alliances: [],
           selectedAlliance: null,
-          loading: false
+          loading: false,
+          zonesLoaded: true
         })
       }
     } catch (err) {
       console.error('加载分区失败:', err)
-      util.showError('加载分区失败')
+      util.showError('加载分区失败: ' + (err.message || '未知错误'))
       this.setData({ loading: false })
     }
   },

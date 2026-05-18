@@ -31,7 +31,8 @@ Page({
     selectedAlliance: null,
 
     configs: [],
-    loading: false
+    loading: false,
+    zonesLoaded: false
   },
 
   onLoad: function () {
@@ -40,7 +41,7 @@ Page({
   },
 
   onShow: function () {
-    if (app.globalData.roleReady) {
+    if (app.globalData.roleReady && this.data.zonesLoaded) {
       this.loadZones()
     }
   },
@@ -108,7 +109,8 @@ Page({
         this.setData({
           zones: zones,
           selectedZone: selectedZone,
-          loading: false
+          loading: false,
+          zonesLoaded: true
         })
         this.loadAlliances(selectedZone._id)
       } else {
@@ -117,12 +119,13 @@ Page({
           selectedZone: null,
           alliances: [],
           selectedAlliance: null,
-          loading: false
+          loading: false,
+          zonesLoaded: true
         })
       }
     } catch (err) {
       console.error('加载分区失败:', err)
-      util.showError('加载分区失败')
+      util.showError('加载分区失败: ' + (err.message || '未知错误'))
       this.setData({ loading: false })
     }
   },

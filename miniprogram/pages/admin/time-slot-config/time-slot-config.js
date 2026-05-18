@@ -38,7 +38,8 @@ Page({
     timeSlots: [],
     selectedSlots: [],
     selectAllChecked: false,
-    loading: false
+    loading: false,
+    zonesLoaded: false
   },
 
   onLoad: function () {
@@ -47,7 +48,7 @@ Page({
   },
 
   onShow: function () {
-    if (app.globalData.roleReady) {
+    if (app.globalData.roleReady && this.data.zonesLoaded) {
       this.loadZones()
     }
   },
@@ -124,7 +125,8 @@ Page({
         this.setData({
           zones: zones,
           selectedZone: selectedZone,
-          loading: false
+          loading: false,
+          zonesLoaded: true
         })
         this.loadAlliances(selectedZone._id)
       } else {
@@ -134,7 +136,8 @@ Page({
           alliances: [],
           selectedAlliance: null,
           timeSlots: [],
-          loading: false
+          loading: false,
+          zonesLoaded: true
         })
       }
     } catch (err) {
