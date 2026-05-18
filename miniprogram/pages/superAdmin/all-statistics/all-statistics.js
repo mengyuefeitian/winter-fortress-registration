@@ -246,6 +246,8 @@ Page({
         const canyonStats = []
         let canyonTotal = 0
 
+        const ACTIVITY_TYPE_LABELS = { 'arsenal': '兵工厂', 'canyon': '峡谷会战' }
+
         for (const config of configs) {
           const stats = await db.getCanyonStats(config._id)
           const regs = (stats.registrations || []).sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
