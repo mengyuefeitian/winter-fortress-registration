@@ -1662,12 +1662,12 @@ async function getCanyonRegistrationsByUser(userId) {
  */
 
 // 获取兵营统计数据
-async function getArsenalStats(configId) {
+async function getArsenalStats(configId, options = {}) {
   const res = await wx.cloud.callFunction({
     name: 'manageArsenal',
     data: {
       action: 'getStats',
-      data: { configId, activityType: 'arsenal' }
+      data: { configId, activityType: 'arsenal', includeRegistrations: options.includeRegistrations || false }
     }
   })
   if (!res.result || !res.result.success) {
@@ -1677,12 +1677,12 @@ async function getArsenalStats(configId) {
 }
 
 // 获取峡谷统计数据
-async function getCanyonStats(configId) {
+async function getCanyonStats(configId, options = {}) {
   const res = await wx.cloud.callFunction({
     name: 'manageArsenal',
     data: {
       action: 'getStats',
-      data: { configId, activityType: 'canyon' }
+      data: { configId, activityType: 'canyon', includeRegistrations: options.includeRegistrations || false }
     }
   })
   if (!res.result || !res.result.success) {

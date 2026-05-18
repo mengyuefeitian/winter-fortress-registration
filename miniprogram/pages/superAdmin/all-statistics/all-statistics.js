@@ -209,7 +209,7 @@ Page({
         const ACTIVITY_TYPE_LABELS = { 'arsenal': '兵工厂', 'canyon': '峡谷会战' }
 
         for (const config of configs) {
-          const stats = await db.getArsenalStats(config._id)
+          const stats = await db.getArsenalStats(config._id, { includeRegistrations: true })
           const regs = (stats.registrations || []).sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
           arsenalStats.push({
             config: config,
@@ -249,7 +249,7 @@ Page({
         const ACTIVITY_TYPE_LABELS = { 'arsenal': '兵工厂', 'canyon': '峡谷会战' }
 
         for (const config of configs) {
-          const stats = await db.getCanyonStats(config._id)
+          const stats = await db.getCanyonStats(config._id, { includeRegistrations: true })
           const regs = (stats.registrations || []).sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
           canyonStats.push({
             config: config,
@@ -584,13 +584,37 @@ Page({
           y += 40
 
           if (stat.registrations.length > 0) {
-            ctx.fillStyle = '#666666'
-            ctx.font = '24px sans-serif'
-            const sorted = [...stat.registrations].sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
-            const nameStrs = sorted.map((r, i) => `${i + 1}.${r.nickName}(${r.position === 'combat' ? '参战' : '替补'})`)
-            for (let i = 0; i < nameStrs.length; i += 3) {
-              ctx.fillText(nameStrs.slice(i, i + 3).join(' '), margin + 20, y)
-              y += 40
+            const substitutes = stat.registrations.filter(r => r.position === 'substitute')
+            const combats = stat.registrations.filter(r => r.position === 'combat')
+
+            if (substitutes.length > 0) {
+              ctx.fillStyle = '#07C160'
+              ctx.font = 'bold 24px sans-serif'
+              ctx.fillText(`替补(${substitutes.length}):`, margin + 20, y)
+              y += 30
+
+              ctx.fillStyle = '#666666'
+              ctx.font = '24px sans-serif'
+              const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
+              for (let i = 0; i < subNames.length; i += 3) {
+                ctx.fillText(subNames.slice(i, i + 3).join('  '), margin + 20, y)
+                y += 35
+              }
+            }
+
+            if (combats.length > 0) {
+              ctx.fillStyle = '#FA5151'
+              ctx.font = 'bold 24px sans-serif'
+              ctx.fillText(`参战(${combats.length}):`, margin + 20, y)
+              y += 30
+
+              ctx.fillStyle = '#666666'
+              ctx.font = '24px sans-serif'
+              const combatNames = combats.map((r, i) => `${i + 1}.${r.nickName}`)
+              for (let i = 0; i < combatNames.length; i += 3) {
+                ctx.fillText(combatNames.slice(i, i + 3).join('  '), margin + 20, y)
+                y += 35
+              }
             }
           }
 
@@ -637,7 +661,7 @@ Page({
         for (const stat of this.data.canyonStats) {
           totalHeight += 50
           if (stat.registrations.length > 0) {
-            totalHeight += Math.ceil(stat.registrations.length / 3) * 40 + 20
+            totalHeight += 60 + Math.ceil(stat.registrations.length / 3) * 40
           }
           totalHeight += 25
         }
@@ -679,13 +703,37 @@ Page({
           y += 40
 
           if (stat.registrations.length > 0) {
-            ctx.fillStyle = '#666666'
-            ctx.font = '24px sans-serif'
-            const sorted = [...stat.registrations].sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
-            const nameStrs = sorted.map((r, i) => `${i + 1}.${r.nickName}(${r.position === 'combat' ? '参战' : '替补'})`)
-            for (let i = 0; i < nameStrs.length; i += 3) {
-              ctx.fillText(nameStrs.slice(i, i + 3).join(' '), margin + 20, y)
-              y += 40
+            const substitutes = stat.registrations.filter(r => r.position === 'substitute')
+            const combats = stat.registrations.filter(r => r.position === 'combat')
+
+            if (substitutes.length > 0) {
+              ctx.fillStyle = '#07C160'
+              ctx.font = 'bold 24px sans-serif'
+              ctx.fillText(`替补(${substitutes.length}):`, margin + 20, y)
+              y += 30
+
+              ctx.fillStyle = '#666666'
+              ctx.font = '24px sans-serif'
+              const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
+              for (let i = 0; i < subNames.length; i += 3) {
+                ctx.fillText(subNames.slice(i, i + 3).join('  '), margin + 20, y)
+                y += 35
+              }
+            }
+
+            if (combats.length > 0) {
+              ctx.fillStyle = '#FA5151'
+              ctx.font = 'bold 24px sans-serif'
+              ctx.fillText(`参战(${combats.length}):`, margin + 20, y)
+              y += 30
+
+              ctx.fillStyle = '#666666'
+              ctx.font = '24px sans-serif'
+              const combatNames = combats.map((r, i) => `${i + 1}.${r.nickName}`)
+              for (let i = 0; i < combatNames.length; i += 3) {
+                ctx.fillText(combatNames.slice(i, i + 3).join('  '), margin + 20, y)
+                y += 35
+              }
             }
           }
 

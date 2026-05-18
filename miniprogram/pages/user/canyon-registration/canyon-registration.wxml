@@ -69,7 +69,7 @@
 
     <view wx:else class="time-slot-list">
       <view wx:for="{{configs}}" wx:key="_id"
-            class="time-slot-card {{item.isMyConfig ? 'my-config' : ''}} {{item.isFull ? 'full' : ''}} {{selectedConfig && selectedConfig._id === item._id ? 'selected' : ''}}"
+            class="time-slot-card {{item.isMyConfig ? 'my-slot' : ''}} {{item.isFull ? 'full' : ''}} {{selectedConfig && selectedConfig._id === item._id ? 'selected' : ''}}"
             bindtap="selectConfig" data-index="{{index}}">
         <view class="slot-header">
           <view class="slot-time">

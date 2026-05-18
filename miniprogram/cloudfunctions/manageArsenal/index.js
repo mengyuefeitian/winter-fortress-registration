@@ -493,7 +493,7 @@ async function cancelRegistration(data) {
 
 // 获取统计信息
 async function getStats(data) {
-  const { configId, activityType } = data
+  const { configId, activityType, includeRegistrations } = data
 
   if (!configId || !activityType) {
     throw new Error('缺少必要参数')
@@ -521,19 +521,21 @@ async function getStats(data) {
   const combatCount = combatCountRes.total
   const substituteCount = substituteCountRes.total
 
-  // 获取报名记录列表（带分页，避免20条限制）
+  // 仅当需要报名记录时才查询（统计页需要，列表页不需要）
   let allRegs = []
-  let skip = 0
-  const batchSize = 20
-  while (true) {
-    const res = await db.collection(collectionName).where({
-      configId: configId,
-      status: 'active'
-    }).skip(skip).limit(batchSize).get()
-    allRegs = allRegs.concat(res.data)
-    if (res.data.length < batchSize) break
-    skip += batchSize
-    if (skip > 200) break
+  if (includeRegistrations) {
+    let skip = 0
+    const batchSize = 20
+    while (true) {
+      const res = await db.collection(collectionName).where({
+        configId: configId,
+        status: 'active'
+      }).skip(skip).limit(batchSize).get()
+      allRegs = allRegs.concat(res.data)
+      if (res.data.length < batchSize) break
+      skip += batchSize
+      if (skip > 200) break
+    }
   }
 
   return {
