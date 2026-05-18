@@ -215,9 +215,8 @@ Page({
         let offset = 0
         const batchSize = 20
         while (true) {
-          const res = await wxdb.collection('arsenalRegistrations').where({
+          const res = await wxdb.collection('canyonRegistrations').where({
             configId: wxdb.command.in(configIds),
-            activityType: 'canyon',
             status: 'active'
           }).skip(offset).limit(batchSize).get()
           allRegs = allRegs.concat(res.data)

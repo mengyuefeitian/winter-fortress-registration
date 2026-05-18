@@ -232,12 +232,14 @@
   border-radius: 4px;
 }
 
-.reg-position.head {
+.reg-position.head,
+.reg-position.combat {
   background-color: #FFE8E8;
   color: #FA5151;
 }
 
-.reg-position.body {
+.reg-position.body,
+.reg-position.substitute {
   background-color: #F0FFF0;
   color: #07C160;
 }

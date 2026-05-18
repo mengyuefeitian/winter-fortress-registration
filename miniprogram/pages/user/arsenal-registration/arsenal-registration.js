@@ -21,6 +21,7 @@ const CAPACITY_LIMITS = {
 Page({
   data: {
     POSITION_OPTIONS: POSITION_OPTIONS,
+    ACTIVITY_TYPE_LABELS: ACTIVITY_TYPE_LABELS,
     selectedPosition: 'combat',
     nickName: '',
     isLoggedIn: false,
@@ -233,12 +234,13 @@ Page({
 
       const processed = await Promise.all(activeConfigs.map(async (cfg) => {
         const stats = await this.getConfigStats(cfg._id)
-        const combatCount = stats.combat || 0
-        const substituteCount = stats.substitute || 0
+        const combatCount = stats.combatCount || stats.combat || 0
+        const substituteCount = stats.substituteCount || stats.substitute || 0
         const combatFull = combatCount >= CAPACITY_LIMITS.combat
         const substituteFull = substituteCount >= CAPACITY_LIMITS.substitute
         const totalCount = combatCount + substituteCount
         const totalCapacity = CAPACITY_LIMITS.combat + CAPACITY_LIMITS.substitute
+        const myRegistrations = stats.myRegistrations || stats.registrations || []
 
         return {
           ...cfg,
@@ -249,8 +251,8 @@ Page({
           combatFull,
           substituteFull,
           isFull: combatFull && substituteFull,
-          isMyConfig: currentUserId ? (stats.myRegistrations || []).some(r => r.userId === currentUserId) : false,
-          myPositions: currentUserId ? (stats.myRegistrations || []).filter(r => r.userId === currentUserId).map(r => r.position) : []
+          isMyConfig: currentUserId ? myRegistrations.some(r => r.userId === currentUserId) : false,
+          myPositions: currentUserId ? myRegistrations.filter(r => r.userId === currentUserId).map(r => r.position) : []
         }
       }))
 
@@ -267,10 +269,10 @@ Page({
   getConfigStats: async function (configId) {
     try {
       const stats = await db.getArsenalStats(configId)
-      return stats || { combat: 0, substitute: 0, myRegistrations: [] }
+      return stats || { combatCount: 0, combat: 0, substituteCount: 0, substitute: 0, myRegistrations: [] }
     } catch (err) {
       console.error('获取配置统计失败:', err)
-      return { combat: 0, substitute: 0, myRegistrations: [] }
+      return { combatCount: 0, combat: 0, substituteCount: 0, substitute: 0, myRegistrations: [] }
     }
   },
 

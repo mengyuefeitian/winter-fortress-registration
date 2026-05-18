@@ -209,14 +209,17 @@ Page({
         const arsenalStats = []
         let arsenalTotal = 0
 
+        const ACTIVITY_TYPE_LABELS = { 'arsenal': '兵工厂', 'canyon': '峡谷会战' }
+
         for (const config of configs) {
           const stats = await db.getArsenalStats(config._id)
           arsenalStats.push({
             config: config,
+            activityTypeLabel: ACTIVITY_TYPE_LABELS[config.activityType] || config.activityType,
             registrations: stats.registrations || [],
-            count: stats.count || 0
+            count: stats.totalRegistered || stats.count || 0
           })
-          arsenalTotal += stats.count || 0
+          arsenalTotal += stats.totalRegistered || stats.count || 0
         }
 
         this.setData({
@@ -245,14 +248,17 @@ Page({
         const canyonStats = []
         let canyonTotal = 0
 
+        const ACTIVITY_TYPE_LABELS = { 'arsenal': '兵工厂', 'canyon': '峡谷会战' }
+
         for (const config of configs) {
           const stats = await db.getCanyonStats(config._id)
           canyonStats.push({
             config: config,
+            activityTypeLabel: ACTIVITY_TYPE_LABELS[config.activityType] || config.activityType,
             registrations: stats.registrations || [],
-            count: stats.count || 0
+            count: stats.totalRegistered || stats.count || 0
           })
-          canyonTotal += stats.count || 0
+          canyonTotal += stats.totalRegistered || stats.count || 0
         }
 
         this.setData({
@@ -593,6 +599,238 @@ Page({
             util.hideLoading()
             console.error('生成图片失败:', err)
             this.saveScreenshotFallback()
+          }
+        })
+
+      } else if (this.data.selectedRegType === '兵工厂报名') {
+        // 兵工厂报名截图
+        if (!this.data.selectedZone) {
+          util.hideLoading()
+          util.showInfo('请先选择分区')
+          return
+        }
+
+        const margin = 40
+        const canvasWidth = 750
+        const titleY = 70
+        const dateY = 115
+        const summaryY = 155
+        const lineY = 180
+        const dataStartY = 220
+
+        let totalHeight = dataStartY + 20
+        for (const stat of this.data.arsenalStats) {
+          totalHeight += 50
+          if (stat.registrations.length > 0) {
+            totalHeight += Math.ceil(stat.registrations.length / 3) * 40 + 20
+          }
+          totalHeight += 25
+        }
+
+        const canvas = wx.createOffscreenCanvas({
+          type: '2d',
+          width: canvasWidth,
+          height: totalHeight
+        })
+        const ctx = canvas.getContext('2d')
+
+        ctx.fillStyle = '#FFFFFF'
+        ctx.fillRect(0, 0, canvasWidth, totalHeight)
+
+        ctx.fillStyle = '#07C160'
+        ctx.font = 'bold 36px sans-serif'
+        ctx.fillText(this.data.selectedZone.zoneName + ' 兵工厂报名统计', margin, titleY)
+
+        ctx.fillStyle = '#999999'
+        ctx.font = '26px sans-serif'
+        ctx.fillText(util.formatDate(new Date(), 'YY/MM/DD HH:mm'), margin, dateY)
+
+        ctx.fillStyle = '#333333'
+        ctx.font = 'bold 28px sans-serif'
+        ctx.fillText(`总人数: ${this.data.arsenalTotal}`, margin, summaryY)
+
+        ctx.strokeStyle = '#E8E8E8'
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.moveTo(margin, lineY)
+        ctx.lineTo(canvasWidth - margin, lineY)
+        ctx.stroke()
+
+        let y = dataStartY
+        for (const stat of this.data.arsenalStats) {
+          ctx.fillStyle = '#333333'
+          ctx.font = 'bold 28px sans-serif'
+          ctx.fillText(`${stat.config.corps} (${stat.count}人)`, margin, y)
+          y += 40
+
+          ctx.fillStyle = '#A6A6A6'
+          ctx.font = '24px sans-serif'
+          ctx.fillText(`日期: ${stat.config.date}  时间: ${stat.config.timeValue}`, margin + 20, y)
+          y += 40
+
+          if (stat.registrations.length > 0) {
+            ctx.fillStyle = '#666666'
+            ctx.font = '24px sans-serif'
+            const sorted = [...stat.registrations].sort((a, b) => (a.position === 'combat' ? -1 : 1) - (b.position === 'combat' ? -1 : 1))
+            const nameStrs = sorted.map((r, i) => `${i + 1}.${r.nickName}(${r.position === 'combat' ? '参战' : '替补'})`)
+            for (let i = 0; i < nameStrs.length; i += 3) {
+              ctx.fillText(nameStrs.slice(i, i + 3).join(' '), margin + 20, y)
+              y += 40
+            }
+          }
+
+          y += 25
+        }
+
+        wx.canvasToTempFilePath({
+          canvas: canvas,
+          destWidth: 750,
+          destHeight: totalHeight,
+          success: (res) => {
+            wx.saveImageToPhotosAlbum({
+              filePath: res.tempFilePath,
+              success: () => {
+                util.hideLoading()
+                util.showSuccess('截图已保存到相册')
+              },
+              fail: (err) => {
+                util.hideLoading()
+                if (err.errMsg.indexOf('auth deny') !== -1) {
+                  wx.showModal({
+                    title: '提示',
+                    content: '需要您授权保存图片权限',
+                    confirmText: '去授权',
+                    success: (modalRes) => {
+                      if (modalRes.confirm) {
+                        wx.openSetting()
+                      }
+                    }
+                  })
+                } else {
+                  util.showError('保存失败')
+                }
+              }
+            })
+          },
+          fail: () => {
+            util.hideLoading()
+            util.showError('生成图片失败')
+          }
+        })
+
+      } else if (this.data.selectedRegType === '峡谷报名') {
+        // 峡谷报名截图
+        if (!this.data.selectedZone) {
+          util.hideLoading()
+          util.showInfo('请先选择分区')
+          return
+        }
+
+        const margin = 40
+        const canvasWidth = 750
+        const titleY = 70
+        const dateY = 115
+        const summaryY = 155
+        const lineY = 180
+        const dataStartY = 220
+
+        let totalHeight = dataStartY + 20
+        for (const stat of this.data.canyonStats) {
+          totalHeight += 50
+          if (stat.registrations.length > 0) {
+            totalHeight += Math.ceil(stat.registrations.length / 3) * 40 + 20
+          }
+          totalHeight += 25
+        }
+
+        const canvas = wx.createOffscreenCanvas({
+          type: '2d',
+          width: canvasWidth,
+          height: totalHeight
+        })
+        const ctx = canvas.getContext('2d')
+
+        ctx.fillStyle = '#FFFFFF'
+        ctx.fillRect(0, 0, canvasWidth, totalHeight)
+
+        ctx.fillStyle = '#07C160'
+        ctx.font = 'bold 36px sans-serif'
+        ctx.fillText(this.data.selectedZone.zoneName + ' 峡谷报名统计', margin, titleY)
+
+        ctx.fillStyle = '#999999'
+        ctx.font = '26px sans-serif'
+        ctx.fillText(util.formatDate(new Date(), 'YY/MM/DD HH:mm'), margin, dateY)
+
+        ctx.fillStyle = '#333333'
+        ctx.font = 'bold 28px sans-serif'
+        ctx.fillText(`总人数: ${this.data.canyonTotal}`, margin, summaryY)
+
+        ctx.strokeStyle = '#E8E8E8'
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.moveTo(margin, lineY)
+        ctx.lineTo(canvasWidth - margin, lineY)
+        ctx.stroke()
+
+        let y = dataStartY
+        for (const stat of this.data.canyonStats) {
+          ctx.fillStyle = '#333333'
+          ctx.font = 'bold 28px sans-serif'
+          ctx.fillText(`${stat.config.corps} (${stat.count}人)`, margin, y)
+          y += 40
+
+          ctx.fillStyle = '#A6A6A6'
+          ctx.font = '24px sans-serif'
+          ctx.fillText(`日期: ${stat.config.date}  时间: ${stat.config.timeValue}`, margin + 20, y)
+          y += 40
+
+          if (stat.registrations.length > 0) {
+            ctx.fillStyle = '#666666'
+            ctx.font = '24px sans-serif'
+            const sorted = [...stat.registrations].sort((a, b) => (a.position === 'combat' ? -1 : 1) - (b.position === 'combat' ? -1 : 1))
+            const nameStrs = sorted.map((r, i) => `${i + 1}.${r.nickName}(${r.position === 'combat' ? '参战' : '替补'})`)
+            for (let i = 0; i < nameStrs.length; i += 3) {
+              ctx.fillText(nameStrs.slice(i, i + 3).join(' '), margin + 20, y)
+              y += 40
+            }
+          }
+
+          y += 25
+        }
+
+        wx.canvasToTempFilePath({
+          canvas: canvas,
+          destWidth: 750,
+          destHeight: totalHeight,
+          success: (res) => {
+            wx.saveImageToPhotosAlbum({
+              filePath: res.tempFilePath,
+              success: () => {
+                util.hideLoading()
+                util.showSuccess('截图已保存到相册')
+              },
+              fail: (err) => {
+                util.hideLoading()
+                if (err.errMsg.indexOf('auth deny') !== -1) {
+                  wx.showModal({
+                    title: '提示',
+                    content: '需要您授权保存图片权限',
+                    confirmText: '去授权',
+                    success: (modalRes) => {
+                      if (modalRes.confirm) {
+                        wx.openSetting()
+                      }
+                    }
+                  })
+                } else {
+                  util.showError('保存失败')
+                }
+              }
+            })
+          },
+          fail: () => {
+            util.hideLoading()
+            util.showError('生成图片失败')
           }
         })
 

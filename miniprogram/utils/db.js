@@ -2,6 +2,24 @@
  * 数据库操作工具
  */
 
+// 将云数据库/云函数错误信息转为用户友好的中文提示
+function friendlyErrorMsg(errMsg) {
+  if (!errMsg) return '操作失败'
+  const msg = String(errMsg)
+  // 云数据库底层错误（如 ResourceUnavailable、Transaction 等）
+  if (msg.includes('Resource') || msg.includes('Unava') || msg.includes('resource')) {
+    return '服务器繁忙，请稍后再试'
+  }
+  if (msg.includes('Transaction') || msg.includes('transaction')) {
+    return '操作冲突，请稍后再试'
+  }
+  if (msg.includes('timeout') || msg.includes('Timeout')) {
+    return '请求超时，请检查网络后重试'
+  }
+  // 云函数返回的中文错误直接返回
+  return msg
+}
+
 // 获取数据库实例
 function getDb() {
   return wx.cloud.database()
@@ -750,11 +768,21 @@ async function getRegistrationsByTimeSlot(timeSlotId) {
 // 获取用户的报名记录
 async function getRegistrationsByUser(userId) {
   const db = getDb()
-  const res = await db.collection('registrations').where({
-    userId: userId,
-    status: 'active'
-  }).orderBy('createTime', 'desc').get()
-  return res.data
+  // 分页获取所有记录，避免20条限制
+  let allData = []
+  let skip = 0
+  const batchSize = 20
+  while (true) {
+    const res = await db.collection('registrations').where({
+      userId: userId,
+      status: 'active'
+    }).orderBy('createTime', 'desc').skip(skip).limit(batchSize).get()
+    allData = allData.concat(res.data)
+    if (res.data.length < batchSize) break
+    skip += batchSize
+    if (skip > 500) break
+  }
+  return allData
 }
 
 // 取消报名
@@ -992,14 +1020,26 @@ async function createPositionRegistration(data) {
 // 获取官职配置的所有报名记录
 async function getPositionRegistrationsByConfig(configId) {
   const db = getDb()
-  const res = await db.collection('positionRegistrations')
-    .where({
-      configId: configId,
-      status: 'active'
-    })
-    .orderBy('timeSlot', 'asc')
-    .get()
-  return res.data
+  // 分页获取所有记录，避免20条限制
+  let allData = []
+  let skip = 0
+  const batchSize = 20
+  while (true) {
+    const res = await db.collection('positionRegistrations')
+      .where({
+        configId: configId,
+        status: 'active'
+      })
+      .orderBy('timeSlot', 'asc')
+      .skip(skip)
+      .limit(batchSize)
+      .get()
+    allData = allData.concat(res.data)
+    if (res.data.length < batchSize) break
+    skip += batchSize
+    if (skip > 500) break
+  }
+  return allData
 }
 
 // 根据时间段获取报名记录
@@ -1018,16 +1058,29 @@ async function getPositionRegistrationByTimeSlot(configId, timeSlot) {
 // 获取用户的官职报名记录
 async function getPositionRegistrationsByUser(userId) {
   const db = getDb()
-  const res = await db.collection('positionRegistrations')
-    .where({
-      userId: userId,
-      status: 'active'
-    })
-    .orderBy('createTime', 'desc')
-    .get()
+
+  // 分页获取所有记录，避免20条限制
+  let allData = []
+  let skip = 0
+  const batchSize = 20
+  while (true) {
+    const res = await db.collection('positionRegistrations')
+      .where({
+        userId: userId,
+        status: 'active'
+      })
+      .orderBy('createTime', 'desc')
+      .skip(skip)
+      .limit(batchSize)
+      .get()
+    allData = allData.concat(res.data)
+    if (res.data.length < batchSize) break
+    skip += batchSize
+    if (skip > 500) break
+  }
 
   // 获取关联的配置信息
-  const registrations = res.data
+  const registrations = allData
   for (const reg of registrations) {
     try {
       reg.config = await getPositionConfigById(reg.configId)
@@ -1401,7 +1454,7 @@ async function deleteArsenalConfig(configId) {
     name: 'manageArsenal',
     data: {
       action: 'deleteConfig',
-      data: { configId }
+      data: { configId, activityType: 'arsenal' }
     }
   })
   if (!res.result || !res.result.success) {
@@ -1455,7 +1508,7 @@ async function deleteCanyonConfig(configId) {
     name: 'manageArsenal',
     data: {
       action: 'deleteConfig',
-      data: { configId }
+      data: { configId, activityType: 'canyon' }
     }
   })
   if (!res.result || !res.result.success) {
@@ -1481,7 +1534,8 @@ async function createArsenalRegistration(data) {
     }
   })
   if (!res.result || !res.result.success) {
-    throw new Error((res.result && res.result.error) || '兵营报名失败')
+    const rawErr = (res.result && res.result.error) || '兵营报名失败'
+    throw new Error(friendlyErrorMsg(rawErr))
   }
   return res.result
 }
@@ -1548,7 +1602,8 @@ async function createCanyonRegistration(data) {
     }
   })
   if (!res.result || !res.result.success) {
-    throw new Error((res.result && res.result.error) || '峡谷报名失败')
+    const rawErr = (res.result && res.result.error) || '峡谷报名失败'
+    throw new Error(friendlyErrorMsg(rawErr))
   }
   return res.result
 }

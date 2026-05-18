@@ -83,7 +83,10 @@
         </view>
         <view class="slot-footer">
           <view class="slot-date" wx:if="{{item.date}}">{{item.date}}</view>
-          <view class="slot-count {{item.isFull ? 'full' : ''}}">{{item.totalCount}}/{{item.totalCapacity}}人</view>
+          <view class="slot-counts">
+            <view class="slot-count {{item.isCombatFull ? 'full' : ''}}">参战 {{item.combatCount}}/{{30}}</view>
+            <view class="slot-count {{item.isSubstituteFull ? 'full' : ''}}">替补 {{item.substituteCount}}/{{10}}</view>
+          </view>
         </view>
       </view>
     </view>
