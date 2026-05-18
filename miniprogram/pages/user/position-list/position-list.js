@@ -120,18 +120,18 @@ Page({
         return a.date.localeCompare(b.date)
       })
 
-      // 为每个配置计算报名统计
-      const processedConfigs = []
-      for (const config of validConfigs) {
-        const registrations = await db.getPositionRegistrationsByConfig(config._id)
-        const slots = db.generatePositionTimeSlots(config.startTime)
+      // 为每个配置计算报名统计（批量查询，一次 DB 请求）
+      const configIds = validConfigs.map(c => c._id)
+      const countByConfig = await db.getPositionRegistrationsCountByConfigs(configIds)
 
-        processedConfigs.push({
+      const processedConfigs = validConfigs.map(config => {
+        const slots = db.generatePositionTimeSlots(config.startTime)
+        return {
           ...config,
-          registeredCount: registrations.length,
+          registeredCount: countByConfig[config._id] || 0,
           totalSlots: slots.length
-        })
-      }
+        }
+      })
 
       this.setData({
         configs: processedConfigs,

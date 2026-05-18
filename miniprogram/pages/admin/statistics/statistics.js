@@ -321,7 +321,12 @@ Page({
           const regs = (regsByConfig[config._id] || []).sort((a, b) => {
             const aTime = a.timeSlot || ''
             const bTime = b.timeSlot || ''
-            return aTime < bTime ? -1 : aTime > bTime ? 1 : 0
+            const parseTime = (t) => {
+              const parts = t.split(':')
+              if (parts.length === 2) return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10)
+              return 0
+            }
+            return parseTime(aTime) - parseTime(bTime)
           })
           return {
             config: config,
@@ -1050,7 +1055,7 @@ Page({
         height += 45 // 标题
         height += 40 // 日期起始时间
         if (stat.registrations.length > 0) {
-          height += 40 * Math.ceil(stat.registrations.length / 3) // 报名人员（每3人换行）
+          height += 40 * Math.ceil(stat.registrations.length / 5) // 报名人员（每5人换行）
         }
         height += 25 // 间隔
       }
