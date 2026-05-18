@@ -226,7 +226,7 @@
 
 .time-slot-card.full {
   background-color: #FAFAFA;
-  opacity: 0.85;
+  opacity: 0.5;
 }
 
 .time-slot-card.selected {

@@ -969,9 +969,13 @@ Page({
           if (stat.registrations.length > 0) {
             ctx.fillStyle = '#666666'
             ctx.font = '24px sans-serif'
-            const nameStrs = stat.registrations.map((r, i) => `${i + 1}.${r.nickName}(${r.timeSlot})`)
-            for (let i = 0; i < nameStrs.length; i += 2) {
-              ctx.fillText(nameStrs.slice(i, i + 2).join('  '), margin + 20, y)
+            const items = stat.registrations.map(r => `${r.timeSlot} ${r.nickName}`)
+            const colX = [margin + 20, margin + 345]
+            for (let i = 0; i < items.length; i += 2) {
+              ctx.fillText(`${i + 1}. ${items[i]}`, colX[0], y)
+              if (items[i + 1]) {
+                ctx.fillText(`${i + 2}. ${items[i + 1]}`, colX[1], y)
+              }
               y += 40
             }
           }

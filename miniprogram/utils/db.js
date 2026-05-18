@@ -1083,17 +1083,29 @@ async function getPositionRegistrationsByUser(userId) {
     if (skip > 500) break
   }
 
-  // 获取关联的配置信息
-  const registrations = allData
-  for (const reg of registrations) {
-    try {
-      reg.config = await getPositionConfigById(reg.configId)
-    } catch (e) {
-      reg.config = null
+  // 获取关联的配置信息（批量获取，避免N+1查询）
+  const configIds = [...new Set(allData.map(r => r.configId))]
+  const configs = []
+  if (configIds.length > 0) {
+    const _ = db.command
+    // WeChat _.in() 限制最多10个，需要分片查询
+    const chunkSize = 10
+    for (let i = 0; i < configIds.length; i += chunkSize) {
+      const chunk = configIds.slice(i, i + chunkSize)
+      const configRes = await db.collection('positionConfigs')
+        .where({ _id: _.in(chunk) })
+        .get()
+      configs.push(...configRes.data)
     }
   }
+  const configMap = {}
+  configs.forEach(cfg => { configMap[cfg._id] = cfg })
 
-  return registrations
+  for (const reg of allData) {
+    reg.config = configMap[reg.configId] || null
+  }
+
+  return allData
 }
 
 // 更新官职报名记录

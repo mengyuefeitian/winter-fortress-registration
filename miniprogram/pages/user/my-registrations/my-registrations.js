@@ -167,11 +167,15 @@ Page({
         positionRegistrations: processedPositionRegistrations
       })
 
-      // 加载兵工厂报名记录
+      // 加载兵工厂报名记录（批量获取配置，避免N+1查询）
       const arsenalRegistrations = await db.getArsenalRegistrationsByUser(userId)
+      const allArsenalConfigs = await db.getArsenalConfigs({})
+      const arsenalConfigMap = {}
+      allArsenalConfigs.forEach(cfg => { arsenalConfigMap[cfg._id] = cfg })
+
       const processedArsenal = []
       for (const reg of arsenalRegistrations) {
-        const config = await db.getArsenalConfigs({}).then(cfgs => cfgs.find(c => c._id === reg.configId))
+        const config = arsenalConfigMap[reg.configId]
         processedArsenal.push({
           ...reg,
           type: 'arsenal',
@@ -183,11 +187,15 @@ Page({
         })
       }
 
-      // 加载峡谷会战报名记录
+      // 加载峡谷会战报名记录（批量获取配置，避免N+1查询）
       const canyonRegistrations = await db.getCanyonRegistrationsByUser(userId)
+      const allCanyonConfigs = await db.getCanyonConfigs({})
+      const canyonConfigMap = {}
+      allCanyonConfigs.forEach(cfg => { canyonConfigMap[cfg._id] = cfg })
+
       const processedCanyon = []
       for (const reg of canyonRegistrations) {
-        const config = await db.getCanyonConfigs({}).then(cfgs => cfgs.find(c => c._id === reg.configId))
+        const config = canyonConfigMap[reg.configId]
         processedCanyon.push({
           ...reg,
           type: 'canyon',
