@@ -221,7 +221,11 @@ async function clearExpiredByAlliance(allianceId) {
   const results = {
     registrations: 0,
     timeSlots: 0,
-    orphanRegistrations: 0
+    orphanRegistrations: 0,
+    arsenalConfigs: 0,
+    arsenalRegistrations: 0,
+    canyonConfigs: 0,
+    canyonRegistrations: 0
   }
 
   console.log('开始清空联盟数据, allianceId:', allianceId, '今天:', today)
@@ -262,7 +266,40 @@ async function clearExpiredByAlliance(allianceId) {
     results.timeSlots = slotResult.stats.removed
   }
 
-  // 3. 清理孤立的报名记录（报名记录对应的timeSlotId不存在或已删除）
+  // 3. 清理兵工厂/峡谷过期配置和报名
+  const toDeleteArsenalConfigs = (await getAllRecords('arsenalConfigs', { allianceId: allianceId }))
+    .filter(cfg => !cfg.status || cfg.status === 'inactive' || isDateExpired(cfg.date, todayObj))
+  const toDeleteArsenalConfigIds = toDeleteArsenalConfigs.map(c => c._id)
+
+  if (toDeleteArsenalConfigIds.length > 0) {
+    const arRegResult = await db.collection('arsenalRegistrations').where({
+      configId: _.in(toDeleteArsenalConfigIds)
+    }).remove()
+    results.arsenalRegistrations = arRegResult.stats.removed
+
+    const arConfigResult = await db.collection('arsenalConfigs').where({
+      _id: _.in(toDeleteArsenalConfigIds)
+    }).remove()
+    results.arsenalConfigs = arConfigResult.stats.removed
+  }
+
+  const toDeleteCanyonConfigs = (await getAllRecords('canyonConfigs', { allianceId: allianceId }))
+    .filter(cfg => !cfg.status || cfg.status === 'inactive' || isDateExpired(cfg.date, todayObj))
+  const toDeleteCanyonConfigIds = toDeleteCanyonConfigs.map(c => c._id)
+
+  if (toDeleteCanyonConfigIds.length > 0) {
+    const cnRegResult = await db.collection('canyonRegistrations').where({
+      configId: _.in(toDeleteCanyonConfigIds)
+    }).remove()
+    results.canyonRegistrations = cnRegResult.stats.removed
+
+    const cnConfigResult = await db.collection('canyonConfigs').where({
+      _id: _.in(toDeleteCanyonConfigIds)
+    }).remove()
+    results.canyonConfigs = cnConfigResult.stats.removed
+  }
+
+  // 4. 清理孤立的报名记录（报名记录对应的timeSlotId不存在或已删除）
   // 方法：直接查询所有报名记录，找出那些 timeSlotId 不在时间段列表中的
   const allRegistrations = await getAllRecords('registrations', { allianceId: allianceId })
   console.log('查询到报名记录数量（按allianceId）:', allRegistrations.length)
@@ -291,7 +328,7 @@ async function clearExpiredByAlliance(allianceId) {
     results.orphanRegistrations = orphanRegResult.stats.removed
   }
 
-  // 4. 清理没有 allianceId 的孤立报名记录（旧数据可能没有 allianceId）
+  // 5. 清理没有 allianceId 的孤立报名记录（旧数据可能没有 allianceId）
   // 这部分记录无法通过 allianceId 查询到，需要通过 timeSlotId 反查
   if (allTimeSlotIds.length > 0) {
     // 获取所有可能的报名记录（通过 timeSlotId 查询）
@@ -320,7 +357,7 @@ async function clearExpiredByAlliance(allianceId) {
   return {
     success: true,
     data: results,
-    message: `已清空：过期报名 ${results.registrations} 条，过期时间段 ${results.timeSlots} 个，孤立报名 ${results.orphanRegistrations} 条`
+    message: `已清空：堡垒报名 ${results.registrations} 条，时间段 ${results.timeSlots} 个，兵工厂报名 ${results.arsenalRegistrations} 条，峡谷报名 ${results.canyonRegistrations} 条，孤立报名 ${results.orphanRegistrations} 条`
   }
 }
 
@@ -333,7 +370,11 @@ async function clearExpiredByZone(zoneId) {
     positionConfigs: 0,
     positionRegistrations: 0,
     orphanRegistrations: 0,
-    orphanPositionRegistrations: 0
+    orphanPositionRegistrations: 0,
+    arsenalConfigs: 0,
+    arsenalRegistrations: 0,
+    canyonConfigs: 0,
+    canyonRegistrations: 0
   }
 
   console.log('开始清空分区数据, zoneId:', zoneId, '今天:', today)
@@ -460,6 +501,41 @@ async function clearExpiredByZone(zoneId) {
     }
   }
 
+  // 2b. 清空兵工厂/峡谷过期配置和报名（按分区）
+  if (allianceIds.length > 0) {
+    const toDeleteArsenalConfigs = (await getAllRecords('arsenalConfigs', { zoneId: zoneId }))
+      .filter(cfg => !cfg.status || cfg.status === 'inactive' || isDateExpired(cfg.date, todayObj))
+    const toDeleteArsenalConfigIds = toDeleteArsenalConfigs.map(c => c._id)
+
+    if (toDeleteArsenalConfigIds.length > 0) {
+      const arRegResult = await db.collection('arsenalRegistrations').where({
+        configId: _.in(toDeleteArsenalConfigIds)
+      }).remove()
+      results.arsenalRegistrations = arRegResult.stats.removed
+
+      const arConfigResult = await db.collection('arsenalConfigs').where({
+        _id: _.in(toDeleteArsenalConfigIds)
+      }).remove()
+      results.arsenalConfigs = arConfigResult.stats.removed
+    }
+
+    const toDeleteCanyonConfigs = (await getAllRecords('canyonConfigs', { zoneId: zoneId }))
+      .filter(cfg => !cfg.status || cfg.status === 'inactive' || isDateExpired(cfg.date, todayObj))
+    const toDeleteCanyonConfigIds = toDeleteCanyonConfigs.map(c => c._id)
+
+    if (toDeleteCanyonConfigIds.length > 0) {
+      const cnRegResult = await db.collection('canyonRegistrations').where({
+        configId: _.in(toDeleteCanyonConfigIds)
+      }).remove()
+      results.canyonRegistrations = cnRegResult.stats.removed
+
+      const cnConfigResult = await db.collection('canyonConfigs').where({
+        _id: _.in(toDeleteCanyonConfigIds)
+      }).remove()
+      results.canyonConfigs = cnConfigResult.stats.removed
+    }
+  }
+
   // 3. 清空该分区下的官职配置和报名数据
   const allConfigs = await getAllRecords('positionConfigs', { zoneId: zoneId })
   console.log('查询到官职配置数量:', allConfigs.length)
@@ -529,7 +605,7 @@ async function clearExpiredByZone(zoneId) {
   return {
     success: true,
     data: results,
-    message: `已清空：堡垒报名 ${results.registrations} 条，时间段 ${results.timeSlots} 个，官职报名 ${results.positionRegistrations} 条，官职配置 ${results.positionConfigs} 个，孤立数据 ${results.orphanRegistrations + results.orphanPositionRegistrations} 条`
+    message: `已清空：堡垒报名 ${results.registrations} 条，时间段 ${results.timeSlots} 个，兵工厂报名 ${results.arsenalRegistrations} 条，峡谷报名 ${results.canyonRegistrations} 条，官职报名 ${results.positionRegistrations} 条，官职配置 ${results.positionConfigs} 个，孤立数据 ${results.orphanRegistrations + results.orphanPositionRegistrations} 条`
   }
 }
 
@@ -542,7 +618,11 @@ async function clearExpiredAll() {
     positionConfigs: 0,
     positionRegistrations: 0,
     orphanRegistrations: 0,
-    orphanPositionRegistrations: 0
+    orphanPositionRegistrations: 0,
+    arsenalConfigs: 0,
+    arsenalRegistrations: 0,
+    canyonConfigs: 0,
+    canyonRegistrations: 0
   }
 
   console.log('开始清空所有数据, 今天:', today)
@@ -661,10 +741,43 @@ async function clearExpiredAll() {
     results.orphanPositionRegistrations = orphanPosRegResult.stats.removed
   }
 
+  // 3. 清空所有兵工厂/峡谷过期配置和报名
+  const toDeleteArsenalConfigs = (await getAllRecords('arsenalConfigs'))
+    .filter(cfg => !cfg.status || cfg.status === 'inactive' || isDateExpired(cfg.date, todayObj))
+  const toDeleteArsenalConfigIds = toDeleteArsenalConfigs.map(c => c._id)
+
+  if (toDeleteArsenalConfigIds.length > 0) {
+    const arRegResult = await db.collection('arsenalRegistrations').where({
+      configId: _.in(toDeleteArsenalConfigIds)
+    }).remove()
+    results.arsenalRegistrations = arRegResult.stats.removed
+
+    const arConfigResult = await db.collection('arsenalConfigs').where({
+      _id: _.in(toDeleteArsenalConfigIds)
+    }).remove()
+    results.arsenalConfigs = arConfigResult.stats.removed
+  }
+
+  const toDeleteCanyonConfigs = (await getAllRecords('canyonConfigs'))
+    .filter(cfg => !cfg.status || cfg.status === 'inactive' || isDateExpired(cfg.date, todayObj))
+  const toDeleteCanyonConfigIds = toDeleteCanyonConfigs.map(c => c._id)
+
+  if (toDeleteCanyonConfigIds.length > 0) {
+    const cnRegResult = await db.collection('canyonRegistrations').where({
+      configId: _.in(toDeleteCanyonConfigIds)
+    }).remove()
+    results.canyonRegistrations = cnRegResult.stats.removed
+
+    const cnConfigResult = await db.collection('canyonConfigs').where({
+      _id: _.in(toDeleteCanyonConfigIds)
+    }).remove()
+    results.canyonConfigs = cnConfigResult.stats.removed
+  }
+
   console.log('清空结果:', results)
   return {
     success: true,
     data: results,
-    message: `已清空全部数据：堡垒报名 ${results.registrations} 条，时间段 ${results.timeSlots} 个，官职报名 ${results.positionRegistrations} 条，官职配置 ${results.positionConfigs} 个，孤立数据 ${results.orphanRegistrations + results.orphanPositionRegistrations} 条`
+    message: `已清空全部数据：堡垒报名 ${results.registrations} 条，时间段 ${results.timeSlots} 个，兵工厂报名 ${results.arsenalRegistrations} 条，峡谷报名 ${results.canyonRegistrations} 条，官职报名 ${results.positionRegistrations} 条，官职配置 ${results.positionConfigs} 个，孤立数据 ${results.orphanRegistrations + results.orphanPositionRegistrations} 条`
   }
 }

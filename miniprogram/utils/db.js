@@ -16,6 +16,10 @@ function friendlyErrorMsg(errMsg) {
   if (msg.includes('timeout') || msg.includes('Timeout')) {
     return '请求超时，请检查网络后重试'
   }
+  // 纯英文错误（无中文字符）统一返回通用提示
+  if (!/[一-龥]/.test(msg)) {
+    return '操作失败，请稍后再试'
+  }
   // 云函数返回的中文错误直接返回
   return msg
 }

@@ -206,10 +206,13 @@ Page({
         const arsenalStats = []
         let arsenalTotal = 0
 
+        const ACTIVITY_TYPE_LABELS = { 'arsenal': '兵工厂', 'canyon': '峡谷会战' }
+
         for (const config of configs) {
           const stats = await db.getArsenalStats(config._id)
           arsenalStats.push({
             config: config,
+            activityTypeLabel: ACTIVITY_TYPE_LABELS[config.activityType] || config.activityType,
             registrations: stats.registrations || [],
             count: stats.count || 0
           })
@@ -246,6 +249,7 @@ Page({
           const stats = await db.getCanyonStats(config._id)
           canyonStats.push({
             config: config,
+            activityTypeLabel: ACTIVITY_TYPE_LABELS[config.activityType] || config.activityType,
             registrations: stats.registrations || [],
             count: stats.count || 0
           })
