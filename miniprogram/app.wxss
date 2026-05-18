@@ -671,6 +671,7 @@ page {
   min-height: 100px;
   box-sizing: border-box;
   transition: all 0.15s ease;
+  position: relative;
 }
 
 .function-card:active {
