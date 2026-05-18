@@ -75,7 +75,7 @@
           <view class="slot-time">
             <text wx:if="{{item.timeValue}}" class="time-value">{{item.timeValue}}</text>
             <text wx:if="{{item.corps}}" class="slot-tag corps-tag">{{item.corps}}</text>
-            <text class="slot-tag activity-type-tag">峡谷会战</text>
+            <text wx:if="{{item.activityType}}" class="slot-tag activity-type-tag">{{ACTIVITY_TYPE_LABELS[item.activityType] || item.activityType}}</text>
           </view>
           <view wx:if="{{item.isMyConfig}}" class="my-badge">已报名</view>
           <view wx:elif="{{item.isFull}}" class="full-badge">已满</view>

@@ -15,8 +15,14 @@ const POSITION_CAPACITY = {
   substitute: 10
 }
 
+const ACTIVITY_TYPE_LABELS = {
+  'arsenal': '兵工厂',
+  'canyon': '峡谷会战'
+}
+
 Page({
   data: {
+    ACTIVITY_TYPE_LABELS: ACTIVITY_TYPE_LABELS,
     alliances: [],
     allianceIndex: 0,
     selectedAlliance: null,
