@@ -1667,7 +1667,7 @@ async function getArsenalStats(configId, options = {}) {
     name: 'manageArsenal',
     data: {
       action: 'getStats',
-      data: { configId, activityType: 'arsenal', includeRegistrations: options.includeRegistrations || false }
+      data: { configId, activityType: 'arsenal', includeRegistrations: options.includeRegistrations || false, userId: options.userId || null }
     }
   })
   if (!res.result || !res.result.success) {
@@ -1682,7 +1682,7 @@ async function getCanyonStats(configId, options = {}) {
     name: 'manageArsenal',
     data: {
       action: 'getStats',
-      data: { configId, activityType: 'canyon', includeRegistrations: options.includeRegistrations || false }
+      data: { configId, activityType: 'canyon', includeRegistrations: options.includeRegistrations || false, userId: options.userId || null }
     }
   })
   if (!res.result || !res.result.success) {

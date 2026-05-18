@@ -274,7 +274,8 @@ Page({
 
   getConfigStats: async function (configId) {
     try {
-      const stats = await db.getArsenalStats(configId)
+      const currentUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+      const stats = await db.getArsenalStats(configId, { userId: currentUserId })
       return stats || { combatCount: 0, combat: 0, substituteCount: 0, substitute: 0, myRegistrations: [] }
     } catch (err) {
       console.error('获取配置统计失败:', err)

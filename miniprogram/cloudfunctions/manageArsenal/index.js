@@ -493,7 +493,7 @@ async function cancelRegistration(data) {
 
 // 获取统计信息
 async function getStats(data) {
-  const { configId, activityType, includeRegistrations } = data
+  const { configId, activityType, includeRegistrations, userId } = data
 
   if (!configId || !activityType) {
     throw new Error('缺少必要参数')
@@ -521,8 +521,12 @@ async function getStats(data) {
   const combatCount = combatCountRes.total
   const substituteCount = substituteCountRes.total
 
-  // 仅当需要报名记录时才查询（统计页需要，列表页不需要）
+  // 查询报名记录：
+  // - includeRegistrations=true: 查所有记录（统计页）
+  // - userId 存在但 includeRegistrations=false: 只查该用户的记录（列表页 isMyConfig）
+  // - 都没有: 不查询（最快）
   let allRegs = []
+  let userRegs = []
   if (includeRegistrations) {
     let skip = 0
     const batchSize = 20
@@ -536,6 +540,12 @@ async function getStats(data) {
       skip += batchSize
       if (skip > 200) break
     }
+  } else if (userId) {
+    userRegs = (await db.collection(collectionName).where({
+      configId: configId,
+      userId: userId,
+      status: 'active'
+    }).limit(50).get()).data || []
   }
 
   return {
@@ -551,7 +561,7 @@ async function getStats(data) {
       substitute: substituteCount,
       count: totalRes.total,
       registrations: allRegs,
-      myRegistrations: allRegs
+      myRegistrations: includeRegistrations ? allRegs : userRegs
     }
   }
 }
