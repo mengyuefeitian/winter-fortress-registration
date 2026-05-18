@@ -206,51 +206,30 @@ Page({
       }
 
       const currentUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
-      const wxdb = wx.cloud.database()
-      let registrationsByConfig = {}
 
-      const configIds = filteredConfigs.map(c => c._id)
-      if (configIds.length > 0) {
-        let allRegs = []
-        let offset = 0
-        const batchSize = 20
-        while (true) {
-          const res = await wxdb.collection('canyonRegistrations').where({
-            configId: wxdb.command.in(configIds),
-            status: 'active'
-          }).skip(offset).limit(batchSize).get()
-          allRegs = allRegs.concat(res.data)
-          if (res.data.length < batchSize) break
-          offset += batchSize
-          if (offset > 500) break
-        }
-
-        for (const reg of allRegs) {
-          if (!registrationsByConfig[reg.configId]) {
-            registrationsByConfig[reg.configId] = []
-          }
-          registrationsByConfig[reg.configId].push(reg)
-        }
-      }
-
-      const processedConfigs = filteredConfigs.map(cfg => {
-        const regs = registrationsByConfig[cfg._id] || []
-        const combatCount = regs.filter(r => r.position === 'combat').length
-        const substituteCount = regs.filter(r => r.position === 'substitute').length
-        const isCombatFull = combatCount >= POSITION_CAPACITY.combat
-        const isSubstituteFull = substituteCount >= POSITION_CAPACITY.substitute
-        const isFull = isCombatFull && isSubstituteFull
+      const processedConfigs = await Promise.all(filteredConfigs.map(async (cfg) => {
+        const stats = await this.getConfigStats(cfg._id)
+        const combatCount = stats.combatCount || stats.combat || 0
+        const substituteCount = stats.substituteCount || stats.substitute || 0
+        const combatFull = combatCount >= POSITION_CAPACITY.combat
+        const substituteFull = substituteCount >= POSITION_CAPACITY.substitute
+        const totalCount = combatCount + substituteCount
+        const totalCapacity = POSITION_CAPACITY.combat + POSITION_CAPACITY.substitute
+        const myRegistrations = stats.myRegistrations || stats.registrations || []
 
         return {
           ...cfg,
-          combatCount: combatCount,
-          substituteCount: substituteCount,
-          isCombatFull: isCombatFull,
-          isSubstituteFull: isSubstituteFull,
-          isFull: isFull,
-          isMyConfig: currentUserId ? regs.some(r => r.userId === currentUserId) : false
+          combatCount,
+          substituteCount,
+          totalCount,
+          totalCapacity,
+          combatFull,
+          substituteFull,
+          isFull: combatFull && substituteFull,
+          isMyConfig: currentUserId ? myRegistrations.some(r => r.userId === currentUserId) : false,
+          myPositions: currentUserId ? myRegistrations.filter(r => r.userId === currentUserId).map(r => r.position) : []
         }
-      })
+      }))
 
       this.setData({
         configs: processedConfigs
@@ -258,6 +237,16 @@ Page({
 
     } catch (err) {
       console.error('加载配置失败:', err)
+    }
+  },
+
+  getConfigStats: async function (configId) {
+    try {
+      const stats = await db.getCanyonStats(configId)
+      return stats || { combatCount: 0, combat: 0, substituteCount: 0, substitute: 0, myRegistrations: [] }
+    } catch (err) {
+      console.error('获取配置统计失败:', err)
+      return { combatCount: 0, combat: 0, substituteCount: 0, substitute: 0, myRegistrations: [] }
     }
   },
 

@@ -610,6 +610,12 @@ Page({
           return
         }
 
+        if (this.data.arsenalStats.length === 0) {
+          util.hideLoading()
+          util.showInfo('暂无数据可截图')
+          return
+        }
+
         const margin = 40
         const canvasWidth = 750
         const titleY = 70
@@ -723,6 +729,12 @@ Page({
         if (!this.data.selectedZone) {
           util.hideLoading()
           util.showInfo('请先选择分区')
+          return
+        }
+
+        if (this.data.canyonStats.length === 0) {
+          util.hideLoading()
+          util.showInfo('暂无数据可截图')
           return
         }
 

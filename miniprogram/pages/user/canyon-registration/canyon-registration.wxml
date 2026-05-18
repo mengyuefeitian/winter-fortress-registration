@@ -67,21 +67,25 @@
       </view>
     </view>
 
-    <view wx:else class="config-list">
+    <view wx:else class="time-slot-list">
       <view wx:for="{{configs}}" wx:key="_id"
-            class="config-card {{item.isMyConfig ? 'my-config' : ''}} {{item.isFull ? 'full' : ''}} {{selectedConfig && selectedConfig._id === item._id ? 'selected' : ''}}"
+            class="time-slot-card {{item.isMyConfig ? 'my-config' : ''}} {{item.isFull ? 'full' : ''}} {{selectedConfig && selectedConfig._id === item._id ? 'selected' : ''}}"
             bindtap="selectConfig" data-index="{{index}}">
-        <view class="config-header">
-          <view class="config-time">
-            <text class="date-value">{{item.date}}</text>
-            <text class="time-value">{{item.timeValue}}</text>
+        <view class="slot-header">
+          <view class="slot-time">
+            <text wx:if="{{item.timeValue}}" class="time-value">{{item.timeValue}}</text>
+            <text wx:if="{{item.corps}}" class="slot-tag corps-tag">{{item.corps}}</text>
+            <text class="slot-tag activity-type-tag">峡谷会战</text>
           </view>
           <view wx:if="{{item.isMyConfig}}" class="my-badge">已报名</view>
           <view wx:elif="{{item.isFull}}" class="full-badge">已满</view>
         </view>
-        <view class="config-details">
-          <text wx:if="{{item.corps}}" class="corps-tag">{{item.corps}}</text>
-          <text class="config-count">参战 {{item.combatCount}}/{{30}} 替补 {{item.substituteCount}}/{{10}}</text>
+        <view class="slot-footer">
+          <view class="slot-date" wx:if="{{item.date}}">{{item.date}}</view>
+          <view class="slot-counts">
+            <view class="slot-count {{item.isCombatFull ? 'full' : ''}}">参战 {{item.combatCount}}/{{30}}</view>
+            <view class="slot-count {{item.isSubstituteFull ? 'full' : ''}}">替补 {{item.substituteCount}}/{{10}}</view>
+          </view>
         </view>
       </view>
     </view>

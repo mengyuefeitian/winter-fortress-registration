@@ -76,6 +76,7 @@
             <text wx:if="{{item.timeValue}}" class="time-value">{{item.timeValue}}</text>
             <text wx:if="{{item.displayName}}" class="time-value">{{item.displayName}}</text>
             <text wx:if="{{item.tag}}" class="slot-tag">{{item.tag}}</text>
+          <text wx:if="{{item.corps}}" class="slot-tag corps-tag">{{item.corps}}</text>
             <text wx:if="{{item.activityType}}" class="slot-tag activity-type-tag">{{ACTIVITY_TYPE_LABELS[item.activityType] || item.activityType}}</text>
           </view>
           <view wx:if="{{item.isMyConfig}}" class="my-badge">已报名</view>
