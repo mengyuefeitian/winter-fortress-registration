@@ -140,6 +140,19 @@ Page({
         this.loadAlliances(selectedZone._id)
       } else {
         console.log('No zones found for userId:', userId, 'role:', role)
+        // 诊断：直接查询 zones 中 adminIds 包含当前 userId 的记录
+        try {
+          const wxdb = wx.cloud.database()
+          const _ = wxdb.command
+          const diagRes = await wxdb.collection('zones').where({
+            status: 'active'
+          }).limit(20).get()
+          console.log('[诊断] 所有活跃分区:', JSON.stringify(diagRes.data.map(z => ({
+            _id: z._id, zoneName: z.zoneName, creatorId: z.creatorId, adminIds: z.adminIds
+          }))))
+        } catch (diagErr) {
+          console.log('[诊断] 查询分区失败:', diagErr)
+        }
         this.setData({
           zones: [],
           selectedZone: null,
@@ -148,6 +161,7 @@ Page({
           loading: false,
           zonesLoaded: true
         })
+        util.showInfo('您当前没有管理任何分区，请联系超管开通权限')
       }
     } catch (err) {
       console.error('加载分区失败:', err)

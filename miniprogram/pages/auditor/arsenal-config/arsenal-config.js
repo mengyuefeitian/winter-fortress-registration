@@ -199,7 +199,34 @@ Page({
         return
       }
 
-      // 检查角色
+      // 添加前预检查：确认当前用户确实在联盟的 auditorIds 中
+      const role = app.globalData.role || 'user'
+      const userInfo = app.globalData.userInfo
+      const userId = userInfo ? userInfo._id : app.globalData.openid
+      console.log('[auditor addConfig] 角色:', role, 'userId:', userId)
+
+      // admin 和 superAdmin 不需要验证联盟绑定，直接放行
+      if (role !== 'auditor') {
+        console.log('[auditor addConfig] 角色非 auditor，直接放行')
+      } else {
+        // auditor 需要验证联盟绑定
+        try {
+          const wxdb = wx.cloud.database()
+          const allianceRes = await wxdb.collection('alliances').doc(this.data.allianceId).get()
+          const auditorIds = allianceRes.data.auditorIds || []
+          console.log('[auditor addConfig] 联盟 auditorIds:', JSON.stringify(auditorIds))
+          if (!auditorIds.includes(userId)) {
+            util.hideLoading()
+            util.showError('您未绑定到该联盟，无法添加配置。请联系区管绑定您到此联盟。')
+            return
+          }
+          console.log('[auditor addConfig] 预检查通过')
+        } catch (err) {
+          console.error('[auditor addConfig] 预检查失败:', err)
+          // 预检查失败不阻止，让云函数做最终判断
+        }
+      }
+
       const configData = {
         date: this.data.selectedDate,
         timeValue: this.data.selectedTime,
