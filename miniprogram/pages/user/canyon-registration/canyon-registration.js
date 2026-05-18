@@ -211,30 +211,18 @@ Page({
         return
       }
 
-      // 批量查询：一次 DB 请求获取所有配置的统计数据
-      const wxdb = wx.cloud.database()
-      const configIds = filteredConfigs.map(c => c._id)
-      const allRegs = await this.batchFetchRegistrations(wxdb, configIds)
-
-      const statsByConfigId = {}
-      for (const reg of allRegs) {
-        if (!statsByConfigId[reg.configId]) {
-          statsByConfigId[reg.configId] = { combatCount: 0, substituteCount: 0 }
-        }
-        if (reg.position === 'combat') statsByConfigId[reg.configId].combatCount++
-        if (reg.position === 'substitute') statsByConfigId[reg.configId].substituteCount++
-      }
-
       const currentUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
 
-      const processedConfigs = filteredConfigs.map(cfg => {
-        const stats = statsByConfigId[cfg._id] || { combatCount: 0, substituteCount: 0 }
-        const combatCount = stats.combatCount
-        const substituteCount = stats.substituteCount
+      // 并行查询所有配置的统计数据（云函数端权限，count查询快速返回）
+      const processedConfigs = await Promise.all(filteredConfigs.map(async (cfg) => {
+        const stats = await this.getConfigStats(cfg._id)
+        const combatCount = stats.combatCount || stats.combat || 0
+        const substituteCount = stats.substituteCount || stats.substitute || 0
         const combatFull = combatCount >= POSITION_CAPACITY.combat
         const substituteFull = substituteCount >= POSITION_CAPACITY.substitute
         const totalCount = combatCount + substituteCount
         const totalCapacity = POSITION_CAPACITY.combat + POSITION_CAPACITY.substitute
+        const myRegistrations = stats.myRegistrations || stats.registrations || []
 
         return {
           ...cfg,
@@ -245,10 +233,10 @@ Page({
           combatFull,
           substituteFull,
           isFull: combatFull && substituteFull,
-          isMyConfig: currentUserId ? allRegs.some(r => r.configId === cfg._id && r.userId === currentUserId) : false,
-          myPositions: currentUserId ? allRegs.filter(r => r.configId === cfg._id && r.userId === currentUserId).map(r => r.position) : []
+          isMyConfig: currentUserId ? myRegistrations.some(r => r.userId === currentUserId) : false,
+          myPositions: currentUserId ? myRegistrations.filter(r => r.userId === currentUserId).map(r => r.position) : []
         }
-      })
+      }))
 
       this.setData({
         configs: processedConfigs
@@ -257,26 +245,6 @@ Page({
     } catch (err) {
       console.error('加载配置失败:', err)
     }
-  },
-
-  // 批量获取所有配置的报名记录（一次 DB 查询）
-  batchFetchRegistrations: async function (wxdb, configIds) {
-    const batchSize = 100
-    let allRegs = []
-    let skip = 0
-
-    while (true) {
-      const res = await wxdb.collection('canyonRegistrations').where({
-        configId: wxdb.command.in(configIds),
-        status: 'active'
-      }).skip(skip).limit(batchSize).get()
-      allRegs = allRegs.concat(res.data)
-      if (res.data.length < batchSize) break
-      skip += batchSize
-      if (skip > 500) break
-    }
-
-    return allRegs
   },
 
   getConfigStats: async function (configId) {

@@ -970,8 +970,8 @@ Page({
             ctx.fillStyle = '#666666'
             ctx.font = '24px sans-serif'
             const nameStrs = stat.registrations.map((r, i) => `${i + 1}.${r.nickName}(${r.timeSlot})`)
-            for (let i = 0; i < nameStrs.length; i += 5) {
-              ctx.fillText(nameStrs.slice(i, i + 5).join(' '), margin + 20, y)
+            for (let i = 0; i < nameStrs.length; i += 2) {
+              ctx.fillText(nameStrs.slice(i, i + 2).join('  '), margin + 20, y)
               y += 40
             }
           }
@@ -1055,7 +1055,7 @@ Page({
         height += 45 // 标题
         height += 40 // 日期起始时间
         if (stat.registrations.length > 0) {
-          height += 40 * Math.ceil(stat.registrations.length / 5) // 报名人员（每5人换行）
+          height += 40 * Math.ceil(stat.registrations.length / 2) // 报名人员（每2人换行）
         }
         height += 25 // 间隔
       }

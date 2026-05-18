@@ -298,39 +298,23 @@ Page({
 
         const configs = res.result.data
 
-        // 批量查询所有配置的报名记录（一次 DB 查询，替代 N+1 云函数调用）
+        // 加载每个配置的报名统计
         const positionStats = []
         let positionTotal = 0
 
-        if (configs.length > 0) {
-          const configIds = configs.map(c => c._id)
-          const wxdb = wx.cloud.database()
-          let allRegs = []
-          let skip = 0
-          const batchSize = 100
-
-          while (true) {
-            const res = await wxdb.collection('positionRegistrations').where({
-              configId: wxdb.command.in(configIds),
-              status: 'active'
-            }).skip(skip).limit(batchSize).get()
-            allRegs = allRegs.concat(res.data)
-            if (res.data.length < batchSize) break
-            skip += batchSize
-            if (skip > 500) break
-          }
-
-          // 按 configId 分组并排序
-          const regsByConfig = {}
-          for (const reg of allRegs) {
-            if (!regsByConfig[reg.configId]) {
-              regsByConfig[reg.configId] = []
+        for (const config of configs) {
+          const regRes = await wx.cloud.callFunction({
+            name: 'managePosition',
+            data: {
+              action: 'getRegistrations',
+              data: {
+                configId: config._id
+              }
             }
-            regsByConfig[reg.configId].push(reg)
-          }
+          })
 
-          for (const config of configs) {
-            const regs = (regsByConfig[config._id] || []).sort((a, b) => {
+          if (regRes.result.success) {
+            const registrations = (regRes.result.data || []).sort((a, b) => {
               const aTime = a.timeSlot || ''
               const bTime = b.timeSlot || ''
               const parseTime = (t) => {
@@ -342,10 +326,10 @@ Page({
             })
             positionStats.push({
               config: config,
-              registrations: regs,
-              count: regs.length
+              registrations: registrations,
+              count: registrations.length
             })
-            positionTotal += regs.length
+            positionTotal += registrations.length
           }
         }
 
@@ -831,8 +815,8 @@ Page({
             ctx.fillStyle = '#666666'
             ctx.font = '24px sans-serif'
             const nameStrs = stat.registrations.map((r, i) => `${i + 1}.${r.nickName}(${r.timeSlot})`)
-            for (let i = 0; i < nameStrs.length; i += 3) {
-              ctx.fillText(nameStrs.slice(i, i + 3).join(' '), 50, y)
+            for (let i = 0; i < nameStrs.length; i += 2) {
+              ctx.fillText(nameStrs.slice(i, i + 2).join('  '), 50, y)
               y += 40
             }
           }
@@ -913,7 +897,7 @@ Page({
         height += 45 // 标题
         height += 40 // 日期起始时间
         if (stat.registrations.length > 0) {
-          height += 40 * Math.ceil(stat.registrations.length / 3) // 报名人员（每3人换行）
+          height += 40 * Math.ceil(stat.registrations.length / 2) // 报名人员（每2人换行）
         }
         height += 25 // 间隔
       }

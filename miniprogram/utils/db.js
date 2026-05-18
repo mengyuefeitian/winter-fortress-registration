@@ -1046,33 +1046,6 @@ async function getPositionRegistrationsByConfig(configId) {
   return allData
 }
 
-// 批量获取多个配置的报名计数（一次查询，替代 N+1）
-async function getPositionRegistrationsCountByConfigs(configIds) {
-  if (!configIds || configIds.length === 0) return {}
-  const db = getDb()
-  const batchSize = 100
-  let allRegs = []
-  let skip = 0
-
-  while (true) {
-    const res = await db.collection('positionRegistrations').where({
-      configId: db.command.in(configIds),
-      status: 'active'
-    }).skip(skip).limit(batchSize).get()
-    allRegs = allRegs.concat(res.data)
-    if (res.data.length < batchSize) break
-    skip += batchSize
-    if (skip > 500) break
-  }
-
-  // 按 configId 分组计数
-  const countByConfig = {}
-  for (const reg of allRegs) {
-    countByConfig[reg.configId] = (countByConfig[reg.configId] || 0) + 1
-  }
-  return countByConfig
-}
-
 // 根据时间段获取报名记录
 async function getPositionRegistrationByTimeSlot(configId, timeSlot) {
   const db = getDb()
@@ -1813,7 +1786,6 @@ module.exports = {
   // 官职报名
   createPositionRegistration,
   getPositionRegistrationsByConfig,
-  getPositionRegistrationsCountByConfigs,
   getPositionRegistrationByTimeSlot,
   getPositionRegistrationsByUser,
   updatePositionRegistration,

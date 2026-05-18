@@ -120,9 +120,20 @@ Page({
         return a.date.localeCompare(b.date)
       })
 
-      // 为每个配置计算报名统计（批量查询，一次 DB 请求）
-      const configIds = validConfigs.map(c => c._id)
-      const countByConfig = await db.getPositionRegistrationsCountByConfigs(configIds)
+      // 并行 count 查询每个配置的报名人数（替代原 for 循环顺序查询）
+      const wxdb = wx.cloud.database()
+      const countResults = await Promise.all(validConfigs.map(async (config) => {
+        const res = await wxdb.collection('positionRegistrations').where({
+          configId: config._id,
+          status: 'active'
+        }).count()
+        return { configId: config._id, count: res.total || 0 }
+      }))
+
+      const countByConfig = {}
+      for (const { configId, count } of countResults) {
+        countByConfig[configId] = count
+      }
 
       const processedConfigs = validConfigs.map(config => {
         const slots = db.generatePositionTimeSlots(config.startTime)
