@@ -671,6 +671,7 @@ page {
   min-height: 100px;
   box-sizing: border-box;
   transition: all 0.15s ease;
+  position: relative;
 }
 
 .function-card:active {
@@ -735,10 +736,24 @@ page {
   font-size: 11px;
   font-weight: 600;
   color: #ffffff;
+  position: absolute;
+  top: 8px;
+  right: 8px;
 }
 
 .badge-danger {
   background-color: #e94560;
+}
+
+.badge-red {
+  background-color: #FF6B6B;
+  color: white;
+  border-radius: 10px;
+  padding: 2px 8px;
+  font-size: 12px;
+  position: absolute;
+  top: 8px;
+  right: 8px;
 }
 
 .function-icon {

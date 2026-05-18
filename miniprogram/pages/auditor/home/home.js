@@ -307,6 +307,36 @@ Page({
     }
   },
 
+  goToArsenalConfig: function () {
+    if (this.data.isSuperAdmin) {
+      if (!this.data.selectedAlliance) {
+        util.showInfo('请先选择联盟')
+        return
+      }
+      wx.navigateTo({
+        url: '/pages/auditor/arsenal-config/arsenal-config?allianceId=' + this.data.selectedAlliance._id + '&zoneId=' + this.data.selectedZone._id
+      })
+    } else if (this.data.isAdmin) {
+      const alliance = this.data.myAlliances[this.data.selectedAllianceIndex]
+      if (!alliance) {
+        util.showInfo('请先选择联盟')
+        return
+      }
+      wx.navigateTo({
+        url: '/pages/auditor/arsenal-config/arsenal-config?allianceId=' + alliance._id + '&zoneId=' + alliance.zoneId
+      })
+    } else {
+      const alliance = this.data.myAlliances[this.data.selectedAllianceIndex]
+      if (!alliance) {
+        util.showInfo('您还未绑定联盟')
+        return
+      }
+      wx.navigateTo({
+        url: '/pages/auditor/arsenal-config/arsenal-config?allianceId=' + alliance._id + '&zoneId=' + alliance.zoneId
+      })
+    }
+  },
+
   goToStatistics: function () {
     if (this.data.isSuperAdmin) {
       if (!this.data.selectedAlliance) {

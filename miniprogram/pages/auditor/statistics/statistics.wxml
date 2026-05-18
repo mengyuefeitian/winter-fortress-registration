@@ -1,5 +1,20 @@
 <!--pages/auditor/statistics/statistics.wxml-->
 <view class="page">
+  <!-- 报名类型选择 -->
+  <view class="card">
+    <view class="form-row">
+      <view class="form-col">
+        <text class="form-label">报名类型</text>
+        <picker bindchange="onRegTypeChange" value="{{regTypeIndex}}" range="{{registrationTypes}}">
+          <view class="picker-compact">
+            <text>{{selectedRegType}}</text>
+            <image class="picker-compact-arrow" src="/images/icon-arrow-down.png"></image>
+          </view>
+        </picker>
+      </view>
+    </view>
+  </view>
+
   <view class="card">
     <view class="stats-header">
       <view class="stats-title">{{allianceName}} 报名统计</view>
@@ -9,50 +24,149 @@
       <button class="btn btn-primary btn-sm" bindtap="saveScreenshot">保存截图</button>
     </view>
 
-    <view wx:if="{{stats.length === 0}}" class="empty-state">
-      <view class="empty-text">暂无数据</view>
-    </view>
-
-    <view wx:else>
-      <!-- 汇总数据 -->
-      <view class="stats-summary">
-        <view class="summary-item">
-          <view class="summary-value">{{totalRegistrations}}</view>
-          <view class="summary-label">总报名人数</view>
-        </view>
-        <view class="summary-item">
-          <view class="summary-value">{{fullSlots}}</view>
-          <view class="summary-label">已满时间段</view>
-        </view>
-        <view class="summary-item">
-          <view class="summary-value">{{remainingSlots}}</view>
-          <view class="summary-label">剩余名额</view>
-        </view>
+    <!-- 堡垒报名统计 -->
+    <view wx:if="{{selectedRegType === '堡垒报名'}}">
+      <view wx:if="{{stats.length === 0}}" class="empty-state">
+        <view class="empty-text">暂无数据</view>
       </view>
 
-      <!-- 时间段详情 -->
-      <view class="time-slot-list">
-        <view wx:for="{{stats}}" wx:key="*this" class="time-slot-card">
-          <view class="slot-header">
-            <view class="slot-time">
-              {{item.timeSlot.displayName}}
-              <text wx:if="{{item.timeSlot.fortress}}" class="slot-tag fortress-tag">{{item.timeSlot.fortress}}</text>
-              <text wx:if="{{item.timeSlot.tag}}" class="slot-tag">{{item.timeSlot.tag}}</text>
+      <view wx:else>
+        <!-- 汇总数据 -->
+        <view class="stats-summary">
+          <view class="summary-item">
+            <view class="summary-value">{{totalRegistrations}}</view>
+            <view class="summary-label">总报名人数</view>
+          </view>
+          <view class="summary-item">
+            <view class="summary-value">{{fullSlots}}</view>
+            <view class="summary-label">已满时间段</view>
+          </view>
+          <view class="summary-item">
+            <view class="summary-value">{{remainingSlots}}</view>
+            <view class="summary-label">剩余名额</view>
+          </view>
+        </view>
+
+        <!-- 时间段详情 -->
+        <view class="time-slot-list">
+          <view wx:for="{{stats}}" wx:key="*this" class="time-slot-card">
+            <view class="slot-header">
+              <view class="slot-time">
+                {{item.timeSlot.displayName}}
+                <text wx:if="{{item.timeSlot.fortress}}" class="slot-tag fortress-tag">{{item.timeSlot.fortress}}</text>
+                <text wx:if="{{item.timeSlot.tag}}" class="slot-tag">{{item.timeSlot.tag}}</text>
+              </view>
+              <view class="slot-status {{item.isFull ? 'full' : ''}}">
+                {{item.count}}/{{item.timeSlot.maxCount}}人
+              </view>
             </view>
-            <view class="slot-status {{item.isFull ? 'full' : ''}}">
-              {{item.count}}/{{item.timeSlot.maxCount}}人
+
+            <view wx:if="{{item.timeSlot.date}}" class="slot-date">日期: {{item.timeSlot.date}}</view>
+
+            <!-- 报名人员列表 -->
+            <view wx:if="{{item.registrations.length > 0}}" class="registration-list">
+              <view wx:for="{{item.registrations}}" wx:for-item="reg" wx:for-index="regIdx" wx:key="_id" class="registration-item">
+                <view class="reg-order">{{regIdx + 1}}</view>
+                <view class="reg-name">{{reg.nickName}}</view>
+                <view class="reg-position {{reg.position === 'head' ? 'head' : 'body'}}">
+                  {{reg.position === 'head' ? '车头' : '车身'}}
+                </view>
+              </view>
             </view>
           </view>
+        </view>
+      </view>
+    </view>
 
-          <view wx:if="{{item.timeSlot.date}}" class="slot-date">日期: {{item.timeSlot.date}}</view>
+    <!-- 兵工厂报名统计 -->
+    <view wx:if="{{selectedRegType === '兵工厂报名'}}">
+      <view wx:if="{{arsenalStats.length === 0}}" class="empty-state">
+        <view class="empty-text">暂无数据</view>
+      </view>
 
-          <!-- 报名人员列表 -->
-          <view wx:if="{{item.registrations.length > 0}}" class="registration-list">
-            <view wx:for="{{item.registrations}}" wx:for-item="reg" wx:for-index="regIdx" wx:key="_id" class="registration-item">
-              <view class="reg-order">{{regIdx + 1}}</view>
-              <view class="reg-name">{{reg.nickName}}</view>
-              <view class="reg-position {{reg.position === 'head' ? 'head' : 'body'}}">
-                {{reg.position === 'head' ? '车头' : '车身'}}
+      <view wx:else>
+        <!-- 汇总数据 -->
+        <view class="stats-summary">
+          <view class="summary-item">
+            <view class="summary-value">{{arsenalTotal}}</view>
+            <view class="summary-label">总报名人数</view>
+          </view>
+          <view class="summary-item">
+            <view class="summary-value">{{arsenalStats.length}}</view>
+            <view class="summary-label">活动配置</view>
+          </view>
+        </view>
+
+        <!-- 兵工厂详情列表 -->
+        <view class="time-slot-list">
+          <view wx:for="{{arsenalStats}}" wx:key="*this" class="time-slot-card">
+            <view class="slot-header">
+              <view class="slot-time">
+                <text class="config-title">{{item.activityTypeLabel}}</text>
+                <text class="slot-tag">{{item.config.date}}</text>
+              </view>
+              <view class="slot-status">
+                {{item.count}}人报名
+              </view>
+            </view>
+            <view class="slot-date">时间: {{item.config.timeValue}}  军团: {{item.config.corps}}</view>
+
+            <!-- 报名人员列表 -->
+            <view wx:if="{{item.registrations.length > 0}}" class="registration-list">
+              <view wx:for="{{item.registrations}}" wx:for-item="reg" wx:for-index="regIdx" wx:key="_id" class="registration-item">
+                <view class="reg-order">{{regIdx + 1}}</view>
+                <view class="reg-name">{{reg.nickName}}</view>
+                <view class="reg-position {{reg.position === 'combat' ? 'combat' : 'substitute'}}">
+                  {{reg.position === 'combat' ? '参战' : '替补'}}
+                </view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 峡谷报名统计 -->
+    <view wx:if="{{selectedRegType === '峡谷报名'}}">
+      <view wx:if="{{canyonStats.length === 0}}" class="empty-state">
+        <view class="empty-text">暂无数据</view>
+      </view>
+
+      <view wx:else>
+        <!-- 汇总数据 -->
+        <view class="stats-summary">
+          <view class="summary-item">
+            <view class="summary-value">{{canyonTotal}}</view>
+            <view class="summary-label">总报名人数</view>
+          </view>
+          <view class="summary-item">
+            <view class="summary-value">{{canyonStats.length}}</view>
+            <view class="summary-label">活动配置</view>
+          </view>
+        </view>
+
+        <!-- 峡谷详情列表 -->
+        <view class="time-slot-list">
+          <view wx:for="{{canyonStats}}" wx:key="*this" class="time-slot-card">
+            <view class="slot-header">
+              <view class="slot-time">
+                <text class="config-title">{{item.activityTypeLabel}}</text>
+                <text class="slot-tag">{{item.config.date}}</text>
+              </view>
+              <view class="slot-status">
+                {{item.count}}人报名
+              </view>
+            </view>
+            <view class="slot-date">时间: {{item.config.timeValue}}  军团: {{item.config.corps}}</view>
+
+            <!-- 报名人员列表 -->
+            <view wx:if="{{item.registrations.length > 0}}" class="registration-list">
+              <view wx:for="{{item.registrations}}" wx:for-item="reg" wx:for-index="regIdx" wx:key="_id" class="registration-item">
+                <view class="reg-order">{{regIdx + 1}}</view>
+                <view class="reg-name">{{reg.nickName}}</view>
+                <view class="reg-position {{reg.position === 'combat' ? 'combat' : 'substitute'}}">
+                  {{reg.position === 'combat' ? '参战' : '替补'}}
+                </view>
               </view>
             </view>
           </view>

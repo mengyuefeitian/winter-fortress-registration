@@ -1,0 +1,41 @@
+@import "../registration/registration.wxss";
+
+.position-option.active {
+  background-color: #4A90D9;
+  border-color: #4A90D9;
+}
+
+.position-option.active .position-name {
+  color: #FFFFFF;
+}
+
+.position-position.combat {
+  background-color: #FFE8E8;
+  color: #FA5151;
+}
+
+.position-position.substitute {
+  background-color: #F0FFF0;
+  color: #07C160;
+}
+
+.activity-type-tag {
+  background-color: #6BB3F0;
+}
+
+.slot-counts {
+  display: flex;
+  gap: 12px;
+}
+
+.slot-counts .slot-count {
+  font-size: 13px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background-color: #F5F5F5;
+}
+
+.slot-counts .slot-count.full {
+  background-color: #FFE8E8;
+  color: #FA5151;
+}

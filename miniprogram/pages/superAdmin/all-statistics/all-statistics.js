@@ -7,7 +7,7 @@ const auth = require('../../../utils/auth')
 Page({
   data: {
     // 报名类型选择
-    registrationTypes: ['堡垒报名', '官职报名'],
+    registrationTypes: ['堡垒报名', '兵工厂报名', '峡谷报名', '官职报名'],
     regTypeIndex: 0,
     selectedRegType: '堡垒报名',
 
@@ -26,7 +26,17 @@ Page({
     // 官职报名数据
     positionConfigs: [],
     positionStats: [],
-    positionTotal: 0
+    positionTotal: 0,
+
+    // 兵工厂报名数据
+    arsenalConfigs: [],
+    arsenalStats: [],
+    arsenalTotal: 0,
+
+    // 峡谷报名数据
+    canyonConfigs: [],
+    canyonStats: [],
+    canyonTotal: 0
   },
 
   onLoad: function () {
@@ -177,7 +187,91 @@ Page({
           fullSlots: fullSlots,
           remainingSlots: remainingSlots,
           positionStats: [],
-          positionTotal: 0
+          positionTotal: 0,
+          arsenalStats: [],
+          arsenalTotal: 0,
+          canyonStats: [],
+          canyonTotal: 0
+        })
+
+      } else if (this.data.selectedRegType === '兵工厂报名') {
+        // 兵工厂报名统计
+        if (!this.data.selectedZone) {
+          util.hideLoading()
+          return
+        }
+
+        const configs = await db.getArsenalConfigs({ zoneId: this.data.selectedZone._id })
+
+        const arsenalStats = []
+        let arsenalTotal = 0
+
+        const ACTIVITY_TYPE_LABELS = { 'arsenal': '兵工厂', 'canyon': '峡谷会战' }
+
+        for (const config of configs) {
+          const stats = await db.getArsenalStats(config._id, { includeRegistrations: true })
+          const regs = (stats.registrations || []).sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
+          arsenalStats.push({
+            config: config,
+            activityTypeLabel: ACTIVITY_TYPE_LABELS[config.activityType] || config.activityType,
+            registrations: regs,
+            count: stats.count || 0
+          })
+          arsenalTotal += stats.count || 0
+        }
+
+        this.setData({
+          arsenalConfigs: configs,
+          arsenalStats: arsenalStats,
+          arsenalTotal: arsenalTotal,
+          timeSlotStats: [],
+          totalRegistrations: 0,
+          fullSlots: 0,
+          remainingSlots: 0,
+          positionStats: [],
+          positionTotal: 0,
+          canyonStats: [],
+          canyonTotal: 0
+        })
+
+      } else if (this.data.selectedRegType === '峡谷报名') {
+        // 峡谷报名统计
+        if (!this.data.selectedZone) {
+          util.hideLoading()
+          return
+        }
+
+        const configs = await db.getCanyonConfigs({ zoneId: this.data.selectedZone._id })
+
+        const canyonStats = []
+        let canyonTotal = 0
+
+        const ACTIVITY_TYPE_LABELS = { 'arsenal': '兵工厂', 'canyon': '峡谷会战' }
+
+        for (const config of configs) {
+          const stats = await db.getCanyonStats(config._id, { includeRegistrations: true })
+          const regs = (stats.registrations || []).sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
+          canyonStats.push({
+            config: config,
+            activityTypeLabel: ACTIVITY_TYPE_LABELS[config.activityType] || config.activityType,
+            registrations: regs,
+            count: stats.count || 0
+          })
+          canyonTotal += stats.count || 0
+        }
+
+        this.setData({
+          canyonConfigs: configs,
+          canyonStats: canyonStats,
+          canyonTotal: canyonTotal,
+          timeSlotStats: [],
+          totalRegistrations: 0,
+          fullSlots: 0,
+          remainingSlots: 0,
+          positionStats: [],
+          positionTotal: 0,
+          arsenalStats: [],
+          arsenalTotal: 0
         })
 
       } else {
@@ -220,7 +314,16 @@ Page({
           })
 
           if (regRes.result.success) {
-            const registrations = regRes.result.data
+            const registrations = (regRes.result.data || []).sort((a, b) => {
+              const aTime = a.timeSlot || ''
+              const bTime = b.timeSlot || ''
+              const parseTime = (t) => {
+                const parts = t.split(':')
+                if (parts.length === 2) return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10)
+                return 0
+              }
+              return parseTime(aTime) - parseTime(bTime)
+            })
             positionStats.push({
               config: config,
               registrations: registrations,
@@ -237,7 +340,11 @@ Page({
           timeSlotStats: [],
           totalRegistrations: 0,
           fullSlots: 0,
-          remainingSlots: 0
+          remainingSlots: 0,
+          arsenalStats: [],
+          arsenalTotal: 0,
+          canyonStats: [],
+          canyonTotal: 0
         })
       }
 
@@ -245,7 +352,8 @@ Page({
 
     } catch (err) {
       util.hideLoading()
-      util.showError('加载统计数据失败')
+      console.error('加载统计数据失败:', err)
+      util.showError('加载统计数据失败: ' + (err.message || '未知错误'))
     }
   },
 
@@ -426,6 +534,244 @@ Page({
           y += 20
         }
 
+      } else if (this.data.selectedRegType === '兵工厂报名') {
+        if (!this.data.selectedZone || this.data.arsenalStats.length === 0) {
+          util.hideLoading()
+          util.showInfo('暂无数据可截图')
+          return
+        }
+
+        const margin = 40
+        const canvasWidth = 750
+        let totalHeight = 220
+        for (const stat of this.data.arsenalStats) {
+          totalHeight += 50
+          if (stat.registrations.length > 0) {
+            totalHeight += Math.ceil(stat.registrations.length / 3) * 40 + 20
+          }
+          totalHeight += 25
+        }
+
+        canvas.width = canvasWidth
+        canvas.height = totalHeight
+
+        ctx.fillStyle = '#FFFFFF'
+        ctx.fillRect(0, 0, canvasWidth, totalHeight)
+
+        ctx.fillStyle = '#07C160'
+        ctx.font = 'bold 32px sans-serif'
+        ctx.fillText(this.data.selectedZone.zoneName + ' 兵工厂报名统计', margin, 50)
+
+        ctx.fillStyle = '#999999'
+        ctx.font = '24px sans-serif'
+        ctx.fillText(util.formatDate(new Date(), 'YY/MM/DD HH:mm'), margin, 90)
+
+        ctx.fillStyle = '#333333'
+        ctx.font = 'bold 28px sans-serif'
+        ctx.fillText(`总人数: ${this.data.arsenalTotal}`, margin, 130)
+
+        ctx.strokeStyle = '#E8E8E8'
+        ctx.beginPath()
+        ctx.moveTo(margin, 155)
+        ctx.lineTo(canvasWidth - margin, 155)
+        ctx.stroke()
+
+        let y = 195
+        for (const stat of this.data.arsenalStats) {
+          ctx.fillStyle = '#333333'
+          ctx.font = 'bold 28px sans-serif'
+          ctx.fillText(`${stat.activityTypeLabel} - ${stat.config.corps} (${stat.count}人)`, margin, y)
+          y += 40
+
+          ctx.fillStyle = '#A6A6A6'
+          ctx.font = '24px sans-serif'
+          ctx.fillText(`日期: ${stat.config.date}  时间: ${stat.config.timeValue}`, margin + 20, y)
+          y += 40
+
+          if (stat.registrations.length > 0) {
+            const substitutes = stat.registrations.filter(r => r.position === 'substitute')
+            const combats = stat.registrations.filter(r => r.position === 'combat')
+
+            if (substitutes.length > 0) {
+              ctx.fillStyle = '#07C160'
+              ctx.font = 'bold 24px sans-serif'
+              ctx.fillText(`替补(${substitutes.length}):`, margin + 20, y)
+              y += 30
+
+              ctx.fillStyle = '#666666'
+              ctx.font = '24px sans-serif'
+              const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
+              for (let i = 0; i < subNames.length; i += 3) {
+                ctx.fillText(subNames.slice(i, i + 3).join('  '), margin + 20, y)
+                y += 35
+              }
+            }
+
+            if (combats.length > 0) {
+              ctx.fillStyle = '#FA5151'
+              ctx.font = 'bold 24px sans-serif'
+              ctx.fillText(`参战(${combats.length}):`, margin + 20, y)
+              y += 30
+
+              ctx.fillStyle = '#666666'
+              ctx.font = '24px sans-serif'
+              const combatNames = combats.map((r, i) => `${i + 1}.${r.nickName}`)
+              for (let i = 0; i < combatNames.length; i += 3) {
+                ctx.fillText(combatNames.slice(i, i + 3).join('  '), margin + 20, y)
+                y += 35
+              }
+            }
+          }
+
+          y += 25
+        }
+
+        wx.canvasToTempFilePath({
+          canvas: canvas,
+          destWidth: canvasWidth,
+          destHeight: totalHeight,
+          success: (res) => {
+            wx.saveImageToPhotosAlbum({
+              filePath: res.tempFilePath,
+              success: () => {
+                util.hideLoading()
+                util.showSuccess('截图已保存到相册')
+              },
+              fail: (err) => {
+                util.hideLoading()
+                if (err.errMsg.indexOf('auth deny') !== -1) {
+                  wx.showModal({ title: '提示', content: '需要您授权保存图片权限', confirmText: '去授权', success: (modalRes) => { if (modalRes.confirm) { wx.openSetting() } } })
+                } else {
+                  util.showError('保存失败')
+                }
+              }
+            })
+          },
+          fail: () => {
+            util.hideLoading()
+            util.showError('生成图片失败')
+          }
+        })
+
+      } else if (this.data.selectedRegType === '峡谷报名') {
+        if (!this.data.selectedZone || this.data.canyonStats.length === 0) {
+          util.hideLoading()
+          util.showInfo('暂无数据可截图')
+          return
+        }
+
+        const margin = 40
+        const canvasWidth = 750
+        let totalHeight = 220
+        for (const stat of this.data.canyonStats) {
+          totalHeight += 50
+          if (stat.registrations.length > 0) {
+            totalHeight += 60 + Math.ceil(stat.registrations.length / 3) * 40
+          }
+          totalHeight += 25
+        }
+
+        canvas.width = canvasWidth
+        canvas.height = totalHeight
+
+        ctx.fillStyle = '#FFFFFF'
+        ctx.fillRect(0, 0, canvasWidth, totalHeight)
+
+        ctx.fillStyle = '#07C160'
+        ctx.font = 'bold 32px sans-serif'
+        ctx.fillText(this.data.selectedZone.zoneName + ' 峡谷报名统计', margin, 50)
+
+        ctx.fillStyle = '#999999'
+        ctx.font = '24px sans-serif'
+        ctx.fillText(util.formatDate(new Date(), 'YY/MM/DD HH:mm'), margin, 90)
+
+        ctx.fillStyle = '#333333'
+        ctx.font = 'bold 28px sans-serif'
+        ctx.fillText(`总人数: ${this.data.canyonTotal}`, margin, 130)
+
+        ctx.strokeStyle = '#E8E8E8'
+        ctx.beginPath()
+        ctx.moveTo(margin, 155)
+        ctx.lineTo(canvasWidth - margin, 155)
+        ctx.stroke()
+
+        let y = 195
+        for (const stat of this.data.canyonStats) {
+          ctx.fillStyle = '#333333'
+          ctx.font = 'bold 28px sans-serif'
+          ctx.fillText(`${stat.activityTypeLabel} - ${stat.config.corps} (${stat.count}人)`, margin, y)
+          y += 40
+
+          ctx.fillStyle = '#A6A6A6'
+          ctx.font = '24px sans-serif'
+          ctx.fillText(`日期: ${stat.config.date}  时间: ${stat.config.timeValue}`, margin + 20, y)
+          y += 40
+
+          if (stat.registrations.length > 0) {
+            const substitutes = stat.registrations.filter(r => r.position === 'substitute')
+            const combats = stat.registrations.filter(r => r.position === 'combat')
+
+            if (substitutes.length > 0) {
+              ctx.fillStyle = '#07C160'
+              ctx.font = 'bold 24px sans-serif'
+              ctx.fillText(`替补(${substitutes.length}):`, margin + 20, y)
+              y += 30
+
+              ctx.fillStyle = '#666666'
+              ctx.font = '24px sans-serif'
+              const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
+              for (let i = 0; i < subNames.length; i += 3) {
+                ctx.fillText(subNames.slice(i, i + 3).join('  '), margin + 20, y)
+                y += 35
+              }
+            }
+
+            if (combats.length > 0) {
+              ctx.fillStyle = '#FA5151'
+              ctx.font = 'bold 24px sans-serif'
+              ctx.fillText(`参战(${combats.length}):`, margin + 20, y)
+              y += 30
+
+              ctx.fillStyle = '#666666'
+              ctx.font = '24px sans-serif'
+              const combatNames = combats.map((r, i) => `${i + 1}.${r.nickName}`)
+              for (let i = 0; i < combatNames.length; i += 3) {
+                ctx.fillText(combatNames.slice(i, i + 3).join('  '), margin + 20, y)
+                y += 35
+              }
+            }
+          }
+
+          y += 25
+        }
+
+        wx.canvasToTempFilePath({
+          canvas: canvas,
+          destWidth: canvasWidth,
+          destHeight: totalHeight,
+          success: (res) => {
+            wx.saveImageToPhotosAlbum({
+              filePath: res.tempFilePath,
+              success: () => {
+                util.hideLoading()
+                util.showSuccess('截图已保存到相册')
+              },
+              fail: (err) => {
+                util.hideLoading()
+                if (err.errMsg.indexOf('auth deny') !== -1) {
+                  wx.showModal({ title: '提示', content: '需要您授权保存图片权限', confirmText: '去授权', success: (modalRes) => { if (modalRes.confirm) { wx.openSetting() } } })
+                } else {
+                  util.showError('保存失败')
+                }
+              }
+            })
+          },
+          fail: () => {
+            util.hideLoading()
+            util.showError('生成图片失败')
+          }
+        })
+
       } else {
         // 官职报名截图
         if (!this.data.selectedZone) {
@@ -458,24 +804,28 @@ Page({
           ctx.font = 'bold 28px sans-serif'
           ctx.fillText(`${stat.config.positionType} (${stat.count}人)`, 30, y)
 
-          y += 40
+          y += 45
 
           ctx.fillStyle = '#07C160'
           ctx.font = '24px sans-serif'
           ctx.fillText(`日期: ${stat.config.date}  起始: ${stat.config.startTime}`, 50, y)
-          y += 35
+          y += 40
 
           if (stat.registrations.length > 0) {
             ctx.fillStyle = '#666666'
             ctx.font = '24px sans-serif'
-            const nameStrs = stat.registrations.map((r, i) => `${i + 1}.${r.nickName}(${r.timeSlot})`)
-            for (let i = 0; i < nameStrs.length; i += 3) {
-              ctx.fillText(nameStrs.slice(i, i + 3).join(' '), 50, y)
-              y += 35
+            const items = stat.registrations.map(r => `${r.timeSlot} ${r.nickName}`)
+            const colX = [50, 375]
+            for (let i = 0; i < items.length; i += 2) {
+              ctx.fillText(`${i + 1}. ${items[i]}`, colX[0], y)
+              if (items[i + 1]) {
+                ctx.fillText(`${i + 2}. ${items[i + 1]}`, colX[1], y)
+              }
+              y += 40
             }
           }
 
-          y += 20
+          y += 25
         }
       }
 
@@ -548,12 +898,12 @@ Page({
       height = 190
 
       for (const stat of this.data.positionStats) {
-        height += 40 // 标题
-        height += 35 // 日期起始时间
+        height += 45 // 标题
+        height += 40 // 日期起始时间
         if (stat.registrations.length > 0) {
-          height += 35 * Math.ceil(stat.registrations.length / 3) // 报名人员（每3人换行）
+          height += 40 * Math.ceil(stat.registrations.length / 2) // 报名人员（每2人换行）
         }
-        height += 20 // 间隔
+        height += 25 // 间隔
       }
     }
 

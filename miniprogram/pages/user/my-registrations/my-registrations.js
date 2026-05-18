@@ -12,6 +12,8 @@ Page({
     registrations: [],
     weeklyRegistrations: [],
     positionRegistrations: [],
+    arsenalRegistrations: [],
+    canyonRegistrations: [],
     versionText: version.getVersionText(),
     // 分区过滤
     currentZone: null,
@@ -89,7 +91,9 @@ Page({
         this.setData({
           registrations: [],
           weeklyRegistrations: [],
-          positionRegistrations: []
+          positionRegistrations: [],
+          arsenalRegistrations: [],
+          canyonRegistrations: []
         })
         return
       }
@@ -104,15 +108,32 @@ Page({
         const alliance = await this.getAllianceById(reg.allianceId)
         const timeSlot = await db.getTimeSlotById(reg.timeSlotId)
 
+        // Format date as YY/MM/DD
+        let formattedDate = ''
+        if (timeSlot && timeSlot.date) {
+          const dateParts = timeSlot.date.split('-')
+          if (dateParts.length === 3) {
+            formattedDate = dateParts[0].slice(-2) + '/' + dateParts[1] + '/' + dateParts[2]
+          }
+        }
+
+        // Truncate alliance name to first 3 chars
+        const allianceName = alliance ? alliance.allianceName : '未知联盟'
+        const shortAllianceName = allianceName.substring(0, 3)
+        const zoneCode = zone ? zone.zoneCode : ''
+
         processedRegistrations.push({
           ...reg,
           zoneName: zone ? zone.zoneName : '未知分区',
-          zoneCode: zone ? zone.zoneCode : '',
+          zoneCode: zoneCode,
           zoneId: reg.zoneId,
-          allianceName: alliance ? alliance.allianceName : '未知联盟',
+          allianceName: allianceName,
+          shortAllianceName: shortAllianceName,
           displayName: timeSlot ? timeSlot.displayName : '未知时间',
           timeTag: timeSlot ? timeSlot.tag : '',
+          timeFortress: timeSlot ? timeSlot.fortress : '',
           timeDate: timeSlot ? timeSlot.date : '',
+          formattedDate: formattedDate,
           formattedTime: util.formatDate(reg.createTime, 'YYYY-MM-DD HH:mm')
         })
       }
@@ -144,6 +165,51 @@ Page({
         registrations: filteredRegistrations,
         weeklyRegistrations: weeklyRegistrations,
         positionRegistrations: processedPositionRegistrations
+      })
+
+      // 加载兵工厂报名记录（批量获取配置，避免N+1查询）
+      const arsenalRegistrations = await db.getArsenalRegistrationsByUser(userId)
+      const allArsenalConfigs = await db.getArsenalConfigs({})
+      const arsenalConfigMap = {}
+      allArsenalConfigs.forEach(cfg => { arsenalConfigMap[cfg._id] = cfg })
+
+      const processedArsenal = []
+      for (const reg of arsenalRegistrations) {
+        const config = arsenalConfigMap[reg.configId]
+        processedArsenal.push({
+          ...reg,
+          type: 'arsenal',
+          date: config?.date || '',
+          time: config?.timeValue || '',
+          corps: config?.corps || '',
+          activityType: config?.activityType || 'arsenal',
+          activityLabel: '兵工厂'
+        })
+      }
+
+      // 加载峡谷会战报名记录（批量获取配置，避免N+1查询）
+      const canyonRegistrations = await db.getCanyonRegistrationsByUser(userId)
+      const allCanyonConfigs = await db.getCanyonConfigs({})
+      const canyonConfigMap = {}
+      allCanyonConfigs.forEach(cfg => { canyonConfigMap[cfg._id] = cfg })
+
+      const processedCanyon = []
+      for (const reg of canyonRegistrations) {
+        const config = canyonConfigMap[reg.configId]
+        processedCanyon.push({
+          ...reg,
+          type: 'canyon',
+          date: config?.date || '',
+          time: config?.timeValue || '',
+          corps: config?.corps || '',
+          activityType: config?.activityType || 'canyon',
+          activityLabel: '峡谷会战'
+        })
+      }
+
+      this.setData({
+        arsenalRegistrations: processedArsenal,
+        canyonRegistrations: processedCanyon
       })
 
     } catch (err) {
@@ -229,6 +295,54 @@ Page({
       await db.cancelPositionRegistration(registrationId)
 
       // 重新加载数据（确保数据一致性）
+      await this.loadMyRegistrations()
+
+      util.hideLoading()
+      util.showSuccess('取消成功')
+
+    } catch (err) {
+      util.hideLoading()
+      util.showError('取消失败')
+    }
+  },
+
+  // 取消兵工厂报名
+  cancelArsenalRegistration: async function (e) {
+    const registrationId = e.currentTarget.dataset.id
+
+    const confirm = await util.showConfirm('确认取消', '确定要取消这条兵工厂报名记录吗？')
+
+    if (!confirm) return
+
+    try {
+      util.showLoading('正在取消...')
+
+      await db.cancelArsenalRegistration(registrationId)
+
+      await this.loadMyRegistrations()
+
+      util.hideLoading()
+      util.showSuccess('取消成功')
+
+    } catch (err) {
+      util.hideLoading()
+      util.showError('取消失败')
+    }
+  },
+
+  // 取消峡谷会战报名
+  cancelCanyonRegistration: async function (e) {
+    const registrationId = e.currentTarget.dataset.id
+
+    const confirm = await util.showConfirm('确认取消', '确定要取消这条峡谷会战报名记录吗？')
+
+    if (!confirm) return
+
+    try {
+      util.showLoading('正在取消...')
+
+      await db.cancelCanyonRegistration(registrationId)
+
       await this.loadMyRegistrations()
 
       util.hideLoading()

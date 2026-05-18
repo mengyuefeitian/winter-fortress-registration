@@ -104,15 +104,27 @@ async function getConfigs(data) {
     query.positionType = data.positionType
   }
 
-  const res = await db.collection('positionConfigs')
-    .where(query)
-    .orderBy('date', 'asc')
-    .orderBy('createTime', 'desc')
-    .get()
+  // 分页获取所有记录，避免20条限制
+  let allData = []
+  let skip = 0
+  const batchSize = 20
+  while (true) {
+    const res = await db.collection('positionConfigs')
+      .where(query)
+      .orderBy('date', 'asc')
+      .orderBy('createTime', 'desc')
+      .skip(skip)
+      .limit(batchSize)
+      .get()
+    allData = allData.concat(res.data)
+    if (res.data.length < batchSize) break
+    skip += batchSize
+    if (skip > 500) break
+  }
 
   return {
     success: true,
-    data: res.data
+    data: allData
   }
 }
 
@@ -217,27 +229,47 @@ async function createRegistration(data) {
 
 // 获取配置的所有报名记录
 async function getRegistrations(configId) {
-  const res = await db.collection('positionRegistrations').where({
-    configId: configId,
-    status: 'active'
-  }).orderBy('createTime', 'asc').get()
+  // 分页获取所有记录，避免20条限制
+  let allData = []
+  let skip = 0
+  const batchSize = 20
+  while (true) {
+    const res = await db.collection('positionRegistrations').where({
+      configId: configId,
+      status: 'active'
+    }).orderBy('createTime', 'asc').skip(skip).limit(batchSize).get()
+    allData = allData.concat(res.data)
+    if (res.data.length < batchSize) break
+    skip += batchSize
+    if (skip > 500) break
+  }
 
   return {
     success: true,
-    data: res.data
+    data: allData
   }
 }
 
 // 获取用户的报名记录
 async function getRegistrationsByUser(userId) {
-  const res = await db.collection('positionRegistrations').where({
-    userId: userId,
-    status: 'active'
-  }).orderBy('createTime', 'desc').get()
+  // 分页获取所有记录，避免20条限制
+  let allData = []
+  let skip = 0
+  const batchSize = 20
+  while (true) {
+    const res = await db.collection('positionRegistrations').where({
+      userId: userId,
+      status: 'active'
+    }).orderBy('createTime', 'desc').skip(skip).limit(batchSize).get()
+    allData = allData.concat(res.data)
+    if (res.data.length < batchSize) break
+    skip += batchSize
+    if (skip > 500) break
+  }
 
   return {
     success: true,
-    data: res.data
+    data: allData
   }
 }
 

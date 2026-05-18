@@ -7,8 +7,10 @@
     "pages/user/position-registration/position-registration",
     "pages/user/battle-list/battle-list",
     "pages/user/battle-registration/battle-registration",
+    "pages/user/canyon-registration/canyon-registration",
     "pages/user/battle-statistics/battle-statistics",
     "pages/user/battle-allocation/battle-allocation",
+    "pages/user/arsenal-registration/arsenal-registration",
     "pages/user/feedback/feedback",
     "pages/user/apply-alliance-manager/apply-alliance-manager",
     "pages/user/my-registrations/my-registrations",
@@ -21,6 +23,7 @@
     "pages/admin/member-manage/member-manage",
     "pages/auditor/home/home",
     "pages/auditor/config/config",
+    "pages/auditor/arsenal-config/arsenal-config",
     "pages/auditor/statistics/statistics",
     "pages/superAdmin/home/home",
     "pages/superAdmin/admin-review/admin-review",
@@ -29,7 +32,9 @@
     "pages/superAdmin/alliance-manage/alliance-manage",
     "pages/superAdmin/auto-clear/auto-clear",
     "pages/superAdmin/member-manage/member-manage",
-    "pages/superAdmin/user-identity/user-identity"
+    "pages/superAdmin/user-identity/user-identity",
+    "pages/admin/arsenal-config/arsenal-config",
+    "pages/superAdmin/arsenal-config/arsenal-config"
   ],
   "window": {
     "navigationBarBackgroundColor": "#1a1a2e",

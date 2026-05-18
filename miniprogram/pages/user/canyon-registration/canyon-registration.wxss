@@ -1,0 +1,26 @@
+/* pages/user/canyon-registration/canyon-registration.wxss */
+
+/* 复用兵工厂报名页面样式，保持一致的展示效果 */
+@import "../arsenal-registration/arsenal-registration.wxss";
+
+/* 位置选项样式覆盖 - 参战/替补 */
+.position-option.active {
+  background-color: #07C160;
+  border-color: #07C160;
+}
+
+.position-option.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* 报名位置标签 - 参战/替补 */
+.registration-position.combat {
+  background-color: #FFE8E8;
+  color: #FA5151;
+}
+
+.registration-position.substitute {
+  background-color: #F0FFF0;
+  color: #07C160;
+}

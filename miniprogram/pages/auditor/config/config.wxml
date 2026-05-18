@@ -43,12 +43,12 @@
     </view>
 
     <!-- 添加按钮 -->
-    <button class="btn btn-primary btn-full" bindtap="addTimeSlot">添加时间段</button>
+    <button class="btn btn-primary btn-full" bindtap="addTimeSlot">添加活动</button>
   </view>
 
   <!-- 已有时间段列表 -->
   <view class="section-header">
-    <text class="section-title">时间段列表</text>
+    <text class="section-title">活动列表</text>
     <text class="section-count">{{timeSlots.length}}个</text>
   </view>
 

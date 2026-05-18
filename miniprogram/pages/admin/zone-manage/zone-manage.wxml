@@ -33,10 +33,6 @@
             <view class="info-label">创建时间</view>
             <view class="info-value">{{item.formattedTime}}</view>
           </view>
-          <view class="info-item">
-            <view class="info-label">联盟数量</view>
-            <view class="info-value">{{item.allianceCount || 0}}个</view>
-          </view>
         </view>
         <view class="zone-actions">
           <button class="action-btn edit-btn" bindtap="editZone" data-zone="{{item}}" wx:if="{{isSuperAdmin}}">修改编号</button>

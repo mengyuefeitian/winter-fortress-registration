@@ -34,7 +34,7 @@
     </view>
     <view class="function-card-compact" bindtap="goToTimeSlotConfig">
       <view class="function-content">
-        <text class="function-name">时间段配置</text>
+        <text class="function-name">堡垒配置</text>
         <text class="function-desc">配置活动时间和标签</text>
       </view>
     </view>
@@ -42,6 +42,12 @@
       <view class="function-content">
         <text class="function-name">官职管理</text>
         <text class="function-desc">创建官职报名配置</text>
+      </view>
+    </view>
+    <view class="function-card-compact" bindtap="goToArsenalConfig">
+      <view class="function-content">
+        <text class="function-name">兵工厂&峡谷</text>
+        <text class="function-desc">生成联盟活动时间进行报名</text>
       </view>
     </view>
   </view>

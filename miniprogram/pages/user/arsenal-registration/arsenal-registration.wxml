@@ -1,0 +1,145 @@
+<!--pages/user/arsenal-registration/arsenal-registration.wxml-->
+<view class="registration-container">
+  <!-- 页面标题 + 帮助 -->
+  <view class="page-header">
+    <view class="page-title-row">
+      <text class="page-title">兵工厂报名</text>
+      <view class="help-icon" bindtap="toggleTip">
+        <text class="help-text">?</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 提示信息 -->
+  <view wx:if="{{showTip}}" class="info-tip">
+    <text class="info-tip-text">联盟管理员可以在控制台中[兵工厂&峡谷]中创建好配置，用户即可选择对应活动进行报名。</text>
+  </view>
+
+  <!-- 未登录提示 -->
+  <view wx:if="{{!isLoggedIn}}" class="login-tip-section">
+    <view class="tip-text">您还未登录，请先登录后再报名</view>
+    <button class="login-btn" bindtap="goToLogin">去登录</button>
+  </view>
+
+  <!-- 当前分区信息 + 联盟选择 - 紧凑布局 -->
+  <view class="card">
+    <!-- 当前分区提示（不可切换） -->
+    <view wx:if="{{selectedZone}}" class="zone-info-row">
+      <text class="form-label">分区：</text>
+      <text class="zone-name-text">{{selectedZone.zoneName}}</text>
+    </view>
+    <view wx:elif="{{!selectedZone}}" class="zone-info-row">
+      <text class="text-secondary text-sm">请先在首页选择您的分区</text>
+    </view>
+
+    <!-- 联盟选择 -->
+    <view wx:if="{{selectedZone}}" class="form-row">
+      <view class="form-col" style="width: 100%;">
+        <text class="form-label">联盟</text>
+        <picker wx:if="{{alliances.length > 0}}" bindchange="onAllianceChange" value="{{allianceIndex >= 0 ? allianceIndex : 0}}" range="{{alliances}}" range-key="allianceName">
+          <view class="picker-compact">
+            <text>{{selectedAlliance ? selectedAlliance.allianceName : '请选择联盟'}}</text>
+            <image class="picker-compact-arrow" src="/images/icon-arrow-down.png"></image>
+          </view>
+        </picker>
+        <view wx:else class="picker-compact disabled">
+          <text class="picker-placeholder">该分区暂无联盟</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 活动配置列表 -->
+  <view wx:if="{{selectedAlliance}}" class="card">
+    <view class="section-header">
+      <text class="section-title">选择活动</text>
+      <text class="section-count">{{configs.length}}个</text>
+    </view>
+
+    <view wx:if="{{configs.length === 0}}" class="empty-state">
+      <view wx:if="{{loading}}" class="loading-container">
+        <text class="loading-text">加载中...</text>
+      </view>
+      <view wx:else class="empty-state-content">
+        <text class="empty-icon">📋</text>
+        <text class="empty-text">当前还没有活动</text>
+        <text class="empty-hint">请联系联盟管理员创建兵工厂或峡谷活动</text>
+      </view>
+    </view>
+
+    <view wx:else class="time-slot-list">
+      <view wx:for="{{configs}}" wx:key="_id"
+            class="time-slot-card {{item.isMyConfig ? 'my-slot' : ''}} {{item.isFull ? 'full' : ''}} {{selectedConfig && selectedConfig._id === item._id ? 'selected' : ''}}"
+            bindtap="selectConfig" data-index="{{index}}">
+        <view class="slot-header">
+          <view class="slot-time">
+            <text wx:if="{{item.timeValue}}" class="time-value">{{item.timeValue}}</text>
+            <text wx:if="{{item.displayName}}" class="time-value">{{item.displayName}}</text>
+            <text wx:if="{{item.tag}}" class="slot-tag">{{item.tag}}</text>
+          <text wx:if="{{item.corps}}" class="slot-tag corps-tag">{{item.corps}}</text>
+            <text wx:if="{{item.activityType}}" class="slot-tag activity-type-tag">{{ACTIVITY_TYPE_LABELS[item.activityType] || item.activityType}}</text>
+          </view>
+          <view wx:if="{{item.isMyConfig}}" class="my-badge">已报名</view>
+          <view wx:elif="{{item.isFull}}" class="full-badge">已满</view>
+        </view>
+        <view class="slot-footer">
+          <view class="slot-date" wx:if="{{item.date}}">{{item.date}}</view>
+          <view class="slot-counts">
+            <view class="slot-count {{item.isCombatFull ? 'full' : ''}}">参战 {{item.combatCount}}/{{30}}</view>
+            <view class="slot-count {{item.isSubstituteFull ? 'full' : ''}}">替补 {{item.substituteCount}}/{{10}}</view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 报名表单 -->
+  <view wx:if="{{selectedConfig && !selectedConfig.isFull}}" class="card">
+    <view class="section-header">
+      <text class="section-title">报名信息</text>
+    </view>
+
+    <view class="form-item">
+      <text class="form-label">昵称</text>
+      <input class="form-input" placeholder="请输入您的昵称" value="{{nickName}}" bindinput="onNickNameInput" maxlength="20" />
+    </view>
+
+    <view class="form-item">
+      <text class="form-label">位置</text>
+      <view class="position-options">
+        <view class="position-option {{selectedPosition === 'combat' ? 'active' : ''}}" bindtap="selectPosition" data-position="combat">
+          <text class="position-icon">⚔️</text>
+          <text class="position-name">参战</text>
+        </view>
+        <view class="position-option {{selectedPosition === 'substitute' ? 'active' : ''}}" bindtap="selectPosition" data-position="substitute">
+          <text class="position-icon">🔄</text>
+          <text class="position-name">替补</text>
+        </view>
+      </view>
+    </view>
+
+    <button class="btn btn-primary btn-full" bindtap="submitRegistration">提交报名</button>
+  </view>
+
+  <!-- 已报名人员预览 -->
+  <view wx:if="{{selectedConfig && registrations.length > 0}}" class="card">
+    <view class="section-header">
+      <text class="section-title">已报名人员</text>
+      <text class="section-count">{{registrations.length}}人</text>
+    </view>
+    <view class="registration-list">
+      <view wx:for="{{registrations}}" wx:key="_id" class="registration-item {{item.isMine ? 'my-registration' : ''}}">
+        <view class="registration-order {{item.isMine ? 'my-order' : ''}}">{{index + 1}}</view>
+        <view class="registration-name">{{item.nickName}}<text wx:if="{{item.isMine}}" class="me-tag">我</text></view>
+        <view class="registration-position {{item.position === 'combat' ? 'combat' : 'substitute'}}">
+          {{item.position === 'combat' ? '参战' : '替补'}}
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 分享按钮 -->
+  <view class="text-center mt-32">
+    <button class="btn-share" open-type="share">分享给好友</button>
+  </view>
+</view>

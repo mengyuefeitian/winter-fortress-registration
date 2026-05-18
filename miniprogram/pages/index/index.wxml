@@ -24,7 +24,7 @@
       <!-- 堡垒报名 -->
       <view class="function-card" bindtap="goToFortressRegistration" wx:if="{{showFortressRegistration}}">
         <view class="function-icon">
-          <image src="/images/icon-registration.png" style="width: 32px; height: 32px;" />
+          <image src="/images/logo-fortress.svg" style="width: 32px; height: 32px;" />
         </view>
         <view class="function-content">
           <text class="function-name">堡垒报名</text>
@@ -46,11 +46,33 @@
       <!-- 国战报名 -->
       <view class="function-card" bindtap="goToBattleRegistration" wx:if="{{showBattleRegistration}}">
         <view class="function-icon">
-          <image src="/images/icon-battle.png" style="width: 32px; height: 32px;" />
+          <image src="/images/logo-battle.svg" style="width: 32px; height: 32px;" />
         </view>
         <view class="function-content">
           <text class="function-name">国战报名</text>
           <text class="function-desc">报名参与国战活动</text>
+        </view>
+      </view>
+
+      <!-- 兵工厂报名 -->
+      <view class="function-card" bindtap="goToArsenalRegistration" wx:if="{{showBattleRegistration}}">
+        <view class="function-icon">
+          <image src="/images/logo-arsenal.svg" style="width: 32px; height: 32px;" />
+        </view>
+        <view class="function-content">
+          <text class="function-name">兵工厂报名</text>
+          <text class="function-desc">报名兵工厂活动</text>
+        </view>
+      </view>
+
+      <!-- 峡谷会战报名 -->
+      <view class="function-card" bindtap="goToCanyonRegistration" wx:if="{{showBattleRegistration}}">
+        <view class="function-icon">
+          <image src="/images/logo-canyon.svg" style="width: 32px; height: 32px;" />
+        </view>
+        <view class="function-content">
+          <text class="function-name">峡谷会战报名</text>
+          <text class="function-desc">报名峡谷会战活动</text>
         </view>
       </view>
     </view>
@@ -103,7 +125,7 @@
       <!-- 堡垒报名 -->
       <view class="function-card" bindtap="goToFortressRegistration" wx:if="{{showFortressRegistration}}">
         <view class="function-icon">
-          <image src="/images/icon-registration.png" style="width: 32px; height: 32px;" />
+          <image src="/images/logo-fortress.svg" style="width: 32px; height: 32px;" />
         </view>
         <view class="function-content">
           <text class="function-name">堡垒报名</text>
@@ -125,11 +147,33 @@
       <!-- 国战报名 -->
       <view class="function-card" bindtap="goToBattleRegistration" wx:if="{{showBattleRegistration}}">
         <view class="function-icon">
-          <image src="/images/icon-battle.png" style="width: 32px; height: 32px;" />
+          <image src="/images/logo-battle.svg" style="width: 32px; height: 32px;" />
         </view>
         <view class="function-content">
           <text class="function-name">国战报名</text>
           <text class="function-desc">报名参与国战活动</text>
+        </view>
+      </view>
+
+      <!-- 兵工厂报名 -->
+      <view class="function-card" bindtap="goToArsenalRegistration" wx:if="{{showBattleRegistration}}">
+        <view class="function-icon">
+          <image src="/images/logo-arsenal.svg" style="width: 32px; height: 32px;" />
+        </view>
+        <view class="function-content">
+          <text class="function-name">兵工厂报名</text>
+          <text class="function-desc">报名兵工厂活动</text>
+        </view>
+      </view>
+
+      <!-- 峡谷会战报名 -->
+      <view class="function-card" bindtap="goToCanyonRegistration" wx:if="{{showBattleRegistration}}">
+        <view class="function-icon">
+          <image src="/images/logo-canyon.svg" style="width: 32px; height: 32px;" />
+        </view>
+        <view class="function-content">
+          <text class="function-name">峡谷会战报名</text>
+          <text class="function-desc">报名峡谷会战活动</text>
         </view>
       </view>
 
@@ -186,6 +230,7 @@
           <text class="function-name">区管控制台</text>
           <text class="function-desc">管理分区和联盟配置</text>
         </view>
+        <view wx:if="{{pendingAdminReviewCount > 0}}" class="badge badge-danger">{{pendingAdminReviewCount}}</view>
       </view>
 
       <!-- 超管控制台 -->
@@ -197,6 +242,7 @@
           <text class="function-name">超管控制台</text>
           <text class="function-desc">全局管理和审核</text>
         </view>
+        <view wx:if="{{pendingReviewCount > 0}}" class="badge badge-danger">{{pendingReviewCount}}</view>
       </view>
     </view>
 

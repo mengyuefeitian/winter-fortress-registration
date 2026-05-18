@@ -1,0 +1,56 @@
+/* pages/auditor/arsenal-config/arsenal-config.wxss */
+@import '../config/config.wxss';
+
+/* 活动类型标签 - 蓝色主题 */
+.activity-type-tag {
+  background-color: #F5F5F5;
+  border: 1px solid #E5E5E5;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: #5F5F5F;
+}
+
+.activity-type-tag.active {
+  background-color: #4A90D9;
+  border-color: #4A90D9;
+  color: #FFFFFF;
+}
+
+/* 配置列表中的活动类型标签 */
+.slot-tag.activity-type-tag {
+  display: inline-block;
+  background-color: #4A90D9;
+  color: #FFFFFF;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 4px;
+}
+
+/* 军团标签 */
+.corps-tag {
+  background-color: #F5F5F5;
+  border: 1px solid #E5E5E5;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: #5F5F5F;
+}
+
+.corps-tag.active {
+  background-color: #576B95;
+  border-color: #576B95;
+  color: #FFFFFF;
+}
+
+/* 配置列表中的军团标签 */
+.slot-tag.corps-tag {
+  display: inline-block;
+  background-color: #576B95;
+  color: #FFFFFF;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 4px;
+}

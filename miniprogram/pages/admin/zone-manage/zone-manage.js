@@ -77,26 +77,6 @@ Page({
         formattedTime: util.formatDate(zone.createTime, 'YYYY-MM-DD')
       }))
 
-      // 批量查询所有分区的联盟数量（一次查询，客户端分组）
-      if (processedZones.length > 0) {
-        const wxdb = wx.cloud.database()
-        const zoneIds = processedZones.map(z => z._id)
-        const allAlliancesRes = await wxdb.collection('alliances').where({
-          zoneId: wxdb.command.in(zoneIds),
-          status: 'active'
-        }).get()
-
-        // 按 zoneId 分组计数
-        const allianceCountMap = {}
-        for (const alliance of allAlliancesRes.data) {
-          allianceCountMap[alliance.zoneId] = (allianceCountMap[alliance.zoneId] || 0) + 1
-        }
-
-        for (const zone of processedZones) {
-          zone.allianceCount = allianceCountMap[zone._id] || 0
-        }
-      }
-
       this.setData({
         zones: processedZones,
         isSuperAdmin: role === 'superAdmin'

@@ -125,6 +125,12 @@ Page({
     })
   },
 
+  goToArsenalConfig: function () {
+    wx.navigateTo({
+      url: '/pages/admin/arsenal-config/arsenal-config'
+    })
+  },
+
   goToTimeSlotConfig: function () {
     wx.navigateTo({
       url: '/pages/admin/time-slot-config/time-slot-config'

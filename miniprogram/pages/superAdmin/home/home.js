@@ -163,6 +163,12 @@ Page({
     })
   },
 
+  goToArsenalConfig: function () {
+    wx.navigateTo({
+      url: '/pages/superAdmin/arsenal-config/arsenal-config'
+    })
+  },
+
   goToUserIdentity: function () {
     wx.navigateTo({
       url: '/pages/superAdmin/user-identity/user-identity'
