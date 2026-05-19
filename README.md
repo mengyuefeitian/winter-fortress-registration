@@ -1,10 +1,10 @@
 # 无尽冬日堡垒分配 - 微信小程序
 
-一个用于联盟活动报名管理的微信小程序，支持四种活动类型的报名、权限管理与数据统计。
+一个用于联盟活动报名管理的微信小程序，支持五种活动类型的报名、权限管理与数据统计。
 
 ## 功能特点
 
-- **四种活动报名**：堡垒报名、兵工厂报名、峡谷会战报名、官职报名
+- **五种活动报名**：堡垒报名、兵工厂报名、峡谷会战报名、国战报名、官职报名
 - **多角色系统**：普通用户、盟管、区管、超级管理员
 - **分区管理**：支持创建多个分区，每个分区最多12个联盟
 - **多区管支持**：一个分区可配置多个区管
@@ -52,6 +52,8 @@
 | `superAdmins` | 超级管理员表 |
 | `positionConfigs` | 官职配置表 |
 | `positionRegistrations` | 官职报名记录表 |
+| `battleConfigs` | 国战配置表 |
+| `battleRegistrations` | 国战报名记录表 |
 | `arsenalConfigs` | 兵工厂配置表 |
 | `arsenalRegistrations` | 兵工厂报名记录表 |
 | `canyonConfigs` | 峡谷会战配置表 |
@@ -121,10 +123,11 @@
 ### 普通用户
 
 1. 在首页选择分区
-2. 参与四种活动报名：
+2. 参与五种活动报名：
    - **堡垒报名**：选择联盟 → 选择时间段 → 填写昵称和位置（车头/车身）
    - **兵工厂报名**：选择联盟 → 选择活动配置 → 填写昵称和位置（参战/替补）
    - **峡谷会战报名**：选择联盟 → 选择活动配置 → 填写昵称和位置（参战/替补）
+   - **国战报名**：选择活动配置 → 填写昵称，选择语音和位置（参战/替补）
    - **官职报名**：选择官职配置 → 选择时间段 → 填写昵称
 3. 可以在【我的】中查看所有报名记录并取消
 
@@ -301,6 +304,32 @@ winter-fortress-registration/
 }
 ```
 
+**battleConfigs** — 国战配置表
+```json
+{
+  "_id": "battleConfigs._id",
+  "date": "日期",
+  "voiceOption": "语音选项",
+  "allianceId": "联盟ID",
+  "zoneId": "分区ID",
+  "creatorId": "创建者ID",
+  "status": "active | inactive"
+}
+```
+
+**battleRegistrations** — 国战报名表
+```json
+{
+  "_id": "battleRegistrations._id",
+  "configId": "配置ID",
+  "userId": "用户ID",
+  "nickName": "昵称",
+  "voice": "语音选项",
+  "position": "combat | substitute",
+  "status": "active | cancelled"
+}
+```
+
 **arsenalConfigs / canyonConfigs** — 兵工厂/峡谷配置表
 ```json
 {
@@ -364,8 +393,9 @@ winter-fortress-registration/
 ## 版本历史
 
 - **v1.3.0** — 报名功能全面扩展 + 多项优化
-  - 新增兵工厂报名和峡谷会战报名
+  - 新增兵工厂报名、峡谷会战报名、国战报名
   - 新增兵工厂/峡谷管理控制台（盟管/区管/超管）
+  - 国战报名活动支持（语音选项 + 参战/替补）
   - 多区管架构重构（`auditorId` → `auditorIds`）
   - 国战删除区管不生效修复
   - 权限模型修复 + 最终一致性延迟修复
