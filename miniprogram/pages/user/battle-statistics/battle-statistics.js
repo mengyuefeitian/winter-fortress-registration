@@ -13,7 +13,7 @@ Page({
     headNickNames: [],
     loading: false,
     isSuperAdmin: false,
-    isAdminOrAbove: false,
+    canDeleteRegistration: false,
     selectAllChecked: false,
     selectedIds: []
   },
@@ -23,7 +23,7 @@ Page({
       configId: options.configId,
       date: options.date,
       isSuperAdmin: app.globalData.role === 'superAdmin',
-      isAdminOrAbove: app.globalData.role === 'superAdmin' || app.globalData.role === 'admin'
+      canDeleteRegistration: app.globalData.role === 'superAdmin' || app.globalData.role === 'admin'
     })
     this.loadRegistrations()
   },
@@ -134,6 +134,7 @@ Page({
     } catch (err) {
       util.hideLoading()
       util.showError('删除失败')
+      this.loadRegistrations()
     }
   },
 

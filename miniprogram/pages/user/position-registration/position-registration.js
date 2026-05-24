@@ -247,7 +247,7 @@ Page({
       util.showLoading('正在提交...')
 
       // 检查座位是否已被占用（并发检测）
-      const existingReg = await db.getPositionRegistrationByTimeSlot(configId, selectedTime)
+      const existingReg = await db.getPositionRegistrationByTimeSlot(configId, normalizeTimeToHHMM(selectedTime))
       if (existingReg && existingReg.userId !== currentUserId) {
         util.hideLoading()
         util.showErrorLong('该座位已被其他人选择，请刷新后重新选择')
