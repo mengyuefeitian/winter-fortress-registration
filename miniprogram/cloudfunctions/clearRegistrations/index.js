@@ -30,6 +30,33 @@ async function getAllRecords(collection, whereCondition = {}) {
   return allData
 }
 
+// 验证调用者是否为 admin 或 superAdmin
+async function verifyAdminRole(openid) {
+  const userRes = await db.collection('users').where({ openid }).get()
+  if (userRes.data.length === 0) {
+    throw new Error('用户不存在')
+  }
+  const user = userRes.data[0]
+  const role = user.role || 'user'
+
+  if (role === 'admin' || role === 'superAdmin') {
+    return true
+  }
+
+  const phone = user.phone
+  if (phone) {
+    const saRes = await db.collection('superAdmins').where({ phone }).get()
+    if (saRes.data.length > 0) return true
+    const phoneNum = parseInt(phone, 10)
+    if (!isNaN(phoneNum)) {
+      const saNumRes = await db.collection('superAdmins').where({ phone: phoneNum }).get()
+      if (saNumRes.data.length > 0) return true
+    }
+  }
+
+  throw new Error('权限不足，仅区管和超级管理员可删除报名记录')
+}
+
 // 云函数入口函数
 exports.main = async (event, context) => {
   const { action, data } = event
@@ -50,6 +77,8 @@ exports.main = async (event, context) => {
         return await clearExpiredByZone(data.zoneId)
       case 'clearExpiredAll':
         return await clearExpiredAll()
+      case 'adminDeleteBattleRegistration':
+        return await adminDeleteBattleRegistration(data, context)
       default:
         return {
           err: 'Unknown action'
@@ -60,6 +89,21 @@ exports.main = async (event, context) => {
       err: err.message
     }
   }
+}
+
+// 管理员删除单条国战报名记录（绕过客户端权限限制）
+async function adminDeleteBattleRegistration(data, context) {
+  const { registrationId } = data || {}
+  if (!registrationId) {
+    throw new Error('缺少 registrationId 参数')
+  }
+
+  const wxContext = cloud.getWXContext()
+  await verifyAdminRole(wxContext.OPENID)
+
+  await db.collection('battleRegistrations').doc(registrationId).remove()
+
+  return { success: true }
 }
 
 // 解析各种格式的日期字符串为 Date 对象

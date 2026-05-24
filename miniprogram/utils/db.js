@@ -1411,9 +1411,9 @@ async function deleteBattleRegistration(registrationId) {
 // 管理员删除单条报名记录（调用云函数绕过客户端权限）
 async function adminDeleteBattleRegistration(registrationId) {
   const res = await wx.cloud.callFunction({
-    name: 'manageBattle',
+    name: 'clearRegistrations',
     data: {
-      action: 'adminDeleteRegistration',
+      action: 'adminDeleteBattleRegistration',
       data: { registrationId }
     }
   })
