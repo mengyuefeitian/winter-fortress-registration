@@ -143,5 +143,16 @@ Page({
         util.showError('报名失败')
       }
     }
+  },
+
+  onShareAppMessage: function () {
+    const { date, zoneName, configId } = this.data
+    const title = date
+      ? `国战报名 - ${date}${zoneName ? ' · ' + zoneName : ''}`
+      : '国战报名 - 无尽冬日'
+    return {
+      title: title,
+      path: `/pages/user/battle-registration/battle-registration?configId=${configId || ''}&date=${date || ''}&zoneName=${encodeURIComponent(zoneName || '')}`
+    }
   }
 })
