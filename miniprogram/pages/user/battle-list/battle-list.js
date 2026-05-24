@@ -170,6 +170,17 @@ Page({
     this.setData({ selectedDate: e.detail.value })
   },
 
+  onShareAppMessage: function () {
+    const { currentZone } = this.data
+    const title = currentZone
+      ? `国战报名 · ${currentZone.zoneName}`
+      : '国战报名 - 无尽冬日'
+    return {
+      title: title,
+      path: '/pages/user/battle-list/battle-list'
+    }
+  },
+
   onCreateConfig: async function () {
     try {
       const userId = app.globalData.openid
