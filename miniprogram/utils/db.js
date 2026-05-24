@@ -957,7 +957,7 @@ function generatePositionTimeSlots(startTime) {
   let currentMinute = startMinute
 
   while (currentHour < 24) {
-    const timeStr = `${currentHour}:${String(currentMinute).padStart(2, '0')}`
+    const timeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`
     slots.push({
       time: timeStr,
       period: currentHour < 12 ? 'morning' : 'afternoon'
