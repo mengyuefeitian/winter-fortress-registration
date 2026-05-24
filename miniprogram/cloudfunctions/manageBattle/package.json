@@ -1,0 +1,9 @@
+{
+  "name": "manageBattle",
+  "version": "1.0.0",
+  "description": "Admin operations for battle registrations",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

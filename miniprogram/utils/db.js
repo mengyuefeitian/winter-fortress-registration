@@ -1400,6 +1400,21 @@ async function deleteBattleRegistration(registrationId) {
   return await db.collection('battleRegistrations').doc(registrationId).remove()
 }
 
+// 管理员删除单条报名记录（调用云函数绕过客户端权限）
+async function adminDeleteBattleRegistration(registrationId) {
+  const res = await wx.cloud.callFunction({
+    name: 'manageBattle',
+    data: {
+      action: 'adminDeleteRegistration',
+      data: { registrationId }
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '删除失败')
+  }
+  return res.result
+}
+
 // 清空国战配置的所有报名
 async function clearBattleRegistrations(configId) {
   const db = getDb()
@@ -1827,6 +1842,7 @@ module.exports = {
   getBattleRegistrationById,
   updateBattleRegistrationAssignment,
   deleteBattleRegistration,
+  adminDeleteBattleRegistration,
   clearBattleRegistrations,
   getBattleRegistrationCount,
 

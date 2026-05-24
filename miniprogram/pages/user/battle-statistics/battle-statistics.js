@@ -126,7 +126,7 @@ Page({
     try {
       util.showLoading('正在删除...')
       for (const id of this.data.selectedIds) {
-        await db.deleteBattleRegistration(id)
+        await db.adminDeleteBattleRegistration(id)
       }
       util.hideLoading()
       util.showSuccess(`成功删除 ${this.data.selectedIds.length} 条记录`)
