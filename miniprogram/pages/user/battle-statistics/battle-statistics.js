@@ -288,7 +288,7 @@ Page({
         }
 
         // 其他字段 - 对齐到第一行
-        ctx.fillText(r.allianceName, colDefs[1].x + 8, rowStartY)
+        ctx.fillText((r.allianceName || '').substring(0, 3), colDefs[1].x + 8, rowStartY)
         ctx.fillText(r.furnaceLevel || '-', colDefs[2].x + 8, rowStartY)
         ctx.fillText(r.barracksLevel || '-', colDefs[3].x + 8, rowStartY)
         ctx.fillText(r.diamonds || '-', colDefs[4].x + 8, rowStartY)
