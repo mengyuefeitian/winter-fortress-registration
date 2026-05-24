@@ -66,4 +66,5 @@
   </view>
 
   <button class="btn-submit" bindtap="onSubmit" loading="{{loading}}">提交报名</button>
+  <button class="btn-share" open-type="share">转发给朋友</button>
 </view>
