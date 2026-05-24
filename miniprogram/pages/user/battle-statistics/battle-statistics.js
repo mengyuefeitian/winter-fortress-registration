@@ -134,7 +134,7 @@ Page({
     } catch (err) {
       util.hideLoading()
       util.showError('删除失败')
-      this.loadRegistrations()
+      await this.loadRegistrations()
     }
   },
 

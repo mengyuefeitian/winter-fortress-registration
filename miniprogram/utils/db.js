@@ -946,6 +946,12 @@ async function deletePositionConfig(configId) {
   return res.result
 }
 
+// 将 H:MM 格式统一为 HH:MM（兼容新旧数据）
+function normalizeTimeToHHMM(t) {
+  if (!t) return t
+  return t.replace(/^(\d):/, '0$1:')
+}
+
 // 根据起始时间生成时间段列表（每30分钟一格，到24:00）
 function generatePositionTimeSlots(startTime) {
   const slots = []
@@ -980,6 +986,7 @@ function generatePositionTimeSlots(startTime) {
 // 创建官职报名记录（带并发检测）
 async function createPositionRegistration(data) {
   const db = getDb()
+  const normalizedTimeSlot = normalizeTimeToHHMM(data.timeSlot)
 
   // 检查游戏昵称是否重复
   const existingNick = await db.collection('positionRegistrations')
@@ -995,11 +1002,11 @@ async function createPositionRegistration(data) {
     throw new Error(`该昵称已在 ${existingReg.timeSlot} 时间段存在报名`)
   }
 
-  // 检查时间段是否已被占用
+  // 检查时间段是否已被占用（同时检查新旧两种格式）
   const existingSlot = await db.collection('positionRegistrations')
     .where({
       configId: data.configId,
-      timeSlot: data.timeSlot,
+      timeSlot: db.command.in([normalizedTimeSlot, data.timeSlot]),
       status: 'active'
     })
     .get()
@@ -1011,7 +1018,7 @@ async function createPositionRegistration(data) {
   return await db.collection('positionRegistrations').add({
     data: {
       configId: data.configId,
-      timeSlot: data.timeSlot,
+      timeSlot: normalizedTimeSlot,
       userId: data.userId,
       nickName: data.nickName,
       remark: data.remark || '',
@@ -1049,10 +1056,11 @@ async function getPositionRegistrationsByConfig(configId) {
 // 根据时间段获取报名记录
 async function getPositionRegistrationByTimeSlot(configId, timeSlot) {
   const db = getDb()
+  const normalized = normalizeTimeToHHMM(timeSlot)
   const res = await db.collection('positionRegistrations')
     .where({
       configId: configId,
-      timeSlot: timeSlot,
+      timeSlot: db.command.in([normalized, timeSlot]),
       status: 'active'
     })
     .get()

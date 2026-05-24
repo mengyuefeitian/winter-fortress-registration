@@ -51,7 +51,7 @@ async function verifyAdminRole(openid) {
 
 // 管理员删除单条国战报名记录（绕过客户端权限限制）
 async function adminDeleteRegistration(data) {
-  const { registrationId } = data
+  const { registrationId } = data || {}
   if (!registrationId) {
     throw new Error('缺少 registrationId 参数')
   }
