@@ -79,6 +79,8 @@ exports.main = async (event, context) => {
         return await clearExpiredAll()
       case 'adminDeleteBattleRegistration':
         return await adminDeleteBattleRegistration(data, context)
+      case 'updateBattleRegistrationAssignment':
+        return await updateBattleRegistrationAssignment(data, context)
       default:
         return {
           err: 'Unknown action'
@@ -89,6 +91,26 @@ exports.main = async (event, context) => {
       err: err.message
     }
   }
+}
+
+// 管理员更新国战报名分配（绕过客户端权限限制）
+async function updateBattleRegistrationAssignment(data, context) {
+  const { registrationId, assignment } = data || {}
+  if (!registrationId) {
+    throw new Error('缺少 registrationId 参数')
+  }
+
+  const wxContext = cloud.getWXContext()
+  await verifyAdminRole(wxContext.OPENID)
+
+  await db.collection('battleRegistrations').doc(registrationId).update({
+    data: {
+      assignment: assignment || '',
+      updateTime: db.serverDate()
+    }
+  })
+
+  return { success: true }
 }
 
 // 管理员删除单条国战报名记录（绕过客户端权限限制）

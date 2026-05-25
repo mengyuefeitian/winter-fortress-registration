@@ -1393,13 +1393,17 @@ async function getBattleRegistrationById(registrationId) {
 
 // 更新报名分配的"安排"
 async function updateBattleRegistrationAssignment(registrationId, assignment) {
-  const db = getDb()
-  return await db.collection('battleRegistrations').doc(registrationId).update({
+  const res = await wx.cloud.callFunction({
+    name: 'clearRegistrations',
     data: {
-      assignment: assignment,
-      updateTime: db.serverDate()
+      action: 'updateBattleRegistrationAssignment',
+      data: { registrationId, assignment }
     }
   })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '更新失败')
+  }
+  return res.result
 }
 
 // 删除单条报名记录
