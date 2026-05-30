@@ -60,9 +60,9 @@
         <text>{{item.shortAllianceName}}</text>
         <text wx:if="{{item.zoneCode}}" class="zone-tag">[{{item.zoneCode}}区]</text>
       </text>
-      <text class="table-cell action-cell">
-        <text class="cancel-btn-small" bindtap="cancelRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</text>
-      </text>
+      <view class="table-cell action-cell">
+        <view class="cancel-btn-small" bindtap="cancelRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</view>
+      </view>
     </view>
   </view>
 
@@ -93,9 +93,9 @@
       </view>
       <text class="table-cell">{{item.nickName}}</text>
       <text class="table-cell">{{item.configInfo.positionType}}</text>
-      <text class="table-cell action-cell">
-        <text class="cancel-btn-small" bindtap="cancelPositionRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</text>
-      </text>
+      <view class="table-cell action-cell">
+        <view class="cancel-btn-small" bindtap="cancelPositionRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</view>
+      </view>
     </view>
   </view>
 
@@ -124,9 +124,9 @@
       </view>
       <text class="table-cell">{{item.nickName}}</text>
       <text class="table-cell">{{item.corps}}</text>
-      <text class="table-cell action-cell">
-        <text class="cancel-btn-small" bindtap="cancelArsenalRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</text>
-      </text>
+      <view class="table-cell action-cell">
+        <view class="cancel-btn-small" bindtap="cancelArsenalRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</view>
+      </view>
     </view>
   </view>
 
@@ -155,9 +155,9 @@
       </view>
       <text class="table-cell">{{item.nickName}}</text>
       <text class="table-cell">{{item.corps}}</text>
-      <text class="table-cell action-cell">
-        <text class="cancel-btn-small" bindtap="cancelCanyonRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</text>
-      </text>
+      <view class="table-cell action-cell">
+        <view class="cancel-btn-small" bindtap="cancelCanyonRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</view>
+      </view>
     </view>
   </view>
 
