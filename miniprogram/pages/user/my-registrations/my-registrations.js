@@ -98,17 +98,33 @@ Page({
         return
       }
 
-      // 加载堡垒报名记录
-      const registrations = await db.getRegistrationsByUser(userId)
+      // 并行拉取堡垒、官职、兵工厂、峡谷报名记录，减少串行等待
+      const [registrations, positionRegistrations, arsenalRegistrations, canyonRegistrations] =
+        await Promise.all([
+          db.getRegistrationsByUser(userId),
+          db.getPositionRegistrationsByUser(userId),
+          db.getArsenalRegistrationsByUser(userId),
+          db.getCanyonRegistrationsByUser(userId)
+        ])
 
-      // 加载关联的分区、联盟、时间段信息
-      const processedRegistrations = []
-      for (const reg of registrations) {
-        const zone = await this.getZoneById(reg.zoneId)
-        const alliance = await this.getAllianceById(reg.allianceId)
-        const timeSlot = await db.getTimeSlotById(reg.timeSlotId)
+      // 批量获取堡垒报名关联的分区、联盟、时间段（避免 N+1 逐条查询）
+      const zoneIds = registrations.map(r => r.zoneId).filter(Boolean)
+      const allianceIds = registrations.map(r => r.allianceId).filter(Boolean)
+      const timeSlotIds = registrations.map(r => r.timeSlotId).filter(Boolean)
 
-        // Format date as YY/MM/DD
+      // 并行批量拉取三类关联数据
+      const [zoneMap, allianceMap, timeSlotMap] = await Promise.all([
+        db.getZonesByIds(zoneIds),
+        db.getAlliancesByIds(allianceIds),
+        db.getTimeSlotsByIds(timeSlotIds)
+      ])
+
+      // 组装堡垒报名展示数据
+      const processedRegistrations = registrations.map(reg => {
+        const zone = zoneMap[reg.zoneId]
+        const alliance = allianceMap[reg.allianceId]
+        const timeSlot = timeSlotMap[reg.timeSlotId]
+
         let formattedDate = ''
         if (timeSlot && timeSlot.date) {
           const dateParts = timeSlot.date.split('-')
@@ -117,12 +133,11 @@ Page({
           }
         }
 
-        // Truncate alliance name to first 3 chars
         const allianceName = alliance ? alliance.allianceName : '未知联盟'
         const shortAllianceName = allianceName.substring(0, 3)
         const zoneCode = zone ? zone.zoneCode : ''
 
-        processedRegistrations.push({
+        return {
           ...reg,
           zoneName: zone ? zone.zoneName : '未知分区',
           zoneCode: zoneCode,
@@ -135,8 +150,8 @@ Page({
           timeDate: timeSlot ? timeSlot.date : '',
           formattedDate: formattedDate,
           formattedTime: util.formatDate(reg.createTime, 'YYYY-MM-DD HH:mm')
-        })
-      }
+        }
+      })
 
       // 按分区过滤
       const filteredRegistrations = this.data.currentZone
@@ -145,10 +160,7 @@ Page({
 
       const weeklyRegistrations = this.filterWeeklyRegistrations(filteredRegistrations)
 
-      // 加载官职报名记录
-      const positionRegistrations = await db.getPositionRegistrationsByUser(userId)
-
-      // 处理官职报名记录
+      // 处理官职报名记录（config 已由 getPositionRegistrationsByUser 批量关联）
       const processedPositionRegistrations = positionRegistrations.map(reg => {
         return {
           ...reg,
@@ -161,53 +173,45 @@ Page({
         }
       })
 
+      // 批量获取兵工厂配置（仅拉取用户已报名的 configId，不拉全量）
+      const arsenalConfigIds = arsenalRegistrations.map(r => r.configId).filter(Boolean)
+      const canyonConfigIds = canyonRegistrations.map(r => r.configId).filter(Boolean)
+
+      const [arsenalConfigMap, canyonConfigMap] = await Promise.all([
+        db.getArsenalConfigsByIds(arsenalConfigIds, 'arsenal'),
+        db.getArsenalConfigsByIds(canyonConfigIds, 'canyon')
+      ])
+
+      const processedArsenal = arsenalRegistrations.map(reg => {
+        const config = arsenalConfigMap[reg.configId]
+        return {
+          ...reg,
+          type: 'arsenal',
+          date: config ? config.date : '',
+          time: config ? config.timeValue : '',
+          corps: config ? config.corps : '',
+          activityType: config ? config.activityType : 'arsenal',
+          activityLabel: '兵工厂'
+        }
+      })
+
+      const processedCanyon = canyonRegistrations.map(reg => {
+        const config = canyonConfigMap[reg.configId]
+        return {
+          ...reg,
+          type: 'canyon',
+          date: config ? config.date : '',
+          time: config ? config.timeValue : '',
+          corps: config ? config.corps : '',
+          activityType: config ? config.activityType : 'canyon',
+          activityLabel: '峡谷会战'
+        }
+      })
+
       this.setData({
         registrations: filteredRegistrations,
         weeklyRegistrations: weeklyRegistrations,
-        positionRegistrations: processedPositionRegistrations
-      })
-
-      // 加载兵工厂报名记录（批量获取配置，避免N+1查询）
-      const arsenalRegistrations = await db.getArsenalRegistrationsByUser(userId)
-      const allArsenalConfigs = await db.getArsenalConfigs({})
-      const arsenalConfigMap = {}
-      allArsenalConfigs.forEach(cfg => { arsenalConfigMap[cfg._id] = cfg })
-
-      const processedArsenal = []
-      for (const reg of arsenalRegistrations) {
-        const config = arsenalConfigMap[reg.configId]
-        processedArsenal.push({
-          ...reg,
-          type: 'arsenal',
-          date: config?.date || '',
-          time: config?.timeValue || '',
-          corps: config?.corps || '',
-          activityType: config?.activityType || 'arsenal',
-          activityLabel: '兵工厂'
-        })
-      }
-
-      // 加载峡谷会战报名记录（批量获取配置，避免N+1查询）
-      const canyonRegistrations = await db.getCanyonRegistrationsByUser(userId)
-      const allCanyonConfigs = await db.getCanyonConfigs({})
-      const canyonConfigMap = {}
-      allCanyonConfigs.forEach(cfg => { canyonConfigMap[cfg._id] = cfg })
-
-      const processedCanyon = []
-      for (const reg of canyonRegistrations) {
-        const config = canyonConfigMap[reg.configId]
-        processedCanyon.push({
-          ...reg,
-          type: 'canyon',
-          date: config?.date || '',
-          time: config?.timeValue || '',
-          corps: config?.corps || '',
-          activityType: config?.activityType || 'canyon',
-          activityLabel: '峡谷会战'
-        })
-      }
-
-      this.setData({
+        positionRegistrations: processedPositionRegistrations,
         arsenalRegistrations: processedArsenal,
         canyonRegistrations: processedCanyon
       })
@@ -232,28 +236,6 @@ Page({
       const createTime = new Date(reg.createTime)
       return createTime >= weekStart && createTime < weekEnd
     })
-  },
-
-  // 获取分区信息
-  getZoneById: async function (zoneId) {
-    try {
-      const wxdb = wx.cloud.database()
-      const res = await wxdb.collection('zones').doc(zoneId).get()
-      return res.data
-    } catch (err) {
-      return null
-    }
-  },
-
-  // 获取联盟信息
-  getAllianceById: async function (allianceId) {
-    try {
-      const wxdb = wx.cloud.database()
-      const res = await wxdb.collection('alliances').doc(allianceId).get()
-      return res.data
-    } catch (err) {
-      return null
-    }
   },
 
   // 取消报名

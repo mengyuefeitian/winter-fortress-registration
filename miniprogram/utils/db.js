@@ -406,6 +406,38 @@ async function getAllianceById(allianceId) {
   return res.data
 }
 
+// 批量根据ID获取分区（返回 id → zone 的 Map）
+async function getZonesByIds(zoneIds) {
+  if (!zoneIds || zoneIds.length === 0) return {}
+  const db = getDb()
+  const _ = db.command
+  const uniqueIds = [...new Set(zoneIds)]
+  const result = {}
+  const chunkSize = 10
+  for (let i = 0; i < uniqueIds.length; i += chunkSize) {
+    const chunk = uniqueIds.slice(i, i + chunkSize)
+    const res = await db.collection('zones').where({ _id: _.in(chunk) }).get()
+    res.data.forEach(z => { result[z._id] = z })
+  }
+  return result
+}
+
+// 批量根据ID获取联盟（返回 id → alliance 的 Map）
+async function getAlliancesByIds(allianceIds) {
+  if (!allianceIds || allianceIds.length === 0) return {}
+  const db = getDb()
+  const _ = db.command
+  const uniqueIds = [...new Set(allianceIds)]
+  const result = {}
+  const chunkSize = 10
+  for (let i = 0; i < uniqueIds.length; i += chunkSize) {
+    const chunk = uniqueIds.slice(i, i + chunkSize)
+    const res = await db.collection('alliances').where({ _id: _.in(chunk) }).get()
+    res.data.forEach(a => { result[a._id] = a })
+  }
+  return result
+}
+
 // 更新联盟名称（通过云函数，绕过客户端权限限制）
 async function updateAllianceName(allianceId, name) {
   const res = await wx.cloud.callFunction({
@@ -693,6 +725,39 @@ async function getTimeSlotById(timeSlotId) {
   return res.data
 }
 
+// 批量根据ID获取时间段（返回 id → timeSlot 的 Map）
+async function getTimeSlotsByIds(timeSlotIds) {
+  if (!timeSlotIds || timeSlotIds.length === 0) return {}
+  const db = getDb()
+  const _ = db.command
+  const uniqueIds = [...new Set(timeSlotIds)]
+  const result = {}
+  const chunkSize = 10
+  for (let i = 0; i < uniqueIds.length; i += chunkSize) {
+    const chunk = uniqueIds.slice(i, i + chunkSize)
+    const res = await db.collection('timeSlots').where({ _id: _.in(chunk) }).get()
+    res.data.forEach(t => { result[t._id] = t })
+  }
+  return result
+}
+
+// 批量根据ID获取兵营/峡谷活动配置（返回 id → config 的 Map）
+async function getArsenalConfigsByIds(configIds, activityType) {
+  if (!configIds || configIds.length === 0) return {}
+  const db = getDb()
+  const _ = db.command
+  const collectionName = activityType === 'canyon' ? 'canyonConfigs' : 'arsenalConfigs'
+  const uniqueIds = [...new Set(configIds)]
+  const result = {}
+  const chunkSize = 10
+  for (let i = 0; i < uniqueIds.length; i += chunkSize) {
+    const chunk = uniqueIds.slice(i, i + chunkSize)
+    const res = await db.collection(collectionName).where({ _id: _.in(chunk) }).get()
+    res.data.forEach(c => { result[c._id] = c })
+  }
+  return result
+}
+
 // 通过云函数删除时间段（绕过数据库 creator-only 写权限限制）
 async function deleteTimeSlotViaCloud(timeSlotId) {
   return await wx.cloud.callFunction({
@@ -789,15 +854,19 @@ async function getRegistrationsByUser(userId) {
   return allData
 }
 
-// 取消报名
+// 取消报名（通过云函数，避免客户端写入后立即读取的最终一致性延迟）
 async function cancelRegistration(registrationId) {
-  const db = getDb()
-  return await db.collection('registrations').doc(registrationId).update({
+  const res = await wx.cloud.callFunction({
+    name: 'register',
     data: {
-      status: 'cancelled',
-      updateTime: db.serverDate()
+      action: 'cancel',
+      data: { registrationId }
     }
   })
+  if (!res.result || res.result.err) {
+    throw new Error((res.result && res.result.err) || '取消失败')
+  }
+  return res.result
 }
 
 /**
@@ -1778,6 +1847,8 @@ module.exports = {
   initAlliances,
   getAlliancesByZone,
   getAllianceById,
+  getZonesByIds,
+  getAlliancesByIds,
   updateAllianceName,
   bindAllianceAuditors,
   getAllianceAuditorInfo,
@@ -1802,6 +1873,8 @@ module.exports = {
   deleteTimeSlot,
   deleteTimeSlotViaCloud,
   getTimeSlotById,
+  getTimeSlotsByIds,
+  getArsenalConfigsByIds,
 
   // 报名
   createRegistration,
