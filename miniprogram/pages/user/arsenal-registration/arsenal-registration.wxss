@@ -39,3 +39,28 @@
   background-color: #FFE8E8;
   color: #FA5151;
 }
+
+/* ===== Dark Theme Overrides ===== */
+.registration-container {
+  min-height: 100vh;
+  padding: 12px;
+}
+.page-title { color: #F8FAFC; }
+.help-icon {
+  background-color: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.2);
+}
+.help-text { color: #F8FAFC; }
+.info-tip {
+  background-color: rgba(56,189,248,0.1);
+  border: 1px solid rgba(56,189,248,0.3);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.info-tip-text { color: #94A3B8; }
+.section-title { color: #F8FAFC; }
+.empty-text { color: #94A3B8; }
+.empty-hint { color: #64748B; }
+.empty-icon { color: #64748B; }
+.loading-text { color: #94A3B8; }

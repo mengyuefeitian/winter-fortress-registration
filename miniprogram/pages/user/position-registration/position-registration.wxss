@@ -4,7 +4,6 @@
 /* 页面容器 */
 .page {
   min-height: 100vh;
-  background-color: #F6F6F6;
 }
 
 /* 刷新按钮 */
@@ -407,3 +406,40 @@
 .text-secondary {
   color: #5F5F5F;
 }
+/* ===== Dark Theme Overrides ===== */
+.card {
+  background-color: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  box-shadow: none;
+}
+.card-header { border-bottom-color: rgba(255,255,255,0.1); }
+.card-title { color: #F8FAFC; }
+.tag { background-color: #10B981; }
+.text-secondary { color: #94A3B8; }
+.period-tabs { background-color: rgba(255,255,255,0.08); }
+.period-tab { color: #94A3B8; }
+.period-tab.active { background-color: #10B981; color: #fff; }
+.seat-item {
+  background-color: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.12);
+}
+.seat-time { background-color: rgba(16,185,129,0.15); }
+.time-value { color: #10B981; }
+.seat-filled { background-color: rgba(255,255,255,0.06); }
+.seat-filled-text { color: #94A3B8; }
+.seat-item.my-slot { border-color: #38BDF8; }
+.seat-item.my-slot .seat-time { background-color: rgba(56,189,248,0.15); }
+.seat-item.my-slot .time-value { color: #38BDF8; }
+.seat-my { background-color: #38BDF8; }
+.safe-area-bottom { background-color: transparent; }
+.empty-text { color: #94A3B8; }
+.loading-text { color: #94A3B8; }
+.modal-container { background-color: #1E293B; }
+.modal-header { background-color: #1E293B; }
+.modal-title { color: #F8FAFC; }
+.modal-time { color: #94A3B8; }
+.form-label { color: #94A3B8; }
+.input { background-color: rgba(255,255,255,0.08); color: #F8FAFC; }
+.modal-footer { border-top-color: rgba(255,255,255,0.1); }
+.modal-footer .btn { background-color: #1E293B; }
+.modal-footer .btn-secondary { color: #94A3B8; border-right-color: rgba(255,255,255,0.1); }

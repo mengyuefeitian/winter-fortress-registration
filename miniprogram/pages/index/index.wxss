@@ -47,6 +47,11 @@
   font-size: 32px;
   margin-bottom: 8px;
 }
+.grid-icon-img {
+  width: 36px;
+  height: 36px;
+  margin-bottom: 8px;
+}
 
 .grid-name {
   font-size: 14px;
