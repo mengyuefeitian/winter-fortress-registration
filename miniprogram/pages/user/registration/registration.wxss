@@ -1,534 +1,209 @@
-/* pages/user/registration/registration.wxss */
+/* pages/user/registration/registration.wxss — Dark Theme */
 
-/* 页面布局 */
-.page {
-  padding: 12px;
-  background-color: #F6F6F6;
-  min-height: 100vh;
-}
-
-/* 页面标题 */
-.page-header {
-  padding: 12px 4px;
-  margin-bottom: 8px;
-}
-
-.page-title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.page-title {
-  font-size: 17px;
-  font-weight: 600;
-  color: #000000;
-}
-
-/* 帮助图标 */
-.help-icon {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background-color: #1296DB;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.help-text {
-  font-size: 14px;
-  font-weight: 600;
-  color: #fff;
-  line-height: 1;
-}
-
-/* 提示信息 */
-.info-tip {
-  background-color: #F0F4FA;
-  border-radius: 8px;
-  padding: 12px;
-  margin: 4px 0 12px 0;
-}
-
-.info-tip-text {
-  font-size: 12px;
-  color: #5F5F5F;
-  line-height: 1.6;
-}
-
-/* 卡片样式 - 紧凑 */
-.card {
-  background-color: #FFFFFF;
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 12px;
-}
-
-/* 表单行布局 - 两列 */
-.form-row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.form-col {
-  flex: 1;
-}
-
-/* 分区信息行 */
-.zone-info-row {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-  padding: 8px 0;
-}
-
-.zone-name-text {
-  font-size: 14px;
-  font-weight: 500;
-  color: #000000;
-}
-
-.form-label {
-  font-size: 13px;
-  color: #5F5F5F;
-  margin-bottom: 4px;
-  display: block;
-}
-
-/* 选择器样式 - 紧凑 */
-.picker-compact {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: #F5F5F5;
-  border-radius: 4px;
-  padding: 8px 12px;
-  height: 32px;
-  font-size: 14px;
-  color: #000000;
-}
-
-.picker-compact.disabled {
-  background-color: #F0F0F0;
-  color: #A6A6A6;
-}
-
-.picker-compact-arrow {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-}
-
-.picker {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: #F5F5F5;
-  border-radius: 4px;
-  padding: 8px 12px;
-  height: 32px;
-  font-size: 14px;
-  color: #000000;
-}
-
-.picker.disabled {
-  background-color: #F0F0F0;
-  color: #A6A6A6;
-}
-
-.picker-placeholder {
-  color: #A6A6A6;
-}
-
-.picker-arrow {
-  width: 14px;
-  height: 14px;
-}
-
-.empty-picker {
-  background-color: #F5F7FA;
-  border-radius: 6px;
-  padding: 10px 12px;
-  text-align: center;
-  color: #999999;
-  font-size: 13px;
-}
-
-.empty-tip {
-  text-align: center;
-  padding: 16px;
-  color: #999999;
-  font-size: 13px;
-}
-
-/* 登录提示 */
-.login-tip-section {
-  background-color: #FFF3E0;
-  border-radius: 10px;
-  padding: 20px;
-  margin-bottom: 12px;
-  text-align: center;
-}
-
-.tip-text {
-  font-size: 14px;
-  color: #E65100;
-  margin-bottom: 12px;
-}
-
-.login-tip-section .login-btn {
-  background-color: #FF9800;
-  color: #FFFFFF;
-  border-radius: 8px;
-  padding: 10px 24px;
-  font-size: 14px;
-}
-
-/* 时间段列表 */
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  padding-left: 4px;
-}
-
-.section-title {
-  font-size: 15px;
-  font-weight: 500;
-  color: #5F5F5F;
-}
-
-.section-count {
-  font-size: 13px;
-  color: #A6A6A6;
-}
-
-.time-slot-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.time-slot-card {
-  background-color: #FFFFFF;
-  border-radius: 8px;
-  padding: 12px;
-  border: 1px solid #E5E5E5;
-  transition: all 0.2s ease;
-}
-
-.time-slot-card:active {
-  background-color: #F5F5F5;
-}
-
-.time-slot-card.full {
-  background-color: #FAFAFA;
-  opacity: 0.5;
-}
-
-.time-slot-card.selected {
-  border-color: #07C160;
-  background-color: #F0FFF0;
-}
-
-/* 我已报名的时间段 - 蓝色边框+浅蓝背景（覆盖full的半透明） */
-.time-slot-card.my-slot {
-  border-color: #4A90D9;
-  background-color: #F0F4FA;
-  opacity: 1;
-}
-
-.slot-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.slot-time {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.time-value {
-  font-size: 18px;
-  font-weight: 600;
-  color: #000000;
-}
-
-.slot-tag {
-  display: inline-block;
-  background-color: #07C160;
-  color: #FFFFFF;
-  font-size: 12px;
-  padding: 3px 8px;
-  border-radius: 4px;
-}
-
-.slot-tag.fortress-tag {
-  background-color: #4A90D9;
-}
-
-.full-badge {
-  background-color: #FA5151;
-  color: #FFFFFF;
-  font-size: 12px;
-  padding: 3px 8px;
-  border-radius: 4px;
-}
-
-/* 我已报名标签 - 蓝色 */
-.my-badge {
-  background-color: #4A90D9;
-  color: #FFFFFF;
-  font-size: 12px;
-  padding: 3px 8px;
-  border-radius: 4px;
-}
-
-.slot-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 6px;
-}
-
-.slot-date {
-  font-size: 13px;
-  color: #A6A6A6;
-}
-
-.slot-count {
-  font-size: 14px;
-  color: #5F5F5F;
-  font-weight: 500;
-}
-
-.slot-count.full {
-  color: #FA5151;
-}
-
-.empty-state {
-  display: flex;
-  justify-content: center;
-  padding: 40px 16px;
-}
-
-.empty-state-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.empty-icon {
-  font-size: 48px;
-  margin-bottom: 8px;
-}
-
-.empty-text {
-  color: #A6A6A6;
-  font-size: 15px;
-  font-weight: 500;
-}
-
-.empty-hint {
-  color: #C0C0C0;
-  font-size: 13px;
-  text-align: center;
-  line-height: 1.5;
-}
-
-/* 表单样式 */
-.form-item {
-  margin-bottom: 12px;
-}
-
-.form-input {
-  width: 100%;
-  height: 36px;
-  background-color: #F5F5F5;
-  border-radius: 6px;
-  padding: 0 12px;
-  font-size: 14px;
-  border: 1px solid #E5E5E5;
-}
-
-/* 位置选择 */
-.position-options {
-  display: flex;
-  gap: 10px;
-}
-
-.position-option {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 14px;
-  background-color: #F5F5F5;
-  border-radius: 8px;
-  border: 2px solid transparent;
-  transition: all 0.2s ease;
-}
-
-.position-option.active {
-  background-color: #07C160;
-  border-color: #07C160;
-}
-
-.position-icon {
-  font-size: 24px;
-  margin-bottom: 4px;
-}
-
-.position-name {
-  font-size: 14px;
-  color: #5F5F5F;
-}
-
-.position-option.active .position-name {
-  color: #FFFFFF;
-}
-
-/* 按钮样式 */
-.btn {
-  font-size: 15px;
-  border-radius: 6px;
-  padding: 0 16px;
-  height: 44px;
-  line-height: 44px;
-  border: none;
-  box-sizing: border-box;
-}
-
-.btn-primary {
-  background-color: #07C160;
-  color: #FFFFFF;
-}
-
-.btn-full {
-  width: 100%;
-  margin-top: 8px;
-}
-
-.btn-primary:active {
-  background-color: #06AD56;
-}
-
-/* 已报名人员 */
-.registration-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.registration-item {
-  display: flex;
-  align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid #F0F0F0;
-}
-
-.registration-item:last-child {
-  border-bottom: none;
-}
-
-.registration-order {
-  width: 24px;
-  height: 24px;
-  background-color: #576B95;
-  color: #FFFFFF;
-  border-radius: 50%;
-  font-size: 12px;
-  text-align: center;
-  line-height: 24px;
-  margin-right: 12px;
-}
-
-.registration-name {
-  flex: 1;
-  font-size: 14px;
-  color: #333333;
-}
-
-.registration-position {
-  font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 4px;
-}
-
-.registration-position.head {
-  background-color: #FFE8E8;
-  color: #FA5151;
-}
-
-.registration-position.body {
-  background-color: #F0FFF0;
-  color: #07C160;
-}
-
-/* 我的报名 - 蓝色高亮 */
-.registration-item.my-registration {
-  background-color: #F0F4FA;
-  border-left: 3px solid #4A90D9;
-  padding-left: 9px;
-  border-radius: 0 4px 4px 0;
-}
-
-.registration-order.my-order {
-  background-color: #4A90D9;
-}
-
-.me-tag {
-  display: inline-block;
-  background-color: #4A90D9;
-  color: #FFFFFF;
-  font-size: 10px;
-  padding: 1px 5px;
-  border-radius: 3px;
-  margin-left: 6px;
-  vertical-align: middle;
-}
-
-.btn-share {
-  display: inline-block;
-  padding: 8px 24px;
-  background-color: #4A90D9;
-  color: #FFFFFF;
-  font-size: 13px;
-  border-radius: 20px;
-  border: none;
-  line-height: 1.6;
-  height: auto;
-}
-
-.btn-share::after {
-  border: none;
-}
-/* ===== Dark Theme Overrides ===== */
 .registration-container {
   min-height: 100vh;
   padding: 12px;
+  color: #F8FAFC;
 }
-.page-title { color: #F8FAFC; }
+
+/* Page header */
+.page-header { padding: 12px 4px; margin-bottom: 8px; }
+.page-title-row { display: flex; align-items: center; gap: 8px; }
+.page-title { font-size: 17px; font-weight: 600; color: #F8FAFC; }
 .help-icon {
-  background-color: rgba(255,255,255,0.12);
-  border-color: rgba(255,255,255,0.2);
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.3);
+  display: flex; align-items: center; justify-content: center;
 }
-.help-text { color: #F8FAFC; }
+.help-text { font-size: 12px; color: #94A3B8; font-weight: 600; }
+
+/* Info tip */
 .info-tip {
-  background-color: rgba(56,189,248,0.1);
-  border: 1px solid rgba(56,189,248,0.3);
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 12px;
+  background-color: rgba(56,189,248,0.08);
+  border: 1px solid rgba(56,189,248,0.25);
+  border-radius: 10px; padding: 12px; margin-bottom: 12px;
 }
-.info-tip-text { color: #94A3B8; }
-.section-title { color: #F8FAFC; }
-.empty-text { color: #94A3B8; }
-.empty-hint { color: #64748B; }
-.empty-icon { color: #64748B; }
-.loading-text { color: #94A3B8; }
+.info-tip-text { font-size: 13px; color: #94A3B8; line-height: 1.6; }
+
+/* Login tip */
+.login-tip-section {
+  background-color: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px; padding: 16px; text-align: center; margin-bottom: 12px;
+}
+.tip-text { color: #94A3B8; font-size: 14px; margin-bottom: 12px; }
+.login-btn {
+  background-color: #38BDF8; color: #0F172A; border: none;
+  border-radius: 6px; padding: 8px 24px; font-size: 14px; font-weight: 600;
+}
+
+/* Card */
+.card {
+  background-color: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.13);
+  border-radius: 12px; padding: 14px 16px; margin-bottom: 12px;
+}
+
+/* Zone info */
+.zone-info-row { display: flex; align-items: center; margin-bottom: 10px; }
+.zone-name-text { font-size: 15px; font-weight: 600; color: #F8FAFC; margin-left: 4px; }
+
+/* Form */
+.form-row { display: flex; gap: 12px; }
+.form-col { flex: 1; }
+.form-item { margin-bottom: 14px; }
+.form-label { font-size: 13px; color: #94A3B8; margin-bottom: 6px; display: block; }
+.form-input {
+  width: 100%; height: 40px;
+  background-color: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 8px; padding: 0 12px;
+  font-size: 15px; color: #F8FAFC; box-sizing: border-box;
+}
+
+/* Picker */
+.picker-compact {
+  height: 38px;
+  background-color: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 8px; padding: 0 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 14px; color: #F8FAFC;
+}
+.picker-compact.disabled { opacity: 0.35; }
+.picker-placeholder { color: #64748B; }
+.picker-compact-arrow { width: 14px; height: 14px; opacity: 0.4; }
+
+/* Section header */
+.section-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+}
+.section-title { font-size: 14px; font-weight: 600; color: #F8FAFC; }
+.section-count { font-size: 12px; color: #64748B; }
+
+/* Time slot list */
+.time-slot-list { display: flex; flex-direction: column; gap: 8px; }
+.time-slot-card {
+  background-color: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px; padding: 12px 14px;
+}
+.time-slot-card:active { background-color: rgba(255,255,255,0.09); }
+.time-slot-card.selected {
+  border-color: #38BDF8;
+  background-color: rgba(56,189,248,0.1);
+}
+.time-slot-card.my-slot {
+  border-color: #10B981;
+  background-color: rgba(16,185,129,0.08);
+}
+.time-slot-card.full { opacity: 0.45; }
+
+.slot-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;
+}
+.slot-time { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.time-value { font-size: 16px; font-weight: 600; color: #F8FAFC; }
+.slot-tag {
+  font-size: 11px; color: #94A3B8;
+  background-color: rgba(255,255,255,0.08);
+  border-radius: 4px; padding: 2px 7px;
+}
+.fortress-tag { background-color: rgba(56,189,248,0.15); color: #38BDF8; }
+.corps-tag { background-color: rgba(251,191,36,0.15); color: #FBBF24; }
+.activity-type-tag { background-color: rgba(167,139,250,0.15); color: #A78BFA; }
+.my-badge {
+  font-size: 11px; font-weight: 600; color: #10B981;
+  background-color: rgba(16,185,129,0.15); border-radius: 4px; padding: 2px 8px;
+}
+.full-badge {
+  font-size: 11px; font-weight: 600; color: #94A3B8;
+  background-color: rgba(255,255,255,0.08); border-radius: 4px; padding: 2px 8px;
+}
+.slot-footer { display: flex; align-items: center; justify-content: space-between; }
+.slot-date { font-size: 12px; color: #64748B; }
+.slot-count { font-size: 12px; color: #94A3B8; }
+.slot-count.full { color: #EF4444; }
+.slot-counts { display: flex; gap: 12px; }
+
+/* Position options */
+.position-options { display: flex; gap: 10px; }
+.position-option {
+  flex: 1; border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px; padding: 10px;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  background-color: rgba(255,255,255,0.04);
+}
+.position-option.active {
+  border-color: #38BDF8;
+  background-color: rgba(56,189,248,0.12);
+}
+.position-icon { font-size: 16px; }
+.position-name { font-size: 14px; color: #F8FAFC; }
+.position-option.active .position-name { color: #38BDF8; font-weight: 600; }
+
+/* Buttons */
+.btn {
+  height: 44px; line-height: 44px; border-radius: 8px;
+  font-size: 15px; font-weight: 600; border: none; text-align: center;
+}
+.btn-primary { background-color: #38BDF8; color: #0F172A; }
+.btn-primary:active { background-color: #0EA5E9; }
+.btn-full { width: 100%; margin-top: 6px; }
+
+/* Registration list */
+.registration-list { display: flex; flex-direction: column; gap: 6px; }
+.registration-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px;
+  background-color: rgba(255,255,255,0.04); border-radius: 6px;
+}
+.registration-item.my-registration { background-color: rgba(56,189,248,0.08); }
+.registration-order {
+  width: 24px; height: 24px; border-radius: 50%;
+  background-color: rgba(255,255,255,0.1);
+  font-size: 12px; color: #94A3B8;
+  display: flex; align-items: center; justify-content: center; font-weight: 600;
+}
+.my-order { background-color: #38BDF8; color: #0F172A; }
+.registration-name {
+  flex: 1; font-size: 14px; color: #F8FAFC;
+  display: flex; align-items: center; gap: 4px;
+}
+.me-tag {
+  font-size: 10px; color: #38BDF8;
+  background-color: rgba(56,189,248,0.15);
+  border-radius: 3px; padding: 1px 4px;
+}
+.registration-position { font-size: 12px; padding: 2px 8px; border-radius: 4px; }
+.registration-position.head, .registration-position.combat {
+  background-color: rgba(16,185,129,0.15); color: #10B981;
+}
+.registration-position.body, .registration-position.substitute {
+  background-color: rgba(56,189,248,0.15); color: #38BDF8;
+}
+
+/* Share button */
+.btn-share {
+  background-color: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #94A3B8; border-radius: 8px; font-size: 14px;
+}
+.btn-share::after { border: none; }
+
+/* Empty & loading */
+.empty-state, .empty-state-content {
+  padding: 30px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.loading-container { padding: 30px; text-align: center; }
+.empty-icon { font-size: 32px; }
+.empty-text { font-size: 15px; color: #94A3B8; }
+.empty-hint { font-size: 13px; color: #64748B; line-height: 1.5; }
+.loading-text { font-size: 14px; color: #94A3B8; }
+
+/* Utility */
+.text-center { text-align: center; }
+.text-secondary { color: #94A3B8; }
+.text-sm { font-size: 13px; }
+.mt-32 { margin-top: 32px; }

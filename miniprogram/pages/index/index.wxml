@@ -89,19 +89,19 @@
 
       <!-- 盟管控制台 -->
       <view class="grid-item" bindtap="goToAuditorConsole" wx:if="{{showAuditorConsole}}">
-        <image class="grid-icon-img" src="/images/icon-home-alliance.svg" mode="aspectFit" />
+        <view class="grid-icon">🏛️</view>
         <text class="grid-name">盟管后台</text>
       </view>
 
       <!-- 超管控制台 -->
       <view class="grid-item" bindtap="goToSuperAdminConsole" wx:if="{{showSuperAdminConsole}}">
-        <image class="grid-icon-img" src="/images/icon-home-superadmin.svg" mode="aspectFit" />
+        <view class="grid-icon">🔱</view>
         <text class="grid-name">超管后台</text>
       </view>
 
       <!-- 区管控制台 -->
       <view class="grid-item" bindtap="goToAdminConsole" wx:if="{{showAdminConsole}}">
-        <image class="grid-icon-img" src="/images/icon-home-zone.svg" mode="aspectFit" />
+        <view class="grid-icon">🗺️</view>
         <text class="grid-name">区管后台</text>
         <view wx:if="{{pendingAdminReviewCount > 0}}" class="badge">{{pendingAdminReviewCount}}</view>
       </view>
