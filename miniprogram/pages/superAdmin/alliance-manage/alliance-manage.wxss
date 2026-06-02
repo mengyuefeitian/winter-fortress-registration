@@ -2,7 +2,7 @@
 
 .alliance-manage-container {
   padding: 20px;
-  background-color: #F5F7FA;
+  #removed-bg
   min-height: 100vh;
 }
 
@@ -198,3 +198,48 @@
   padding: 6rpx 20rpx;
   min-width: auto;
 }
+
+/* ===== Dark Theme Override ===== */
+.page, .alliance-config-container, .zone-manage-container,
+.alliance-manage-container, .auto-clear-container, .phone-manage-container {
+  background: transparent !important;
+  color: #F8FAFC;
+}
+.section, .card, .time-slot-card, .member-card, .review-item,
+.stat-card, .stat-section, .alliance-card, .zone-card,
+.auditor-section, .config-card, .review-card, .phone-card,
+.identity-card, .auto-clear-card {
+  background-color: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.13) !important;
+}
+.section-title, .card-title, .form-label, .zone-name, .alliance-name,
+.member-name, .user-name, .stat-label, .config-label,
+.page-title, .review-status, .phone-label {
+  color: #F8FAFC !important;
+}
+.section-desc, .zone-desc, .member-role, .stat-value,
+.text-weak, .text-secondary, .sub-text, .review-desc, .config-desc {
+  color: #94A3B8 !important;
+}
+.edit-input, .form-input, .search-input, .input {
+  background-color: rgba(255,255,255,0.08) !important;
+  border-color: rgba(255,255,255,0.18) !important;
+  color: #F8FAFC !important;
+}
+.picker-compact, .picker-value {
+  background-color: rgba(255,255,255,0.08) !important;
+  border-color: rgba(255,255,255,0.18) !important;
+  color: #F8FAFC !important;
+}
+.alliance-index, .alliance-header {
+  background-color: rgba(56,189,248,0.12) !important;
+  color: #38BDF8 !important;
+  border-color: rgba(56,189,248,0.2) !important;
+}
+.status-tag, .status-badge, .tag, .role-tag {
+  opacity: 0.9;
+}
+.divider, .card-divider, .section-divider {
+  border-color: rgba(255,255,255,0.1) !important;
+}
+

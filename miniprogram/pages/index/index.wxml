@@ -101,7 +101,7 @@
 
       <!-- 区管控制台 -->
       <view class="grid-item" bindtap="goToAdminConsole" wx:if="{{showAdminConsole}}">
-        <view class="grid-icon">🗺️</view>
+        <view class="grid-icon">🗝️</view>
         <text class="grid-name">区管后台</text>
         <view wx:if="{{pendingAdminReviewCount > 0}}" class="badge">{{pendingAdminReviewCount}}</view>
       </view>
