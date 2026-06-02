@@ -12,42 +12,47 @@
     </view>
   </view>
 
-  <!-- 配置管理 -->
   <view class="section-header">
     <text class="section-title">配置管理</text>
   </view>
   <view class="function-grid">
     <view class="function-card-compact" bindtap="goToZoneManage">
+      <image class="function-icon-compact" src="/images/icon-admin-zone.svg" mode="aspectFit" />
       <view class="function-content">
         <text class="function-name">分区管理</text>
         <text class="function-desc">创建和管理分区</text>
       </view>
     </view>
     <view class="function-card-compact" bindtap="goToAllianceManage">
+      <image class="function-icon-compact" src="/images/icon-admin-alliance.svg" mode="aspectFit" />
       <view class="function-content">
         <text class="function-name">联盟管理</text>
         <text class="function-desc">管理所有联盟</text>
       </view>
     </view>
     <view class="function-card-compact" bindtap="goToTimeSlotConfig">
+      <image class="function-icon-compact" src="/images/icon-admin-fortress.svg" mode="aspectFit" />
       <view class="function-content">
         <text class="function-name">堡垒配置</text>
         <text class="function-desc">配置堡垒活动时间</text>
       </view>
     </view>
     <view class="function-card-compact" bindtap="goToPositionManage">
+      <image class="function-icon-compact" src="/images/icon-admin-position.svg" mode="aspectFit" />
       <view class="function-content">
         <text class="function-name">官职管理</text>
         <text class="function-desc">创建官职报名配置</text>
       </view>
     </view>
     <view class="function-card-compact" bindtap="goToBattleConfig">
+      <image class="function-icon-compact" src="/images/icon-admin-battle.svg" mode="aspectFit" />
       <view class="function-content">
         <text class="function-name">国战报名</text>
         <text class="function-desc">管理国战日期与报名</text>
       </view>
     </view>
     <view class="function-card-compact" bindtap="goToArsenalConfig">
+      <image class="function-icon-compact" src="/images/icon-admin-arsenal.svg" mode="aspectFit" />
       <view class="function-content">
         <text class="function-name">兵工厂&峡谷</text>
         <text class="function-desc">生成联盟活动时间进行报名</text>
@@ -55,12 +60,12 @@
     </view>
   </view>
 
-  <!-- 权限审核 -->
   <view class="section-header mt-24">
     <text class="section-title">权限审核</text>
   </view>
   <view class="function-grid">
     <view class="function-card-compact" bindtap="goToAdminReview">
+      <image class="function-icon-compact" src="/images/icon-admin-review.svg" mode="aspectFit" />
       <view class="function-content">
         <text class="function-name">区管审核</text>
         <text class="function-desc">审核区管申请</text>
@@ -68,6 +73,7 @@
       <view wx:if="{{pendingZoneManagerCount > 0}}" class="badge badge-danger">{{pendingZoneManagerCount}}</view>
     </view>
     <view class="function-card-compact" bindtap="goToAllianceManagerReview">
+      <image class="function-icon-compact" src="/images/icon-admin-review.svg" mode="aspectFit" />
       <view class="function-content">
         <text class="function-name">盟管审核</text>
         <text class="function-desc">审核盟管申请</text>
@@ -75,6 +81,7 @@
       <view wx:if="{{pendingAllianceManagerCount > 0}}" class="badge badge-danger">{{pendingAllianceManagerCount}}</view>
     </view>
     <view class="function-card-compact" bindtap="goToZoneCreationReview">
+      <image class="function-icon-compact" src="/images/icon-admin-zone.svg" mode="aspectFit" />
       <view class="function-content">
         <text class="function-name">分区开通审核</text>
         <text class="function-desc">审核用户分区开通申请</text>
@@ -82,18 +89,21 @@
       <view wx:if="{{pendingZoneCreationCount > 0}}" class="badge badge-danger">{{pendingZoneCreationCount}}</view>
     </view>
     <view class="function-card-compact" bindtap="goToPhoneManage">
+      <image class="function-icon-compact" src="/images/icon-admin-superadmin.svg" mode="aspectFit" />
       <view class="function-content">
         <text class="function-name">超管管理</text>
         <text class="function-desc">设置超管手机号</text>
       </view>
     </view>
     <view class="function-card-compact" bindtap="goToMemberManage">
+      <image class="function-icon-compact" src="/images/icon-admin-members.svg" mode="aspectFit" />
       <view class="function-content">
         <text class="function-name">成员管理</text>
         <text class="function-desc">查看和管理区管盟管</text>
       </view>
     </view>
     <view class="function-card-compact" bindtap="goToUserIdentity">
+      <image class="function-icon-compact" src="/images/icon-admin-identity.svg" mode="aspectFit" />
       <view class="function-content">
         <text class="function-name">用户身份管理</text>
         <text class="function-desc">查看用户分区归属、添加区管</text>
@@ -101,18 +111,19 @@
     </view>
   </view>
 
-  <!-- 统计数据 -->
   <view class="section-header mt-24">
     <text class="section-title">统计数据</text>
   </view>
   <view class="function-grid">
     <view class="function-card-compact" bindtap="goToAllStats">
+      <image class="function-icon-compact" src="/images/icon-admin-stats.svg" mode="aspectFit" />
       <view class="function-content">
         <text class="function-name">全局统计</text>
         <text class="function-desc">查看全局数据</text>
       </view>
     </view>
     <view class="function-card-compact" bindtap="goToAutoClear">
+      <image class="function-icon-compact" src="/images/icon-admin-autoclear.svg" mode="aspectFit" />
       <view class="function-content">
         <text class="function-name">自动清理配置</text>
         <text class="function-desc">定时清空报名</text>
