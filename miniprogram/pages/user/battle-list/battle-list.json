@@ -1,5 +1,7 @@
 {
   "navigationBarTitleText": "国战报名",
+  "navigationBarBackgroundColor": "#0F172A",
+  "navigationBarTextStyle": "white",
   "usingComponents": {
     "zone-selector": "/components/zone-selector/zone-selector"
   }
