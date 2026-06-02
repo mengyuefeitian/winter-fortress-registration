@@ -1,5 +1,5 @@
 <!--pages/admin/statistics/statistics.wxml-->
-<view class="page">
+<view class="page admin-page">
   <!-- 报名类型 + 分区选择 -->
   <view class="card">
     <view class="form-row">

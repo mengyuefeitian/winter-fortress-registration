@@ -1,5 +1,5 @@
 <!-- pages/admin/position-manage/position-manage.wxml -->
-<view class="page">
+<view class="page admin-page">
   <!-- 创建配置区域 - 紧凑布局 -->
   <view class="card">
     <!-- 第一行：分区 + 日期 -->

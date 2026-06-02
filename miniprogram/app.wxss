@@ -92,13 +92,16 @@ page {
    Used by admin / auditor / superAdmin pages which were NOT redesigned.
    ========================================================================== */
 
-/* Admin pages wrap content in <view class="page"> to get white background */
+/* .page: base layout for all pages (user-facing pages show dark gradient through transparent bg) */
+/* .admin-page: adds white background for admin/auditor/superAdmin pages */
 .page {
-  background-color: #fafbfc;
   min-height: 100vh;
   font-size: 14px;
-  color: #111827;
   line-height: 1.6;
+}
+.admin-page {
+  background-color: #fafbfc;
+  color: #111827;
 }
 
 /* --------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 <!--pages/auditor/config/config.wxml-->
-<view class="page">
+<view class="page admin-page">
   <!-- 紧凑配置区域 -->
   <view class="card">
     <!-- 第一行：日期 + 时间 -->

@@ -1,5 +1,5 @@
 <!-- pages/superAdmin/user-identity/user-identity.wxml -->
-<view class="page">
+<view class="page admin-page">
   <!-- 搜索和添加 -->
   <view class="section">
     <view class="section-title">用户身份管理</view>

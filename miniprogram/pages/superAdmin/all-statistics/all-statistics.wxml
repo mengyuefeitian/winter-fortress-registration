@@ -1,5 +1,5 @@
 <!--pages/superAdmin/all-statistics/all-statistics.wxml-->
-<view class="page">
+<view class="page admin-page">
   <!-- 报名类型选择 -->
   <view class="card">
     <view class="form-row">
