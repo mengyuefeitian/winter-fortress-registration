@@ -1,4 +1,4 @@
-﻿/* pages/login/login.wxss - Winter Fortress Style */
+/* pages/login/login.wxss - Winter Fortress Style */
 .login-container {
   min-height: 100vh;
   padding: 40px 24px;

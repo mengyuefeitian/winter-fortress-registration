@@ -1,4 +1,4 @@
-﻿/* pages/user/battle-list/battle-list.wxss */
+/* pages/user/battle-list/battle-list.wxss */
 .nav-bar {
   padding: 16px 0;
 }

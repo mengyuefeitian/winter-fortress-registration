@@ -1,4 +1,4 @@
-﻿/* pages/user/position-list/position-list.wxss */
+/* pages/user/position-list/position-list.wxss */
 .nav-bar {
   padding: 16px 0;
   text-align: center;

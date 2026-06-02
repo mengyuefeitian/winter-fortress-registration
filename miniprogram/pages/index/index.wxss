@@ -1,4 +1,4 @@
-﻿/* pages/index/index.wxss - Winter Fortress Style */
+/* pages/index/index.wxss - Winter Fortress Style */
 .page {
   min-height: 100vh;
 }
