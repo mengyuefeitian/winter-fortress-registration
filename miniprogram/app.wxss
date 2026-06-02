@@ -632,15 +632,16 @@ page {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 4px;
+  padding: 20px 4px 10px;
 }
 
 .section-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #94A3B8;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #F1F5F9;
+  padding-left: 10px;
+  border-left: 3px solid #38BDF8;
+  line-height: 1.2;
 }
 
 /* --------------------------------------------------------------------------
