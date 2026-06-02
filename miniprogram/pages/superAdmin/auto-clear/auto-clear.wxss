@@ -2,7 +2,6 @@
 
 .auto-clear-container {
   padding: 16px;
-  #removed-bg
   min-height: 100vh;
 }
 

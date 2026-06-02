@@ -2,7 +2,6 @@
 
 .alliance-config-container {
   padding: 20px;
-  #removed-bg
   min-height: 100vh;
 }
 

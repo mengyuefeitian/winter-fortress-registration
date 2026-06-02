@@ -1,7 +1,6 @@
 /* 微信设计语言 - 紧凑布局 */
 .page {
   padding: 12px;
-  #removed-bg
   min-height: 100vh;
 }
 
