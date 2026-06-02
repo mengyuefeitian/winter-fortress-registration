@@ -1,62 +1,19 @@
-<!--pages/user/position-list/position-list.wxml-->
-<view class="page">
-  <!-- 页面标题 + 帮助 -->
-  <view class="page-header">
-    <view class="page-title-row">
-      <text class="page-title">官职报名</text>
-      <view class="help-icon" bindtap="toggleTip">
-        <text class="help-text">?</text>
+﻿<!--pages/user/position-list/position-list.wxml - Winter Fortress Redesign-->
+<view class="container">
+  <view class="nav-bar">
+    <text class="nav-title">职位招募中心</text>
+  </view>
+
+  <view class="wf-card" wx:for="{{positionList}}" wx:key="id">
+    <view class="flex-between">
+      <view>
+        <text class="position-name">{{item.name}}</text>
+        <view class="mt-4 text-secondary text-xs">需求: {{item.required}}人 | 已报: {{item.current}}人</view>
       </view>
+      <view class="wf-tag {{item.isFull ? 'full' : ''}}">{{item.isFull ? '已满员' : '报名中'}}</view>
     </view>
-  </view>
-
-  <!-- 提示信息 -->
-  <view wx:if="{{showTip}}" class="info-tip">
-    <text class="info-tip-text">分区管理员在区管控制台 > 官职管理 中配置好起始时间后，所有用户可以进行官职报名。区管可在[控制台 > 数据统计]中看到报名结果，可保存截图分享。</text>
-  </view>
-
-  <!-- 当前分区提示 -->
-  <view wx:if="{{selectedZone}}" class="zone-info-bar">
-    <text class="text-sm">当前分区：</text>
-    <text class="text-sm font-semibold">{{selectedZone.zoneName}}</text>
-  </view>
-
-  <!-- 未选择分区提示 -->
-  <view wx:if="{{noZoneSelected}}" class="empty-state">
-    <text class="empty-text">请先在首页选择您的分区</text>
-  </view>
-
-  <!-- 加载状态 -->
-  <view class="loading-container" wx:if="{{loading}}">
-    <text class="loading-text">加载中...</text>
-  </view>
-
-  <!-- 空状态 -->
-  <view class="empty-state" wx:if="{{!loading && !noZoneSelected && configs.length === 0}}">
-    <view class="empty-state-content">
-      <text class="empty-icon">📋</text>
-      <text class="empty-text">暂无可报名的官职</text>
-      <text class="empty-hint">请联系区域管理员创建官职报名表</text>
-    </view>
-  </view>
-
-  <!-- 配置列表 -->
-  <view class="function-grid" wx:if="{{!loading && !noZoneSelected && configs.length > 0}}">
-    <view class="card" wx:for="{{configs}}" wx:key="_id"
-          bindtap="goToRegistration" data-config-id="{{item._id}}">
-      <view class="card-header">
-        <text class="card-title">{{item.positionType}}</text>
-        <view class="tag tag-primary">{{item.date}}</view>
-      </view>
-      <view class="card-body">
-        <text class="text-secondary">起始时间：{{item.startTime}}</text>
-        <view class="stats-row mt-8">
-          <text class="text-secondary">已报名：</text>
-          <text class="{{item.registeredCount >= item.totalSlots ? 'text-danger' : 'text-success'}}">
-            {{item.registeredCount}}/{{item.totalSlots}}人
-          </text>
-        </view>
-      </view>
+    <view class="mt-12" wx:if="{{!item.isFull}}">
+      <button class="wf-btn" style="height: 36px; font-size: 13px;" bindtap="applyPosition" data-id="{{item.id}}">申请该职位</button>
     </view>
   </view>
 </view>

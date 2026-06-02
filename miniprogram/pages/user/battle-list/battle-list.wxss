@@ -1,235 +1,54 @@
-/* pages/user/battle-list/battle-list.wxss */
-.container {
-  padding: 20rpx;
-  min-height: 100vh;
-  background: #fafbfc;
+﻿/* pages/user/battle-list/battle-list.wxss */
+.nav-bar {
+  padding: 16px 0;
 }
 
-/* 页面标题 */
-.page-header {
-  padding: 12px 4px;
-  margin-bottom: 8px;
-}
-
-.page-title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.page-title {
-  font-size: 17px;
-  font-weight: 600;
-  color: #000000;
-}
-
-/* 帮助图标 */
 .help-icon {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background-color: #1296DB;
+  background: var(--wf-glass);
+  border: 1px solid var(--wf-border);
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.help-text {
   font-size: 14px;
-  font-weight: 600;
-  color: #fff;
-  line-height: 1;
-}
-
-.hint {
-  font-size: 24rpx;
-  color: #999;
-  margin-top: 8rpx;
-  display: block;
-}
-
-.create-bar {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-  padding: 20rpx;
-  margin-bottom: 20rpx;
-  background: #fff;
-  border-radius: 12rpx;
-  border-left: 6rpx solid #4A90D9;
-}
-
-.date-picker {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-}
-
-.date-picker .label {
-  font-size: 26rpx;
-  color: #666;
-  white-space: nowrap;
-}
-
-.date-picker .picker-display {
-  flex: 1;
-  font-size: 28rpx;
-  color: #333;
-  padding: 8rpx 12rpx;
-  background: #f5f5f5;
-  border-radius: 8rpx;
-}
-
-.btn-create {
-  padding: 12rpx 36rpx;
-  background: #4A90D9;
-  color: #fff;
-  border-radius: 8rpx;
-  font-size: 28rpx;
-  font-weight: bold;
-}
-
-.btn-create:active {
-  background: #3a7bc8;
-}
-
-/* 提示信息 */
-.info-tip {
-  background-color: #F0F4FA;
-  border-radius: 8px;
-  padding: 12px;
-  margin: 4px 0 12px 0;
-}
-
-.info-tip-text {
-  font-size: 12px;
-  color: #5F5F5F;
-  line-height: 1.6;
-}
-
-.zone-bar {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-  padding: 12rpx 20rpx;
-  margin-bottom: 20rpx;
-  background: rgba(74, 144, 217, 0.08);
-  border-radius: 8rpx;
-}
-
-.zone-label {
-  font-size: 24rpx;
-  color: #999;
-}
-
-.zone-name {
-  font-size: 26rpx;
-  font-weight: bold;
-  color: #4A90D9;
-}
-
-.config-list {
-  margin-top: 20rpx;
-}
-
-.config-item {
-  display: flex;
-  align-items: center;
-  padding: 24rpx 30rpx;
-  margin-bottom: 16rpx;
-  background: #fff;
-  border-radius: 12rpx;
-  border: 2rpx solid #e5e5e5;
-}
-
-.config-item.selected {
-  border-color: #4A90D9;
-  background: #f0f7ff;
-}
-
-.config-date {
-  flex: 1;
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #1a1a2e;
-}
-
-.config-badge {
-  display: inline-block;
-  font-size: 22rpx;
-  font-weight: normal;
-  color: #4A90D9;
-  background: #f0f7ff;
-  padding: 4rpx 12rpx;
-  border-radius: 4rpx;
-  margin-left: 12rpx;
-}
-
-.config-zone {
-  font-size: 24rpx;
-  color: #666;
-  margin-right: 16rpx;
-}
-
-.config-actions {
-  display: flex;
-  gap: 12rpx;
-}
-
-.btn-delete {
-  padding: 8rpx 20rpx;
-  font-size: 24rpx;
-  color: #FF6B6B;
-  border: 1rpx solid #FF6B6B;
-  border-radius: 8rpx;
+  color: var(--wf-primary);
 }
 
 .empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 100rpx 0;
+  margin-top: 80px;
+  text-align: center;
+  color: var(--wf-text-sub);
 }
 
 .empty-icon {
-  font-size: 80rpx;
-  margin-bottom: 20rpx;
+  font-size: 48px;
+  display: block;
+  margin-bottom: 16px;
+  opacity: 0.8;
 }
 
 .empty-text {
-  font-size: 30rpx;
-  color: #666;
-  margin-bottom: 10rpx;
+  font-size: 16px;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 8px;
 }
 
 .empty-hint {
-  font-size: 24rpx;
-  color: #999;
+  font-size: 13px;
 }
 
 .action-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--wf-border);
   display: flex;
-  gap: 20rpx;
-  margin-top: 30rpx;
-  padding: 0 20rpx;
-}
-
-.btn {
-  flex: 1;
-  height: 80rpx;
-  line-height: 80rpx;
-  text-align: center;
-  border-radius: 12rpx;
-  font-size: 28rpx;
-}
-
-.btn-statistics {
-  background: #4A90D9;
-  color: #fff;
-}
-
-.btn-allocation {
-  background: #6BB3F0;
-  color: #fff;
+  gap: 12px;
 }

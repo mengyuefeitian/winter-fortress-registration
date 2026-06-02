@@ -1,13 +1,13 @@
-<!--pages/login/login.wxml-->
+﻿<!--pages/login/login.wxml - Winter Fortress Redesign-->
 <view class="login-container">
   <view class="login-header">
-    <view class="title">无尽冬日报名管理</view>
+    <view class="title">❄️ 冬日堡垒</view>
     <view class="desc">联盟活动报名系统</view>
   </view>
 
   <view class="login-content">
-    <!-- 隐私协议（优先展示） -->
-    <view class="privacy-section">
+    <!-- 隐私协议 -->
+    <view class="wf-card privacy-section">
       <view class="privacy-check" bindtap="togglePrivacy">
         <view class="checkbox {{privacyAgreed ? 'checked' : ''}}">
           <view class="checkbox-icon" wx:if="{{privacyAgreed}}">✓</view>
@@ -15,46 +15,40 @@
         <view class="privacy-text">
           我已阅读并同意
           <text class="privacy-link" catchtap="openPrivacyContract">《隐私保护指引》</text>
-          和
-          <text class="privacy-link" catchtap="openUserAgreement">《用户服务协议》</text>
         </view>
       </view>
     </view>
 
-    <!-- 身份信息设置（同意协议后显示） -->
+    <!-- 身份信息设置 -->
     <view wx:if="{{userInfoLoaded}}" class="auth-section">
-      <view class="auth-title">设置身份信息</view>
+      <view class="wf-card auth-card">
+        <view class="auth-title">指挥官身份认证</view>
 
-      <!-- 头像和昵称并排显示 -->
-      <view class="auth-buttons">
-        <!-- 头像按钮 -->
-        <button class="avatar-btn {{tempAvatarUrl ? 'completed' : ''}}" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
-          <image class="avatar-img" src="{{tempAvatarUrl || '/images/default-avatar.png'}}"></image>
-          <view class="btn-status">{{tempAvatarUrl ? '✓' : '1'}}</view>
-          <view class="btn-label">{{tempAvatarUrl ? '已设置头像' : '点击选择头像'}}</view>
-        </button>
+        <!-- 头像和昵称 -->
+        <view class="auth-buttons">
+          <button class="avatar-btn wf-input flex-center {{tempAvatarUrl ? 'completed' : ''}}" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+            <image class="avatar-img" src="{{tempAvatarUrl || '/images/default-avatar.png'}}"></image>
+            <view class="btn-label">{{tempAvatarUrl ? '已设置头像' : '点击选择头像'}}</view>
+          </button>
 
-        <!-- 游戏昵称输入 -->
-        <view class="nickname-box {{tempNickName ? 'completed' : ''}}">
-          <view class="btn-status">{{tempNickName ? '✓' : '2'}}</view>
-          <input class="nickname-input" placeholder="输入游戏昵称" value="{{tempNickName}}" bindinput="onNicknameInputing" maxlength="12" />
-          <view class="btn-label">{{tempNickName ? '已设置昵称' : '输入游戏昵称'}}</view>
+          <view class="nickname-box wf-input {{tempNickName ? 'completed' : ''}}">
+            <input class="nickname-input" placeholder="输入游戏昵称" value="{{tempNickName}}" bindinput="onNicknameInputing" maxlength="12" />
+          </view>
         </view>
-      </view>
 
-      <!-- 使用微信昵称快捷按钮 -->
-      <view class="quick-nickname">
-        <view class="wx-nickname-box">
-          <input class="wx-nickname-input" type="nickname" placeholder="" value="" bindinput="onUseWxNicknameInput" />
-          <view class="wx-nickname-cover">使用微信昵称</view>
+        <!-- 使用微信昵称 -->
+        <view class="quick-nickname">
+          <view class="wx-nickname-box">
+            <input class="wx-nickname-input wf-input" type="nickname" placeholder="一键获取微信昵称" bindinput="onUseWxNicknameInput" />
+          </view>
         </view>
       </view>
     </view>
 
     <!-- 完成登录 -->
     <view class="complete-section">
-      <button class="login-btn {{!tempAvatarUrl || !tempNickName || !privacyAgreed ? 'disabled' : ''}}" bindtap="completeLogin" disabled="{{!tempAvatarUrl || !tempNickName || !privacyAgreed}}">立即登录</button>
-      <view class="login-tip">登录后可在「我的」页面申请管理员</view>
+      <button class="login-btn wf-btn {{!tempAvatarUrl || !tempNickName || !privacyAgreed ? 'disabled' : ''}}" bindtap="completeLogin" disabled="{{!tempAvatarUrl || !tempNickName || !privacyAgreed}}">进入堡垒</button>
+      <view class="login-tip">登录后即可参与冬季演习报名</view>
     </view>
   </view>
 </view>

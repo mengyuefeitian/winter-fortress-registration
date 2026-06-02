@@ -1,114 +1,19 @@
-/* pages/user/position-list/position-list.wxss */
-
-/* 页面容器 */
-.page {
-  min-height: 100vh;
-  background-color: #fafbfc;
-  padding: 12px;
-}
-
-/* 页面标题 */
-.page-header {
-  padding: 12px 4px;
-  margin-bottom: 8px;
-}
-
-.page-title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.page-title {
+﻿/* pages/user/position-list/position-list.wxss */
+.nav-bar {
+  padding: 16px 0;
+  text-align: center;
   font-size: 17px;
   font-weight: 600;
-  color: #000000;
 }
 
-/* 帮助图标 */
-.help-icon {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background-color: #1296DB;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.help-text {
-  font-size: 14px;
+.position-name {
+  font-size: 16px;
   font-weight: 600;
-  color: #fff;
-  line-height: 1;
+  color: var(--wf-text-main);
 }
 
-/* 提示信息 */
-.info-tip {
-  background-color: #F0F4FA;
-  border-radius: 8px;
-  padding: 12px;
-  margin: 4px 0 12px 0;
-}
-
-.info-tip-text {
-  font-size: 12px;
-  color: #5F5F5F;
-  line-height: 1.6;
-}
-
-/* 配置列表使用单列布局 */
-.function-grid {
-  display: flex;
-  flex-direction: column;
-  padding: 16px;
-  gap: 12px;
-}
-
-/* 卡片样式覆盖 */
-.card {
-  width: 100%;
-}
-
-/* 分区信息条 */
-.zone-info-bar {
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  background: #fff;
-  border-radius: 8px;
-  margin-bottom: 12px;
-  border: 1px solid #e5e7eb;
-}
-
-/* 空状态样式 */
-.empty-state {
-  display: flex;
-  justify-content: center;
-  padding: 40px 16px;
-}
-
-.empty-state-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.empty-icon {
-  font-size: 48px;
-  margin-bottom: 8px;
-}
-
-.empty-text {
-  color: #A6A6A6;
-  font-size: 15px;
-  font-weight: 500;
-}
-
-.empty-hint {
-  color: #C0C0C0;
-  font-size: 13px;
-  text-align: center;
-  line-height: 1.5;
+.wf-tag.full {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--wf-danger);
+  border-color: rgba(239, 68, 68, 0.3);
 }

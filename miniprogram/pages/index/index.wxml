@@ -1,259 +1,117 @@
-<!--pages/index/index.wxml-->
+﻿<!--pages/index/index.wxml - Winter Fortress Redesign-->
 <view class="page">
-
-  <!-- 未登录状态：显示功能列表和登录入口 -->
-  <view wx:if="{{!isLoggedIn}}" class="container">
-    <!-- 欢迎卡片 + 登录按钮 -->
-    <view class="card mt-16">
-      <view class="card-body flex items-center">
-        <image class="avatar-lg" src="/images/default-avatar.png" mode="aspectFill" />
-        <view class="ml-16 flex-1">
-          <text class="text-lg font-semibold">无尽冬日活动管理</text>
-          <text class="text-secondary text-sm mt-4">联盟报名管理系统</text>
-        </view>
-        <button class="btn btn-primary btn-sm" bindtap="handleLogin">登录</button>
-      </view>
+  <!-- 未登录状态 -->
+  <view wx:if="{{!isLoggedIn}}" class="container flex-center" style="min-height: 100vh; flex-direction: column;">
+    <view class="login-header" style="margin-bottom: 40px;">
+      <view class="title">❄️ 冬日堡垒</view>
+      <view class="desc">联盟活动报名系统</view>
     </view>
-
-    <!-- 功能入口 -->
-    <view class="section-header mt-24">
-      <text class="section-title">功能</text>
-    </view>
-
-    <view class="function-grid">
-      <!-- 堡垒报名 -->
-      <view class="function-card" bindtap="goToFortressRegistration" wx:if="{{showFortressRegistration}}">
-        <view class="function-icon">
-          <image src="/images/logo-fortress.svg" style="width: 32px; height: 32px;" />
-        </view>
-        <view class="function-content">
-          <text class="function-name">堡垒报名</text>
-          <text class="function-desc">选择时间段报名堡垒活动</text>
-        </view>
-      </view>
-
-      <!-- 官职报名 -->
-      <view class="function-card" bindtap="goToPositionRegistration" wx:if="{{showPositionRegistration}}">
-        <view class="function-icon">
-          <image src="/images/icon-alliance.png" style="width: 32px; height: 32px;" />
-        </view>
-        <view class="function-content">
-          <text class="function-name">官职报名</text>
-          <text class="function-desc">预约官职时间段</text>
-        </view>
-      </view>
-
-      <!-- 国战报名 -->
-      <view class="function-card" bindtap="goToBattleRegistration" wx:if="{{showBattleRegistration}}">
-        <view class="function-icon">
-          <image src="/images/logo-battle.svg" style="width: 32px; height: 32px;" />
-        </view>
-        <view class="function-content">
-          <text class="function-name">国战报名</text>
-          <text class="function-desc">报名参与国战活动</text>
-        </view>
-      </view>
-
-      <!-- 兵工厂报名 -->
-      <view class="function-card" bindtap="goToArsenalRegistration" wx:if="{{showBattleRegistration}}">
-        <view class="function-icon">
-          <image src="/images/logo-arsenal.svg" style="width: 32px; height: 32px;" />
-        </view>
-        <view class="function-content">
-          <text class="function-name">兵工厂报名</text>
-          <text class="function-desc">报名兵工厂活动</text>
-        </view>
-      </view>
-
-      <!-- 峡谷会战报名 -->
-      <view class="function-card" bindtap="goToCanyonRegistration" wx:if="{{showBattleRegistration}}">
-        <view class="function-icon">
-          <image src="/images/logo-canyon.svg" style="width: 32px; height: 32px;" />
-        </view>
-        <view class="function-content">
-          <text class="function-name">峡谷会战报名</text>
-          <text class="function-desc">报名峡谷会战活动</text>
-        </view>
-      </view>
-    </view>
-
-    <!-- 底部说明 -->
-    <view class="text-center mt-32 mb-16">
-      <text class="text-weak text-xs">{{versionText}}</text>
-    </view>
+    <button class="wf-btn" bindtap="handleLogin" style="width: 200px;">指挥官登录</button>
   </view>
 
   <!-- 已登录状态 -->
   <view wx:if="{{isLoggedIn}}" class="container">
-
+    
     <!-- 用户信息卡片 -->
-    <view class="card mt-16">
-      <view class="card-body flex items-center">
-        <image class="avatar-lg" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill" />
-        <view class="ml-16 flex-1">
-          <text class="text-lg font-semibold">{{userInfo.nickName || '未设置昵称'}}</text>
-          <view class="flex items-center mt-8">
+    <view class="wf-card flex-between" style="margin-top: 20px;">
+      <view class="flex-center" style="gap: 12px;">
+        <image class="avatar-lg" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill" style="width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--wf-border);" />
+        <view>
+          <text class="text-lg font-semibold">{{userInfo.nickName || '指挥官'}}</text>
+          <view class="flex-center mt-4" style="gap: 4px;">
             <view class="status-dot status-active"></view>
-            <text class="text-secondary">{{roleDisplayName}}</text>
+            <text class="text-secondary text-xs">{{roleDisplayName}}</text>
           </view>
         </view>
-        <!-- 分区选择器 -->
-        <zone-selector value="{{currentZone}}" zones="{{zones}}" loaded="{{zonesLoaded}}" bind:change="onZoneChange" />
       </view>
+      <zone-selector value="{{currentZone}}" zones="{{zones}}" loaded="{{zonesLoaded}}" bind:change="onZoneChange" />
     </view>
 
-    <!-- 分区引导：未选择分区 -->
-    <view wx:if="{{zonesLoaded && zones.length > 0 && !currentZone}}" class="zone-guide-card">
-      <text class="zone-guide-text">请选择您的分区，以便查看对应联盟和报名信息</text>
-      <text class="zone-guide-desc">找不到您的分区？可以申请开通新分区</text>
-      <view class="zone-guide-btn" bindtap="applyCreateZone">申请开通分区</view>
+    <!-- 分区引导 -->
+    <view wx:if="{{zonesLoaded && zones.length > 0 && !currentZone}}" class="wf-card" style="border-color: var(--wf-primary);">
+      <text class="text-sm">请选择您的分区，以便查看对应联盟和报名信息</text>
+      <view class="wf-btn mt-12" style="height: 36px; font-size: 13px;" bindtap="applyCreateZone">申请开通分区</view>
     </view>
 
-    <!-- 分区引导：暂无分区 -->
-    <view wx:if="{{zonesLoaded && zones.length === 0}}" class="zone-guide-card zone-guide-empty">
-      <text class="zone-guide-text">当前暂无分区</text>
-      <text class="zone-guide-desc">请联系区管开通，或申请创建新分区</text>
-      <view class="zone-guide-btn" bindtap="applyCreateZone">申请开通分区</view>
-    </view>
-
-    <!-- 功能入口 -->
+    <!-- 功能网格 -->
     <view class="section-header mt-24">
-      <text class="section-title">功能</text>
+      <text class="section-title">指挥中心</text>
     </view>
 
     <view class="function-grid">
       <!-- 堡垒报名 -->
-      <view class="function-card" bindtap="goToFortressRegistration" wx:if="{{showFortressRegistration}}">
-        <view class="function-icon">
-          <image src="/images/logo-fortress.svg" style="width: 32px; height: 32px;" />
-        </view>
-        <view class="function-content">
-          <text class="function-name">堡垒报名</text>
-          <text class="function-desc">选择时间段报名堡垒活动</text>
-        </view>
+      <view class="grid-item" bindtap="goToFortressRegistration" wx:if="{{showFortressRegistration}}">
+        <view class="grid-icon">🏰</view>
+        <text class="grid-name">堡垒报名</text>
       </view>
 
       <!-- 官职报名 -->
-      <view class="function-card" bindtap="goToPositionRegistration" wx:if="{{showPositionRegistration}}">
-        <view class="function-icon">
-          <image src="/images/icon-alliance.png" style="width: 32px; height: 32px;" />
-        </view>
-        <view class="function-content">
-          <text class="function-name">官职报名</text>
-          <text class="function-desc">预约官职时间段</text>
-        </view>
+      <view class="grid-item" bindtap="goToPositionRegistration" wx:if="{{showPositionRegistration}}">
+        <view class="grid-icon">👑</view>
+        <text class="grid-name">官职报名</text>
       </view>
 
       <!-- 国战报名 -->
-      <view class="function-card" bindtap="goToBattleRegistration" wx:if="{{showBattleRegistration}}">
-        <view class="function-icon">
-          <image src="/images/logo-battle.svg" style="width: 32px; height: 32px;" />
-        </view>
-        <view class="function-content">
-          <text class="function-name">国战报名</text>
-          <text class="function-desc">报名参与国战活动</text>
-        </view>
+      <view class="grid-item" bindtap="goToBattleRegistration" wx:if="{{showBattleRegistration}}">
+        <view class="grid-icon">⚔️</view>
+        <text class="grid-name">国战报名</text>
       </view>
 
       <!-- 兵工厂报名 -->
-      <view class="function-card" bindtap="goToArsenalRegistration" wx:if="{{showBattleRegistration}}">
-        <view class="function-icon">
-          <image src="/images/logo-arsenal.svg" style="width: 32px; height: 32px;" />
-        </view>
-        <view class="function-content">
-          <text class="function-name">兵工厂报名</text>
-          <text class="function-desc">报名兵工厂活动</text>
-        </view>
+      <view class="grid-item" bindtap="goToArsenalRegistration" wx:if="{{showBattleRegistration}}">
+        <view class="grid-icon">🔫</view>
+        <text class="grid-name">兵工厂</text>
       </view>
 
       <!-- 峡谷会战报名 -->
-      <view class="function-card" bindtap="goToCanyonRegistration" wx:if="{{showBattleRegistration}}">
-        <view class="function-icon">
-          <image src="/images/logo-canyon.svg" style="width: 32px; height: 32px;" />
-        </view>
-        <view class="function-content">
-          <text class="function-name">峡谷会战报名</text>
-          <text class="function-desc">报名峡谷会战活动</text>
-        </view>
+      <view class="grid-item" bindtap="goToCanyonRegistration" wx:if="{{showBattleRegistration}}">
+        <view class="grid-icon">🏔️</view>
+        <text class="grid-name">峡谷会战</text>
       </view>
 
       <!-- 我的报名 -->
-      <view class="function-card" bindtap="goToMyRegistrations" wx:if="{{showMyRegistrations}}">
-        <view class="function-icon">
-          <image src="/images/icon-review.png" style="width: 32px; height: 32px;" />
-        </view>
-        <view class="function-content">
-          <text class="function-name">我的报名</text>
-          <text class="function-desc">查看已报名成功的记录</text>
-        </view>
+      <view class="grid-item" bindtap="goToMyRegistrations" wx:if="{{showMyRegistrations}}">
+        <view class="grid-icon">📝</view>
+        <text class="grid-name">我的报名</text>
       </view>
 
       <!-- 申请盟管 -->
-      <view class="function-card" bindtap="applyAllianceManager" wx:if="{{showApplyAllianceManager}}">
-        <view class="function-icon">
-          <image src="/images/icon-auditor.png" style="width: 32px; height: 32px;" />
-        </view>
-        <view class="function-content">
-          <text class="function-name">申请盟管</text>
-          <text class="function-desc">申请成为联盟管理，预约堡垒</text>
-        </view>
+      <view class="grid-item" bindtap="applyAllianceManager" wx:if="{{showApplyAllianceManager}}">
+        <view class="grid-icon">🛡️</view>
+        <text class="grid-name">申请盟管</text>
       </view>
 
       <!-- 申请区管 -->
-      <view class="function-card" bindtap="applyZoneManager" wx:if="{{showApplyZoneManager}}">
-        <view class="function-icon">
-          <image src="/images/icon-admin.png" style="width: 32px; height: 32px;" />
-        </view>
-        <view class="function-content">
-          <text class="function-name">申请区管</text>
-          <text class="function-desc">申请成为分区管理员，预约官职</text>
-        </view>
+      <view class="grid-item" bindtap="applyZoneManager" wx:if="{{showApplyZoneManager}}">
+        <view class="grid-icon">🏅</view>
+        <text class="grid-name">申请区管</text>
       </view>
 
       <!-- 盟管控制台 -->
-      <view class="function-card" bindtap="goToAuditorConsole" wx:if="{{showAuditorConsole}}">
-        <view class="function-icon">
-          <image src="/images/icon-time.png" style="width: 32px; height: 32px;" />
-        </view>
-        <view class="function-content">
-          <text class="function-name">盟管控制台</text>
-          <text class="function-desc">配置时间段备注</text>
-        </view>
-      </view>
-
-      <!-- 区管控制台 -->
-      <view class="function-card" bindtap="goToAdminConsole" wx:if="{{showAdminConsole}}">
-        <view class="function-icon">
-          <image src="/images/icon-zone.png" style="width: 32px; height: 32px;" />
-        </view>
-        <view class="function-content">
-          <text class="function-name">区管控制台</text>
-          <text class="function-desc">管理分区和联盟配置</text>
-        </view>
-        <view wx:if="{{pendingAdminReviewCount > 0}}" class="badge badge-danger">{{pendingAdminReviewCount}}</view>
+      <view class="grid-item" bindtap="goToAuditorConsole" wx:if="{{showAuditorConsole}}">
+        <view class="grid-icon">🛡️</view>
+        <text class="grid-name">盟管后台</text>
       </view>
 
       <!-- 超管控制台 -->
-      <view class="function-card" bindtap="goToSuperAdminConsole" wx:if="{{showSuperAdminConsole}}">
-        <view class="function-icon">
-          <image src="/images/icon-superadmin.png" style="width: 32px; height: 32px;" />
-        </view>
-        <view class="function-content">
-          <text class="function-name">超管控制台</text>
-          <text class="function-desc">全局管理和审核</text>
-        </view>
-        <view wx:if="{{pendingReviewCount > 0}}" class="badge badge-danger">{{pendingReviewCount}}</view>
+      <view class="grid-item" bindtap="goToSuperAdminConsole" wx:if="{{showSuperAdminConsole}}">
+        <view class="grid-icon">👑</view>
+        <text class="grid-name">超管后台</text>
+      </view>
+
+      <!-- 区管控制台 -->
+      <view class="grid-item" bindtap="goToAdminConsole" wx:if="{{showAdminConsole}}">
+        <view class="grid-icon">⚙️</view>
+        <text class="grid-name">区管后台</text>
+        <view wx:if="{{pendingAdminReviewCount > 0}}" class="badge">{{pendingAdminReviewCount}}</view>
       </view>
     </view>
 
     <!-- 分享按钮 -->
-    <view class="text-center mt-32">
-      <button class="btn-share" open-type="share">分享给好友</button>
+    <view class="mt-32">
+      <button class="wf-btn" open-type="share" style="background: transparent; border: 1px solid var(--wf-border); box-shadow: none;">分享给盟友</button>
     </view>
 
-    <!-- 底部说明 -->
-    <view class="text-center mt-16 mb-16">
-      <text class="text-weak text-xs">{{versionText}}</text>
-    </view>
+    <view class="tab-bar-spacer"></view>
   </view>
 </view>

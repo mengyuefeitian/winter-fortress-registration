@@ -66,5 +66,5 @@
   </view>
 
   <button class="btn-submit" bindtap="onSubmit" loading="{{loading}}">提交报名</button>
-  <button class="btn-share" open-type="share">转发给朋友</button>
+  <button class="wf-btn mt-12" open-type="share" style="background: transparent; border: 1px solid var(--wf-border); box-shadow: none; color: var(--wf-text-secondary);">转发给盟友</button>
 </view>

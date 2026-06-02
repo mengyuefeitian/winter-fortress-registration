@@ -1015,7 +1015,6 @@ async function deletePositionConfig(configId) {
   return res.result
 }
 
-// 将 H:MM 格式统一为 HH:MM（兼容新旧数据）
 function normalizeTimeToHHMM(t) {
   if (!t) return t
   return t.replace(/^(\d):/, '0$1:')
@@ -1032,7 +1031,7 @@ function generatePositionTimeSlots(startTime) {
   let currentMinute = startMinute
 
   while (currentHour < 24) {
-    const timeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`
+    const timeStr = `${currentHour}:${String(currentMinute).padStart(2, '0')}`
     slots.push({
       time: timeStr,
       period: currentHour < 12 ? 'morning' : 'afternoon'
@@ -1055,7 +1054,6 @@ function generatePositionTimeSlots(startTime) {
 // 创建官职报名记录（带并发检测）
 async function createPositionRegistration(data) {
   const db = getDb()
-  const normalizedTimeSlot = normalizeTimeToHHMM(data.timeSlot)
 
   // 检查游戏昵称是否重复
   const existingNick = await db.collection('positionRegistrations')
@@ -1071,11 +1069,11 @@ async function createPositionRegistration(data) {
     throw new Error(`该昵称已在 ${existingReg.timeSlot} 时间段存在报名`)
   }
 
-  // 检查时间段是否已被占用（同时检查新旧两种格式）
+  // 检查时间段是否已被占用
   const existingSlot = await db.collection('positionRegistrations')
     .where({
       configId: data.configId,
-      timeSlot: db.command.in([normalizedTimeSlot, data.timeSlot]),
+      timeSlot: data.timeSlot,
       status: 'active'
     })
     .get()
@@ -1087,7 +1085,7 @@ async function createPositionRegistration(data) {
   return await db.collection('positionRegistrations').add({
     data: {
       configId: data.configId,
-      timeSlot: normalizedTimeSlot,
+      timeSlot: data.timeSlot,
       userId: data.userId,
       nickName: data.nickName,
       remark: data.remark || '',
@@ -1125,11 +1123,10 @@ async function getPositionRegistrationsByConfig(configId) {
 // 根据时间段获取报名记录
 async function getPositionRegistrationByTimeSlot(configId, timeSlot) {
   const db = getDb()
-  const normalized = normalizeTimeToHHMM(timeSlot)
   const res = await db.collection('positionRegistrations')
     .where({
       configId: configId,
-      timeSlot: db.command.in([normalized, timeSlot]),
+      timeSlot: timeSlot,
       status: 'active'
     })
     .get()
@@ -1462,17 +1459,13 @@ async function getBattleRegistrationById(registrationId) {
 
 // 更新报名分配的"安排"
 async function updateBattleRegistrationAssignment(registrationId, assignment) {
-  const res = await wx.cloud.callFunction({
-    name: 'clearRegistrations',
+  const db = getDb()
+  return await db.collection('battleRegistrations').doc(registrationId).update({
     data: {
-      action: 'updateBattleRegistrationAssignment',
-      data: { registrationId, assignment }
+      assignment: assignment,
+      updateTime: db.serverDate()
     }
   })
-  if (!res.result || !res.result.success) {
-    throw new Error((res.result && res.result.error) || '更新失败')
-  }
-  return res.result
 }
 
 // 删除单条报名记录
@@ -1481,7 +1474,6 @@ async function deleteBattleRegistration(registrationId) {
   return await db.collection('battleRegistrations').doc(registrationId).remove()
 }
 
-// 管理员删除单条报名记录（调用云函数绕过客户端权限）
 async function adminDeleteBattleRegistration(registrationId) {
   const res = await wx.cloud.callFunction({
     name: 'clearRegistrations',
@@ -1929,6 +1921,7 @@ module.exports = {
   deleteBattleRegistration,
   adminDeleteBattleRegistration,
   clearBattleRegistrations,
+  normalizeTimeToHHMM,
   getBattleRegistrationCount,
 
   // 意见反馈

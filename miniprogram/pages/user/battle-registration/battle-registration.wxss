@@ -111,14 +111,3 @@ input {
   line-height: 88rpx;
   font-size: 30rpx;
 }
-
-.btn-share {
-  margin-top: 20rpx;
-  background: #fff;
-  color: #4A90D9;
-  border-radius: 12rpx;
-  height: 88rpx;
-  line-height: 88rpx;
-  font-size: 30rpx;
-  border: 1rpx solid #4A90D9;
-}

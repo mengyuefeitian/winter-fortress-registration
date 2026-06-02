@@ -3,11 +3,6 @@ const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 
-function normalizeTimeToHHMM(t) {
-  if (!t) return t
-  return t.replace(/^(\d):/, '0$1:')
-}
-
 Page({
   data: {
     configId: null,
@@ -108,10 +103,6 @@ Page({
         return
       }
 
-      if (config && config.startTime) {
-        config.startTime = normalizeTimeToHHMM(config.startTime)
-      }
-
       this.setData({
         config,
         currentUserId,
@@ -148,7 +139,7 @@ Page({
       // 创建报名记录的映射
       const regMap = {}
       for (const reg of registrations) {
-        regMap[normalizeTimeToHHMM(reg.timeSlot)] = reg
+        regMap[reg.timeSlot] = reg
       }
 
       // 处理每个时间段的报名情况
@@ -247,7 +238,7 @@ Page({
       util.showLoading('正在提交...')
 
       // 检查座位是否已被占用（并发检测）
-      const existingReg = await db.getPositionRegistrationByTimeSlot(configId, normalizeTimeToHHMM(selectedTime))
+      const existingReg = await db.getPositionRegistrationByTimeSlot(configId, selectedTime)
       if (existingReg && existingReg.userId !== currentUserId) {
         util.hideLoading()
         util.showErrorLong('该座位已被其他人选择，请刷新后重新选择')

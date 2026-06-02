@@ -1,252 +1,150 @@
-/* pages/login/login.wxss */
-
+﻿/* pages/login/login.wxss - Winter Fortress Style */
 .login-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #07C160 0%, #06AD56 100%);
+  padding: 40px 24px;
   display: flex;
   flex-direction: column;
-  padding: 60px 20px 40px;
 }
 
 .login-header {
   text-align: center;
   margin-bottom: 40px;
+  margin-top: 60px;
 }
 
-.title {
-  font-size: 26px;
-  font-weight: 600;
-  color: #FFFFFF;
+.login-header .title {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--wf-text-main);
+  text-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
   margin-bottom: 8px;
 }
 
-.desc {
+.login-header .desc {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--wf-text-sub);
+  letter-spacing: 2px;
 }
 
 .login-content {
-  background-color: #FFFFFF;
-  border-radius: 16px;
-  padding: 24px 20px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-}
-
-/* 身份信息设置区域 */
-.auth-section {
-  background-color: #F8F9FA;
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 24px;
-}
-
-.auth-title {
-  font-size: 16px;
-  font-weight: 500;
-  color: #333333;
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.auth-buttons {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.avatar-btn {
-  flex: 1;
-  background: #FFFFFF;
-  padding: 20px 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  border-radius: 12px;
-  border: 2px solid #E8E8E8;
-  transition: all 0.3s;
-}
-
-.avatar-btn.completed {
-  border-color: #52C41A;
-  background-color: #F6FFED;
-}
-
-.avatar-img {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background-color: #F0F0F0;
-  border: 2px solid #07C160;
-}
-
-.btn-status {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background-color: #576B95;
-  color: #FFFFFF;
-  font-size: 14px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 10px;
-}
-
-.avatar-btn.completed .btn-status,
-.nickname-box.completed .btn-status {
-  background-color: #52C41A;
-}
-
-.btn-label {
-  font-size: 12px;
-  color: #666666;
-  margin-top: 8px;
-  text-align: center;
-}
-
-.nickname-box {
   flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 20px 12px;
-  border-radius: 12px;
-  background-color: #FFFFFF;
-  border: 2px solid #E8E8E8;
 }
 
-.nickname-box.completed {
-  border-color: #52C41A;
-  background-color: #F6FFED;
-}
-
-.nickname-input {
-  width: 100%;
-  height: 40px;
-  background-color: #F5F5F5;
-  border-radius: 8px;
-  padding: 0 12px;
-  font-size: 14px;
-  text-align: center;
-  margin-top: 10px;
-}
-
-/* 使用微信昵称快捷按钮 */
-.quick-nickname {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding-top: 12px;
-  border-top: 1px solid #E8E8E8;
-}
-
-.wx-nickname-box {
-  position: relative;
-  width: 110px;
-  height: 32px;
-}
-
-.wx-nickname-input {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  z-index: 2;
-}
-
-.wx-nickname-cover {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  font-size: 13px;
-  color: #576B95;
-  background: transparent;
-  border: 1px solid #576B95;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
-/* 完成登录 */
-
-/* 隐私协议区域 */
 .privacy-section {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  padding: 12px;
 }
 
 .privacy-check {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
 }
 
 .checkbox {
   width: 18px;
   height: 18px;
-  min-width: 18px;
-  border: 2px solid #CCCCCC;
-  border-radius: 3px;
+  border: 1px solid var(--wf-border);
+  border-radius: 4px;
   display: flex;
-  justify-content: center;
   align-items: center;
-  margin-top: 1px;
+  justify-content: center;
 }
 
 .checkbox.checked {
-  background-color: #07C160;
-  border-color: #07C160;
+  background: var(--wf-primary);
+  border-color: var(--wf-primary);
 }
 
 .checkbox-icon {
-  color: #FFFFFF;
   font-size: 12px;
-  line-height: 1;
+  color: #fff;
 }
 
 .privacy-text {
   font-size: 12px;
-  color: #999999;
-  line-height: 1.5;
-  flex: 1;
+  color: var(--wf-text-sub);
+  line-height: 1.4;
 }
 
 .privacy-link {
-  color: #576B95;
-  text-decoration: underline;
+  color: var(--wf-primary);
+}
+
+.auth-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--wf-text-main);
+}
+
+.auth-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.avatar-btn {
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+}
+
+.avatar-btn::after { border: none; }
+
+.avatar-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--wf-border);
+}
+
+.btn-label {
+  font-size: 14px;
+  color: var(--wf-text-main);
+}
+
+.nickname-box {
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.nickname-input {
+  background: transparent;
+  border: none;
+  color: var(--wf-text-main);
+  font-size: 15px;
+  width: 100%;
+}
+
+.quick-nickname {
+  margin-top: 12px;
+}
+
+.wx-nickname-input {
+  margin-bottom: 0;
 }
 
 .complete-section {
-  margin-top: 8px;
-}
-
-.login-btn {
-  background-color: #07C160;
-  color: #FFFFFF;
-  border-radius: 8px;
-  padding: 0 24px;
-  height: 44px;
-  line-height: 44px;
-  font-size: 15px;
-  width: 100%;
-  font-weight: 500;
-  box-sizing: border-box;
+  margin-top: auto;
+  padding-bottom: 20px;
 }
 
 .login-btn.disabled {
-  background-color: #CCCCCC;
-  color: #FFFFFF;
+  opacity: 0.5;
+  background: #333;
+  box-shadow: none;
 }
 
 .login-tip {
-  font-size: 12px;
-  color: #999999;
-  margin-top: 12px;
   text-align: center;
+  font-size: 12px;
+  color: var(--wf-text-sub);
+  margin-top: 16px;
 }
