@@ -26,7 +26,6 @@
 
 .grid-item {
   background: var(--wf-glass);
-  backdrop-filter: blur(12px);
   border: 1px solid var(--wf-border);
   border-radius: 14px;
   height: 100px;

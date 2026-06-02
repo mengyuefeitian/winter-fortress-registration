@@ -46,8 +46,7 @@
   left: 0;
   right: 0;
   padding: 16px;
-  background: rgba(15, 23, 42, 0.95);
-  backdrop-filter: blur(10px);
+  background: rgba(15, 23, 42, 0.98);
   border-top: 1px solid var(--wf-border);
   display: flex;
   gap: 12px;

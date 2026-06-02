@@ -29,8 +29,6 @@ page {
 /* --- 玻璃拟态卡片 --- */
 .wf-card {
   background: var(--wf-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--wf-border);
   border-radius: 16px;
   padding: 16px;
