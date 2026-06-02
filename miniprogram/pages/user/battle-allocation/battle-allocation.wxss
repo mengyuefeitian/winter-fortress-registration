@@ -2,7 +2,7 @@
 .container {
   padding: 20rpx;
   min-height: 100vh;
-  background: #fafbfc;
+  background: #0F172A;
 }
 
 .header {
@@ -50,7 +50,7 @@
 }
 
 .table-row:nth-child(even) {
-  background: #fafbfc;
+  background: #0F172A;
 }
 
 .col {
