@@ -100,8 +100,7 @@ page {
   line-height: 1.6;
 }
 .admin-page {
-  background-color: #fafbfc;
-  color: #111827;
+  color: #F8FAFC;
 }
 
 /* --------------------------------------------------------------------------
@@ -225,31 +224,31 @@ page {
    Card Styles
    -------------------------------------------------------------------------- */
 .card {
-  background-color: #ffffff;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  background-color: rgba(255,255,255,0.07);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.13);
   overflow: hidden;
 }
 
 .card-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid #f3f4f6;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
 .card-title {
   font-size: 16px;
   font-weight: 600;
-  color: #111827;
+  color: #F8FAFC;
 }
 
 .card-body {
-  padding: 20px;
+  padding: 16px 18px;
 }
 
 .card-footer {
-  padding: 12px 20px;
-  border-top: 1px solid #f3f4f6;
-  background-color: #fafbfc;
+  padding: 12px 18px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  background-color: transparent;
 }
 
 .card-flat {

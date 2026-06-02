@@ -1,48 +1,50 @@
-/* pages/user/battle-registration/battle-registration.wxss */
+/* pages/user/battle-registration/battle-registration.wxss — Dark Theme */
+
 .container {
-  padding: 30rpx;
+  padding: 24rpx;
   min-height: 100vh;
-  background: #fafbfc;
+  color: #F8FAFC;
 }
 
 .header {
   text-align: center;
-  padding: 20rpx 0 40rpx;
+  padding: 24rpx 0 40rpx;
 }
 
 .title {
   font-size: 36rpx;
   font-weight: bold;
-  color: #1a1a2e;
+  color: #F8FAFC;
   display: block;
 }
 
 .date {
   font-size: 28rpx;
-  color: #4A90D9;
+  color: #38BDF8;
   margin-top: 8rpx;
   display: block;
 }
 
 .zone {
   font-size: 24rpx;
-  color: #999;
+  color: #94A3B8;
   margin-top: 4rpx;
   display: block;
 }
 
 .form {
-  background: #fff;
-  border-radius: 12rpx;
-  padding: 20rpx;
+  background: rgba(255,255,255,0.07);
+  border: 1rpx solid rgba(255,255,255,0.13);
+  border-radius: 16rpx;
+  padding: 8rpx 20rpx;
 }
 
 .form-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24rpx 0;
-  border-bottom: 1rpx solid #f0f0f0;
+  padding: 28rpx 0;
+  border-bottom: 1rpx solid rgba(255,255,255,0.08);
 }
 
 .form-item:last-child {
@@ -51,8 +53,9 @@
 
 .label {
   font-size: 28rpx;
-  color: #333;
+  color: #94A3B8;
   width: 160rpx;
+  flex-shrink: 0;
 }
 
 .input-group {
@@ -66,12 +69,12 @@
   width: 100%;
   text-align: right;
   font-size: 28rpx;
-  color: #333;
+  color: #F8FAFC;
 }
 
 .input-hint {
   font-size: 20rpx;
-  color: #bbb;
+  color: #64748B;
   margin-top: 4rpx;
 }
 
@@ -79,7 +82,7 @@
   flex: 1;
   text-align: right;
   font-size: 28rpx;
-  color: #666;
+  color: #F8FAFC;
 }
 
 .picker-select {
@@ -91,23 +94,26 @@
 
 .picker-arrow {
   font-size: 22rpx;
-  color: #4A90D9;
-  margin-left: 4rpx;
+  color: #38BDF8;
 }
 
 input {
   flex: 1;
   text-align: right;
   font-size: 28rpx;
-  color: #333;
+  color: #F8FAFC;
 }
 
 .btn-submit {
-  margin-top: 60rpx;
-  background: #4A90D9;
-  color: #fff;
-  border-radius: 12rpx;
+  margin-top: 48rpx;
+  background: linear-gradient(90deg, #38BDF8, #0EA5E9);
+  color: #0F172A;
+  border-radius: 16rpx;
   height: 88rpx;
   line-height: 88rpx;
   font-size: 30rpx;
+  font-weight: 600;
+  border: none;
 }
+
+.mt-12 { margin-top: 12px; }

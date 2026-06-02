@@ -17,3 +17,29 @@
   margin-bottom: 6px;
   display: block;
 }
+
+/* ===== Dark Theme Override ===== */
+.page, .admin-page { background: transparent !important; }
+.card {
+  background-color: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.13) !important;
+}
+.card-body, .card-footer { background: transparent !important; }
+.card-footer { border-top-color: rgba(255,255,255,0.1) !important; }
+.form-label { color: #94A3B8 !important; }
+.picker-compact {
+  background-color: rgba(255,255,255,0.08) !important;
+  border-color: rgba(255,255,255,0.18) !important;
+  color: #F8FAFC !important;
+}
+.picker-compact.disabled { opacity: 0.35 !important; }
+.text-lg, .font-semibold { color: #F8FAFC !important; }
+.text-secondary { color: #94A3B8 !important; }
+.section-title { color: #94A3B8 !important; }
+.function-card-compact {
+  background-color: rgba(255,255,255,0.07) !important;
+  border-color: rgba(255,255,255,0.13) !important;
+}
+.function-name { color: #F8FAFC !important; }
+.function-desc { color: #64748B !important; }
+
