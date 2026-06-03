@@ -99,6 +99,7 @@ page {
 }
 .admin-page {
   color: #F8FAFC;
+  padding: 0 16px 24px;
 }
 
 /* --------------------------------------------------------------------------
@@ -225,7 +226,6 @@ page {
   background-color: rgba(255,255,255,0.07);
   border-radius: 12px;
   border: 1px solid rgba(255,255,255,0.13);
-  overflow: hidden;
 }
 
 .card-header {
