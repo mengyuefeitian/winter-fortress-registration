@@ -31,7 +31,7 @@
         </view>
         <view style="display: flex; align-items: center; gap: 8px;">
           <view class="wf-tag">待报名</view>
-          <view wx:if="{{isSuperAdmin}}" class="wf-tag" style="background: #FF6B6B; color: #fff;" catchtap="onDeleteConfig" data-id="{{item._id}}" data-date="{{item.date}}">删除</view>
+          <view wx:if="{{canCreate}}" class="wf-tag" style="background: #FF6B6B; color: #fff;" catchtap="onDeleteConfig" data-id="{{item._id}}" data-date="{{item.date}}">删除</view>
         </view>
       </view>
     </view>

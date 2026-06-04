@@ -1383,15 +1383,19 @@ async function getBattleConfigById(configId) {
   return res.data
 }
 
-// 删除国战配置（同时删除所有报名记录）
+// 删除国战配置（通过云函数，服务端校验分区归属）
 async function deleteBattleConfig(configId) {
-  const db = getDb()
-  // 先删除所有报名记录
-  await db.collection('battleRegistrations').where({
-    configId: configId
-  }).remove()
-  // 再删除配置
-  return await db.collection('battleConfigs').doc(configId).remove()
+  const res = await wx.cloud.callFunction({
+    name: 'clearRegistrations',
+    data: {
+      action: 'deleteBattleConfig',
+      data: { configId }
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.err) || '删除失败')
+  }
+  return res.result
 }
 
 // 创建国战报名记录
@@ -1469,7 +1473,7 @@ async function updateBattleRegistrationAssignment(registrationId, assignment) {
     }
   })
   if (!res.result || !res.result.success) {
-    throw new Error((res.result && res.result.error) || '更新失败')
+    throw new Error((res.result && res.result.err) || '更新失败')
   }
   return res.result
 }
@@ -1489,7 +1493,7 @@ async function adminDeleteBattleRegistration(registrationId) {
     }
   })
   if (!res.result || !res.result.success) {
-    throw new Error((res.result && res.result.error) || '删除失败')
+    throw new Error((res.result && res.result.err) || '删除失败')
   }
   return res.result
 }
