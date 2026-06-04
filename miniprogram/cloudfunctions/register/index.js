@@ -103,8 +103,19 @@ async function getRegistrationsByUser(userId) {
   }
 }
 
-// 取消报名
+// 取消报名（校验调用者必须是报名本人）
 async function cancelRegistration(registrationId) {
+  const wxContext = cloud.getWXContext()
+  const callerOpenid = wxContext.OPENID
+
+  const regRes = await db.collection('registrations').doc(registrationId).get()
+  if (!regRes.data) {
+    throw new Error('报名记录不存在')
+  }
+  if (regRes.data.userId !== callerOpenid) {
+    throw new Error('无权取消他人的报名')
+  }
+
   await db.collection('registrations').doc(registrationId).update({
     data: {
       status: 'cancelled',

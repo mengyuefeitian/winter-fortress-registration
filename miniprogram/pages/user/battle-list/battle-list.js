@@ -117,8 +117,8 @@ Page({
     const configId = e.currentTarget.dataset.id
     const date = e.currentTarget.dataset.date
 
-    if (!auth.isSuperAdmin(app.globalData.role)) {
-      util.showError('仅超级管理员可删除')
+    if (!auth.canManageZone(app.globalData.role)) {
+      util.showError('仅区管及以上可删除')
       return
     }
 

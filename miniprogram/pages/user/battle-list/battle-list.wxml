@@ -44,7 +44,7 @@
       <view class="config-date">{{item.date}} <text class="config-badge">国战报名</text></view>
       <view class="config-zone" wx:if="{{item.zoneName}}">{{item.zoneName}}</view>
       <view class="config-actions">
-        <view class="btn-delete" wx:if="{{isSuperAdmin}}" catchtap="onDeleteConfig" data-id="{{item._id}}" data-date="{{item.date}}">删除</view>
+        <view class="btn-delete" wx:if="{{canCreate}}" catchtap="onDeleteConfig" data-id="{{item._id}}" data-date="{{item.date}}">删除</view>
       </view>
     </view>
   </view>

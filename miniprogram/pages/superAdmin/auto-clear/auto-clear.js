@@ -143,13 +143,12 @@ Page({
       util.hideLoading()
       util.showSuccess('保存成功')
 
-      // 提示需要配置定时触发器
       if (this.data.enabled) {
         const dayName = this.data.dayOptions[this.data.dayIndex].name
         const hourStr = this.data.hourOptions[this.data.hourIndex]
         wx.showModal({
           title: '配置已保存',
-          content: `自动清空配置已保存（${dayName} ${hourStr}:00 执行）。\n\n请注意：自动清空功能需要在云开发控制台中为 clearRegistrations 云函数配置定时触发器才能生效。\n\n配置方法：\n1. 登录微信云开发控制台\n2. 找到云函数 clearRegistrations\n3. 添加定时触发器\n4. 触发周期设置为定时触发\n5. Cron表达式根据配置设置（如：0 ${hourStr} ? * ${this.data.dayOptions[this.data.dayIndex].value}）`,
+          content: `自动清空已开启（${dayName} ${hourStr}:00 执行）。\n\n定时任务由云函数自动处理，无需手动配置。`,
           showCancel: false,
           confirmText: '我知道了'
         })
