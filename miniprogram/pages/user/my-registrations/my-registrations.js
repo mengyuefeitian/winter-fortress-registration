@@ -383,7 +383,10 @@ Page({
             userInfo: null,
             roleName: '未登录',
             registrations: [],
-            weeklyRegistrations: []
+            weeklyRegistrations: [],
+            positionRegistrations: [],
+            arsenalRegistrations: [],
+            canyonRegistrations: []
           })
 
           util.showSuccess('已退出登录')

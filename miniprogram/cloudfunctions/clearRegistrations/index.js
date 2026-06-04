@@ -57,9 +57,50 @@ async function verifyAdminRole(openid) {
   throw new Error('权限不足，仅区管和超级管理员可删除报名记录')
 }
 
+// 定时触发：读取 settings.autoClear 配置，时间匹配时执行清空
+async function timedClearCheck() {
+  let config
+  try {
+    const res = await db.collection('settings').doc('autoClear').get()
+    config = res.data
+  } catch (err) {
+    console.log('未找到自动清空配置，跳过')
+    return { success: true, message: '未配置自动清空' }
+  }
+
+  if (!config || !config.enabled) {
+    console.log('自动清空未启用，跳过')
+    return { success: true, message: '自动清空未启用' }
+  }
+
+  // config.day: 1=周一 ... 7=周日；Date.getDay(): 0=周日, 1=周一 ... 6=周六
+  const now = new Date()
+  const jsDay = now.getDay()
+  const dayOfWeek = jsDay === 0 ? 7 : jsDay // 转为 1-7
+
+  if (dayOfWeek !== config.day) {
+    console.log(`今天是第${dayOfWeek}天，配置为第${config.day}天，跳过`)
+    return { success: true, message: '今日不执行自动清空' }
+  }
+
+  const currentHour = now.getHours()
+  if (currentHour !== config.hour) {
+    console.log(`当前小时${currentHour}，配置为${config.hour}时，跳过`)
+    return { success: true, message: '当前时间不执行自动清空' }
+  }
+
+  console.log(`定时自动清空触发：周${dayOfWeek} ${config.hour}:00`)
+  return await clearExpiredAll()
+}
+
 // 云函数入口函数
 exports.main = async (event, context) => {
   const { action, data } = event
+
+  // 定时触发器调用时 action 为 undefined
+  if (!action) {
+    return await timedClearCheck()
+  }
 
   try {
     switch (action) {
@@ -81,6 +122,8 @@ exports.main = async (event, context) => {
         return await adminDeleteBattleRegistration(data, context)
       case 'updateBattleRegistrationAssignment':
         return await updateBattleRegistrationAssignment(data, context)
+      case 'deleteBattleConfig':
+        return await deleteBattleConfig(data, context)
       default:
         return {
           err: 'Unknown action'
@@ -124,6 +167,52 @@ async function adminDeleteBattleRegistration(data, context) {
   await verifyAdminRole(wxContext.OPENID)
 
   await db.collection('battleRegistrations').doc(registrationId).remove()
+
+  return { success: true }
+}
+
+// 删除国战配置及其所有报名（校验调用者必须管理该分区）
+async function deleteBattleConfig(data, context) {
+  const { configId } = data || {}
+  if (!configId) {
+    throw new Error('缺少 configId 参数')
+  }
+
+  const wxContext = cloud.getWXContext()
+  const openid = wxContext.OPENID
+
+  // 读取配置，获取所属分区
+  const configRes = await db.collection('battleConfigs').doc(configId).get()
+  if (!configRes.data) {
+    throw new Error('国战配置不存在')
+  }
+  const zoneId = configRes.data.zoneId
+
+  // 校验调用者是否为超管，或是该分区的区管
+  const userRes = await db.collection('users').where({ openid }).get()
+  if (!userRes.data.length) throw new Error('用户不存在')
+  const user = userRes.data[0]
+  const role = user.role || 'user'
+
+  if (role === 'superAdmin') {
+    // 超管直接放行
+  } else if (role === 'admin') {
+    // 区管需校验分区归属
+    const adminRes = await db.collection('admins').where({
+      userId: openid,
+      status: 'approved',
+      zoneId: zoneId
+    }).get()
+    if (!adminRes.data.length) {
+      throw new Error('无权删除其他分区的国战配置')
+    }
+  } else {
+    throw new Error('权限不足')
+  }
+
+  // 先删报名记录，再删配置
+  await db.collection('battleRegistrations').where({ configId }).remove()
+  await db.collection('battleConfigs').doc(configId).remove()
 
   return { success: true }
 }
@@ -688,7 +777,9 @@ async function clearExpiredAll() {
     arsenalConfigs: 0,
     arsenalRegistrations: 0,
     canyonConfigs: 0,
-    canyonRegistrations: 0
+    canyonRegistrations: 0,
+    battleConfigs: 0,
+    battleRegistrations: 0
   }
 
   console.log('开始清空所有数据, 今天:', today)
@@ -840,10 +931,42 @@ async function clearExpiredAll() {
     results.canyonConfigs = cnConfigResult.stats.removed
   }
 
+  // 4. 清空所有过期国战配置和报名数据
+  const allBattleConfigs = await getAllRecords('battleConfigs')
+  console.log('查询到国战配置数量:', allBattleConfigs.length)
+
+  allBattleConfigs.forEach(cfg => {
+    console.log('国战配置:', cfg._id, 'date:', cfg.date, 'status:', cfg.status)
+  })
+
+  const toDeleteBattleConfigs = allBattleConfigs.filter(cfg => {
+    if (!cfg.status) return true // 无状态字段
+    if (cfg.status === 'inactive') return true // 已删除
+    if (isDateExpired(cfg.date, todayObj)) return true // 过期或无日期
+    return false
+  })
+
+  const toDeleteBattleConfigIds = toDeleteBattleConfigs.map(c => c._id)
+  console.log('需要删除的国战配置数量:', toDeleteBattleConfigIds.length)
+
+  if (toDeleteBattleConfigIds.length > 0) {
+    // 先删除对应的国战报名记录
+    const battleRegResult = await db.collection('battleRegistrations').where({
+      configId: _.in(toDeleteBattleConfigIds)
+    }).remove()
+    results.battleRegistrations = battleRegResult.stats.removed
+
+    // 再删除国战配置
+    const battleConfigResult = await db.collection('battleConfigs').where({
+      _id: _.in(toDeleteBattleConfigIds)
+    }).remove()
+    results.battleConfigs = battleConfigResult.stats.removed
+  }
+
   console.log('清空结果:', results)
   return {
     success: true,
     data: results,
-    message: `已清空全部数据：堡垒报名 ${results.registrations} 条，时间段 ${results.timeSlots} 个，兵工厂报名 ${results.arsenalRegistrations} 条，峡谷报名 ${results.canyonRegistrations} 条，官职报名 ${results.positionRegistrations} 条，官职配置 ${results.positionConfigs} 个，孤立数据 ${results.orphanRegistrations + results.orphanPositionRegistrations} 条`
+    message: `已清空全部数据：堡垒报名 ${results.registrations} 条，时间段 ${results.timeSlots} 个，兵工厂报名 ${results.arsenalRegistrations} 条，峡谷报名 ${results.canyonRegistrations} 条，官职报名 ${results.positionRegistrations} 条，官职配置 ${results.positionConfigs} 个，国战报名 ${results.battleRegistrations} 条，国战配置 ${results.battleConfigs} 个，孤立数据 ${results.orphanRegistrations + results.orphanPositionRegistrations} 条`
   }
 }

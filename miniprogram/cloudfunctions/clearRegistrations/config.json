@@ -1,0 +1,9 @@
+{
+  "triggers": [
+    {
+      "name": "hourlyAutoClear",
+      "type": "timer",
+      "config": "0 0 * * * * *"
+    }
+  ]
+}
