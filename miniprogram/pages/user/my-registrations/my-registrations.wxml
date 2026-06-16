@@ -11,15 +11,16 @@
           <text class="text-secondary">{{roleName}}</text>
         </view>
       </view>
-      <!-- 分区选择器 -->
-      <zone-selector wx:if="{{isLoggedIn}}" value="{{currentZone}}" zones="{{zones}}" loaded="{{zonesLoaded}}" bind:change="onZoneChange" />
-      <!-- 信封入口 -->
-      <view wx:if="{{isLoggedIn}}" class="letter-btn" bindtap="goToInbox">
-        <image class="letter-icon" src="/images/icon-letter.svg" mode="aspectFit" />
+      <!-- 分区选择器 + 信封入口（上下排列） -->
+      <view wx:if="{{isLoggedIn}}" class="side-actions">
+        <zone-selector value="{{currentZone}}" zones="{{zones}}" loaded="{{zonesLoaded}}" bind:change="onZoneChange" />
+        <view class="letter-btn" bindtap="goToInbox">
+          <image class="letter-icon" src="/images/icon-letter.svg" mode="aspectFit" />
+        </view>
       </view>
     </view>
     <view class="card-footer">
-      <button wx:if="{{isLoggedIn}}" class="btn btn-danger btn-full" bindtap="logout">退出登录</button>
+      <button wx:if="{{isLoggedIn}}" class="btn btn-danger btn-logout" bindtap="logout">退出登录</button>
       <button wx:else class="btn btn-primary btn-full" bindtap="goToLogin">登录</button>
     </view>
   </view>

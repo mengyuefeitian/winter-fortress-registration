@@ -65,7 +65,7 @@ async function getMyFeedbacks(openid) {
     title: item.content ? item.content.slice(0, 20) : '',
     truncated: item.content ? item.content.length > 20 : false,
     createTime: item.createTime,
-    hasReply: !!item.reply,
+    hasReply: !!(item.replies && item.replies.length > 0) || !!item.reply,
     isRead: item.isRead || false
   }))
 
@@ -82,7 +82,14 @@ async function getFeedbackDetail(openid, data) {
 
   if (item.userId !== openid) throw new Error('forbidden')
 
-  if (item.reply && !item.isRead) {
+  // 兼容旧数据（单条 reply 字段）和新数据（replies 数组）
+  let replies = item.replies || []
+  if (replies.length === 0 && item.reply) {
+    replies = [{ content: item.reply, repliedAt: item.repliedAt || null }]
+  }
+
+  const hasReply = replies.length > 0
+  if (hasReply && !item.isRead) {
     await db.collection('feedbacks').doc(feedbackId).update({
       data: { isRead: true }
     })
@@ -96,8 +103,7 @@ async function getFeedbackDetail(openid, data) {
       content: item.content,
       imageUrls: item.imageUrls || [],
       createTime: item.createTime,
-      reply: item.reply || null,
-      repliedAt: item.repliedAt || null
+      replies: replies
     }
   }
 }
@@ -122,7 +128,7 @@ async function getAllFeedbacks(data) {
     title: item.content ? item.content.slice(0, 20) : '',
     truncated: item.content ? item.content.length > 20 : false,
     createTime: item.createTime,
-    hasReply: !!item.reply
+    hasReply: !!(item.replies && item.replies.length > 0) || !!item.reply
   }))
 
   return { success: true, data: list, total: countRes.total }
@@ -136,6 +142,12 @@ async function getFeedbackForAdmin(data) {
   const res = await db.collection('feedbacks').doc(feedbackId).get()
   const item = res.data
 
+  // 兼容旧数据（单条 reply 字段）和新数据（replies 数组）
+  let replies = item.replies || []
+  if (replies.length === 0 && item.reply) {
+    replies = [{ content: item.reply, repliedAt: item.repliedAt || null }]
+  }
+
   return {
     success: true,
     data: {
@@ -145,21 +157,23 @@ async function getFeedbackForAdmin(data) {
       content: item.content,
       imageUrls: item.imageUrls || [],
       createTime: item.createTime,
-      reply: item.reply || null,
-      repliedAt: item.repliedAt || null
+      replies: replies
     }
   }
 }
 
-// 超管写入回复
+// 超管追加新回复（每次新增一条，不覆盖旧回复）
 async function replyFeedback(data) {
   const { feedbackId, reply } = data || {}
   if (!feedbackId || !reply || !reply.trim()) throw new Error('缺少必要参数')
 
+  const now = new Date()
+  const newReply = { content: reply.trim(), repliedAt: now }
+
   const updateRes = await db.collection('feedbacks').doc(feedbackId).update({
     data: {
-      reply: reply.trim(),
-      repliedAt: db.serverDate(),
+      replies: _.push(newReply),
+      repliedAt: now,  // 顶层字段用于自动删除查询
       isRead: false
     }
   })

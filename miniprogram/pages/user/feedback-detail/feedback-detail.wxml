@@ -23,11 +23,13 @@
       <text class="meta-date">{{detail.createTimeStr}}</text>
     </view>
 
-    <!-- 开发者回复（有回复才渲染） -->
-    <view wx:if="{{detail.reply}}" class="reply-card">
-      <text class="reply-label">开发者回复</text>
-      <text class="reply-content">{{detail.reply}}</text>
-      <text class="reply-date">{{detail.repliedAtStr}}</text>
+    <!-- 开发者回复列表（有回复才渲染） -->
+    <view wx:for="{{detail.replies}}" wx:key="index" class="reply-card">
+      <view class="reply-header">
+        <text class="reply-label">开发者回复</text>
+        <text class="reply-date">{{item.repliedAtStr}}</text>
+      </view>
+      <text class="reply-content">{{item.content}}</text>
     </view>
   </view>
 </view>

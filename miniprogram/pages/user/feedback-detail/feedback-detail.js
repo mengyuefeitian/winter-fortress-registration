@@ -27,11 +27,15 @@ Page({
       if (!res.result.success) throw new Error(res.result.error)
 
       const item = res.result.data
+      const replies = (item.replies || []).map(r => ({
+        ...r,
+        repliedAtStr: r.repliedAt ? util.formatDate(r.repliedAt, 'YYYY-MM-DD HH:mm') : ''
+      }))
       this.setData({
         detail: {
           ...item,
-          createTimeStr: util.formatDate(item.createTime, 'YYYY-MM-DD HH:mm'),
-          repliedAtStr: item.repliedAt ? util.formatDate(item.repliedAt, 'YYYY-MM-DD HH:mm') : ''
+          replies: replies,
+          createTimeStr: util.formatDate(item.createTime, 'YYYY-MM-DD HH:mm')
         },
         loading: false
       })
