@@ -1,0 +1,33 @@
+<!--pages/user/feedback-detail/feedback-detail.wxml-->
+<view class="page">
+  <view wx:if="{{loading}}" class="loading-state">
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <view wx:elif="{{detail}}" class="content">
+    <!-- 原始反馈 -->
+    <view class="feedback-card">
+      <view class="type-tag">{{detail.type}}</view>
+      <text class="feedback-content">{{detail.content}}</text>
+      <view wx:if="{{detail.imageUrls.length > 0}}" class="image-list">
+        <image
+          wx:for="{{detail.imageUrls}}"
+          wx:key="index"
+          src="{{item}}"
+          mode="aspectFill"
+          class="feedback-img"
+          bindtap="previewImage"
+          data-url="{{item}}"
+        />
+      </view>
+      <text class="meta-date">{{detail.createTimeStr}}</text>
+    </view>
+
+    <!-- 开发者回复（有回复才渲染） -->
+    <view wx:if="{{detail.reply}}" class="reply-card">
+      <text class="reply-label">开发者回复</text>
+      <text class="reply-content">{{detail.reply}}</text>
+      <text class="reply-date">{{detail.repliedAtStr}}</text>
+    </view>
+  </view>
+</view>
