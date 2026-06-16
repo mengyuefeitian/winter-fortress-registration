@@ -56,6 +56,7 @@ async function getMyFeedbacks(openid) {
   const res = await db.collection('feedbacks')
     .where({ userId: openid })
     .orderBy('createTime', 'desc')
+    .limit(100)
     .get()
 
   const list = res.data.map(item => ({
@@ -102,7 +103,8 @@ async function getFeedbackDetail(openid, data) {
 
 // 超管查询全部反馈列表（分页）
 async function getAllFeedbacks(data) {
-  const { skip = 0, limit = 20 } = data || {}
+  const skip = Number((data || {}).skip) || 0
+  const limit = Math.min(Number((data || {}).limit) || 20, 100)
 
   const res = await db.collection('feedbacks')
     .orderBy('createTime', 'desc')
@@ -152,13 +154,15 @@ async function replyFeedback(data) {
   const { feedbackId, reply } = data || {}
   if (!feedbackId || !reply || !reply.trim()) throw new Error('缺少必要参数')
 
-  await db.collection('feedbacks').doc(feedbackId).update({
+  const updateRes = await db.collection('feedbacks').doc(feedbackId).update({
     data: {
       reply: reply.trim(),
       repliedAt: db.serverDate(),
       isRead: false
     }
   })
+
+  if (updateRes.stats.updated === 0) throw new Error('反馈不存在')
 
   return { success: true }
 }
