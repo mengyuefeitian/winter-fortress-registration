@@ -181,3 +181,24 @@
 .btn-submit[disabled] {
   background: #b0c4de;
 }
+
+.inbox-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border-radius: 12rpx;
+  padding: 24rpx 30rpx;
+  margin-bottom: 20rpx;
+}
+
+.inbox-text {
+  font-size: 28rpx;
+  color: #4A90D9;
+  font-weight: 500;
+}
+
+.inbox-arrow {
+  font-size: 32rpx;
+  color: #4A90D9;
+}

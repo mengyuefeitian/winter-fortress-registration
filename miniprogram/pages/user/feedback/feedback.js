@@ -166,5 +166,11 @@ Page({
     } finally {
       this.setData({ submitting: false })
     }
+  },
+
+  goToInbox: function () {
+    wx.navigateTo({
+      url: '/pages/user/feedback-inbox/feedback-inbox'
+    })
   }
 })

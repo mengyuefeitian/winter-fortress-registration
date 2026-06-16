@@ -5,6 +5,12 @@
     <text class="hint">您的反馈帮助我们做得更好</text>
   </view>
 
+  <!-- 反馈回信入口 -->
+  <view class="inbox-entry" bindtap="goToInbox">
+    <text class="inbox-text">反馈回信</text>
+    <text class="inbox-arrow">›</text>
+  </view>
+
   <view class="form">
     <!-- 反馈类型 -->
     <view class="form-section">
