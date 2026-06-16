@@ -2,6 +2,7 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
+const cache = require('../../../utils/cache')
 
 const POSITION_OPTIONS = [
   { label: '参战', value: 'combat' },
@@ -78,6 +79,20 @@ Page({
         isLoggedIn: false,
         nickName: ''
       })
+    }
+
+    const zone = app.globalData.currentZone
+    if (zone) {
+      const cached = cache.get('arsenal_' + zone._id)
+      if (cached) {
+        this.setData({
+          selectedZone: cached.selectedZone,
+          alliances: cached.alliances || [],
+          configs: cached.configs || [],
+          loading: false
+        })
+        // 后台继续正常加载
+      }
     }
 
     this.loadConfigsFromCurrentZone()
@@ -266,6 +281,15 @@ Page({
         configs: processed,
         loading: false
       })
+
+      const arsenalZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (arsenalZoneId) {
+        cache.set('arsenal_' + arsenalZoneId, {
+          selectedZone: this.data.selectedZone,
+          alliances: this.data.alliances || [],
+          configs: processed
+        })
+      }
     } catch (err) {
       console.error('加载配置失败:', err)
       this.setData({ loading: false })
@@ -397,6 +421,11 @@ Page({
 
       util.hideLoading()
       util.showSuccess('报名成功')
+
+      const arsenalClearZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (arsenalClearZoneId) cache.invalidate('arsenal_' + arsenalClearZoneId)
+      const arsenalClearUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+      if (arsenalClearUserId) cache.invalidate('myregs_' + arsenalClearUserId)
 
       this.setData({
         selectedConfig: null,
