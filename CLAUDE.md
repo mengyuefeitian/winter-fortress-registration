@@ -2,6 +2,35 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Git 操作规范（严格执行，不得违反）
+
+### 禁止未经确认直接推送
+
+**任何情况下，未经用户明确确认，不得执行 `git push`。**
+
+完成开发后的标准流程：
+
+1. **本地 commit** — 将改动提交到本地分支
+2. **列出测试清单** — 告知用户本次改动涉及的功能点，以及如何在微信开发者工具中验证
+3. **等待用户测试并确认** — 不得催促，不得跳过
+4. **用户明确说"可以推送"后** — 才执行 `git push`
+
+### 合并到主分支的流程
+
+用户说"合并到主分支"或"提交到主分支"时：
+1. 本地执行 `git checkout master && git merge dev`
+2. 列出本次合并包含的功能清单
+3. **停下来等用户确认**，再执行 `git push origin master`
+
+### 云函数变更提醒
+
+修改了云函数代码后，必须在测试清单中注明：
+- 哪个云函数需要重新部署
+- 部署方法：右键对应文件夹 → "上传并部署：云端安装依赖"
+- 未部署前功能不会生效
+
+---
+
 ## Development Commands
 
 This is a WeChat Mini Program project. Development requires **WeChat Developer Tools**:
