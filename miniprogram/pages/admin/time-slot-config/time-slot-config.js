@@ -3,6 +3,7 @@ const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const auth = require('../../../utils/auth')
+const cache = require('../../../utils/cache')
 
 // 标签选项常量
 const TAG_OPTIONS = ['高迁', '生命', '穿透', '加兵', '火晶', '橙碎', '加速', '螺丝', '宠石', '宠箱', '其他']
@@ -49,6 +50,19 @@ Page({
 
   onShow: function () {
     if (app.globalData.roleReady && this.data.zonesLoaded) {
+      // 快速路径：若已选联盟有缓存，先渲染
+      const tsAlliance = this.data.selectedAlliance
+      if (tsAlliance) {
+        const tsCached = cache.get('cfg_fortress_' + tsAlliance._id)
+        if (tsCached) {
+          this.setData({
+            timeSlots: tsCached.timeSlots,
+            selectedSlots: [],
+            selectAllChecked: false,
+            loading: false
+          })
+        }
+      }
       this.loadZones()
     }
   },
@@ -232,6 +246,10 @@ Page({
         selectAllChecked: false,
         loading: false
       })
+      const tsAllianceId = this.data.selectedAlliance ? this.data.selectedAlliance._id : null
+      if (tsAllianceId) {
+        cache.set('cfg_fortress_' + tsAllianceId, { timeSlots: this.data.timeSlots }, 30 * 1000)
+      }
     } catch (err) {
       console.error('加载时间段失败:', err)
       util.showError('加载时间段失败')
@@ -321,6 +339,11 @@ Page({
       util.hideLoading()
       util.showSuccess('添加成功')
 
+      const addAllianceId = this.data.selectedAlliance ? this.data.selectedAlliance._id : null
+      if (addAllianceId) {
+        cache.invalidate('cfg_fortress_' + addAllianceId)
+        cache.invalidate('fortress_slots_' + addAllianceId)
+      }
       this.setData({ selectedTag: '', selectedFortress: '' })
       this.loadTimeSlots()
     } catch (err) {
@@ -408,6 +431,11 @@ Page({
       this.setData({ timeSlots })
       util.hideLoading()
       util.showSuccess('删除成功')
+      const delAllianceId = this.data.selectedAlliance ? this.data.selectedAlliance._id : null
+      if (delAllianceId) {
+        cache.invalidate('cfg_fortress_' + delAllianceId)
+        cache.invalidate('fortress_slots_' + delAllianceId)
+      }
     } catch (err) {
       util.hideLoading()
       util.showError('删除失败')
