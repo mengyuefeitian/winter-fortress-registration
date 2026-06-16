@@ -29,7 +29,7 @@
     <!-- 已发送的回复列表 -->
     <view wx:for="{{detail.replies}}" wx:key="index" class="sent-reply-card">
       <view class="sent-reply-header">
-        <text class="sent-reply-label">回复 {{index + 1}}</text>
+        <text class="sent-reply-label">开发者回复</text>
         <text class="sent-reply-date">{{item.repliedAtStr}}</text>
       </view>
       <text class="sent-reply-content">{{item.content}}</text>

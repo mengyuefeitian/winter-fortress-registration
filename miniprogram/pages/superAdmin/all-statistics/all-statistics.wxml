@@ -59,24 +59,6 @@
       </view>
     </view>
 
-    <!-- 时间段表格 -->
-    <view wx:if="{{timeSlotStats.length > 0}}" class="table-container">
-      <view class="table-row table-header-row">
-        <text class="table-cell">时间段</text>
-        <text class="table-cell">堡垒</text>
-        <text class="table-cell">标签</text>
-        <text class="table-cell">日期</text>
-        <text class="table-cell">人数</text>
-      </view>
-      <view wx:for="{{timeSlotStats}}" wx:key="*this" class="table-row">
-        <text class="table-cell">{{item.timeSlot.displayName}}</text>
-        <text class="table-cell">{{item.timeSlot.fortress || '-'}}</text>
-        <text class="table-cell">{{item.timeSlot.tag || '-'}}</text>
-        <text class="table-cell">{{item.timeSlot.date || '-'}}</text>
-        <text class="table-cell {{item.isFull ? 'full' : ''}}">{{item.count}}/{{item.timeSlot.maxCount}}</text>
-      </view>
-    </view>
-
     <!-- 时间段详情 -->
     <view class="time-slot-list">
       <view wx:for="{{timeSlotStats}}" wx:key="*this" class="time-slot-card">
