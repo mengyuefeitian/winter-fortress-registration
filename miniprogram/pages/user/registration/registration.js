@@ -2,6 +2,7 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
+const cache = require('../../../utils/cache')
 
 Page({
   data: {
@@ -56,6 +57,37 @@ Page({
       })
     }
 
+    // 快速路径：若分区已知，尝试立即渲染缓存
+    const zone = app.globalData.currentZone
+    if (zone) {
+      const alliancesKey = 'fortress_alliances_' + zone._id
+      const cachedAlliances = cache.get(alliancesKey)
+      if (cachedAlliances) {
+        const lastAllianceId = wx.getStorageSync('lastAllianceId')
+        const alliances = cachedAlliances.alliances
+        let selectedAlliance = null
+        let allianceIndex = -1
+        if (lastAllianceId) {
+          allianceIndex = alliances.findIndex(function(a) { return a._id === lastAllianceId })
+          if (allianceIndex >= 0) selectedAlliance = alliances[allianceIndex]
+        }
+        this.setData({
+          selectedZone: zone,
+          alliances: alliances,
+          selectedAlliance: selectedAlliance,
+          allianceIndex: allianceIndex,
+          loading: false
+        })
+        if (selectedAlliance) {
+          const slotsKey = 'fortress_slots_' + selectedAlliance._id
+          const cachedSlots = cache.get(slotsKey)
+          if (cachedSlots) {
+            this.setData({ timeSlots: cachedSlots.timeSlots })
+          }
+        }
+        // 后台继续加载以刷新数据（不拦截，走正常流程）
+      }
+    }
     this.loadAlliancesFromCurrentZone()
   },
 
@@ -159,6 +191,7 @@ Page({
           allianceIndex: allianceIndex,
           loading: false
         })
+        cache.set('fortress_alliances_' + zoneId, { alliances: alliances || [] })
 
         if (selectedAlliance) {
           this.loadTimeSlots()
@@ -170,6 +203,7 @@ Page({
           allianceIndex: -1,
           loading: false
         })
+        cache.set('fortress_alliances_' + zoneId, { alliances: [] })
       }
 
     } catch (err) {
@@ -244,6 +278,10 @@ Page({
       this.setData({
         timeSlots: processedSlots
       })
+      const cacheAllianceId = this.data.selectedAlliance ? this.data.selectedAlliance._id : null
+      if (cacheAllianceId) {
+        cache.set('fortress_slots_' + cacheAllianceId, { timeSlots: this.data.timeSlots })
+      }
 
     } catch (err) {
       console.error('加载时间段失败:', err)
@@ -395,6 +433,11 @@ Page({
 
       util.hideLoading()
       util.showSuccess('报名成功')
+
+      const regAllianceId = this.data.selectedAlliance ? this.data.selectedAlliance._id : null
+      if (regAllianceId) cache.invalidate('fortress_slots_' + regAllianceId)
+      const regUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+      if (regUserId) cache.invalidate('myregs_' + regUserId)
 
       this.setData({
         selectedTimeSlot: null,
