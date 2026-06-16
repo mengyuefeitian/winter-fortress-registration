@@ -1,0 +1,34 @@
+<!--pages/superAdmin/feedback-reply/feedback-reply.wxml-->
+<view class="page">
+  <view wx:if="{{loading}}" class="loading-state">
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <view wx:elif="{{detail}}" class="content">
+    <!-- 原始反馈（只读） -->
+    <view class="original-card">
+      <view class="original-header">
+        <text class="nick">{{detail.nickName}}</text>
+        <view class="type-tag">{{detail.type}}</view>
+      </view>
+      <text class="original-content">{{detail.content}}</text>
+      <text class="meta-date">{{detail.createTimeStr}}</text>
+    </view>
+
+    <!-- 回复表单 -->
+    <view class="reply-form">
+      <text class="form-label">回复内容</text>
+      <textarea
+        class="reply-input"
+        placeholder="输入回复内容..."
+        maxlength="500"
+        bindinput="onReplyInput"
+        value="{{replyText}}"
+        auto-height
+      />
+      <text class="char-count">{{replyText.length}}/500</text>
+    </view>
+
+    <button class="btn-submit" bindtap="onSubmit" loading="{{submitting}}" disabled="{{submitting}}">发送回复</button>
+  </view>
+</view>
