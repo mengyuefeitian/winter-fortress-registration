@@ -2,6 +2,7 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
+const cache = require('../../../utils/cache')
 
 // 位置选项：参战/替补
 const POSITION_OPTIONS = [
@@ -72,6 +73,19 @@ Page({
         isLoggedIn: false,
         nickName: ''
       })
+    }
+
+    const zone = app.globalData.currentZone
+    if (zone) {
+      const cached = cache.get('canyon_' + zone._id)
+      if (cached) {
+        this.setData({
+          selectedZone: cached.selectedZone,
+          alliances: cached.alliances || [],
+          configs: cached.configs || [],
+          loading: false
+        })
+      }
     }
 
     this.loadAlliancesFromCurrentZone()
@@ -242,6 +256,15 @@ Page({
         configs: processedConfigs
       })
 
+      const canyonZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (canyonZoneId) {
+        cache.set('canyon_' + canyonZoneId, {
+          selectedZone: this.data.selectedZone,
+          alliances: this.data.alliances || [],
+          configs: this.data.configs || []
+        })
+      }
+
     } catch (err) {
       console.error('加载配置失败:', err)
     }
@@ -410,6 +433,11 @@ Page({
 
       util.hideLoading()
       util.showSuccess('报名成功')
+
+      const canyonClearZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (canyonClearZoneId) cache.invalidate('canyon_' + canyonClearZoneId)
+      const canyonClearUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+      if (canyonClearUserId) cache.invalidate('myregs_' + canyonClearUserId)
 
       this.setData({
         selectedConfig: null,
