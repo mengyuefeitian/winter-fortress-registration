@@ -2,6 +2,7 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
+const cache = require('../../../utils/cache')
 
 Page({
   data: {
@@ -26,6 +27,19 @@ Page({
   },
 
   onShow: function () {
+    // 快速路径：若分区已知且有缓存，先渲染
+    const zone = app.globalData.currentZone
+    if (zone) {
+      const cached = cache.get('position_' + zone._id)
+      if (cached) {
+        this.setData({
+          configs: cached.configs,
+          selectedZone: cached.selectedZone,
+          noZoneSelected: false,
+          loading: false
+        })
+      }
+    }
     this.loadConfigs()
   },
 
@@ -148,6 +162,14 @@ Page({
         configs: processedConfigs,
         loading: false
       })
+
+      const cacheZoneId = selectedZone ? selectedZone._id : null
+      if (cacheZoneId) {
+        cache.set('position_' + cacheZoneId, {
+          configs: processedConfigs,
+          selectedZone: selectedZone
+        })
+      }
 
     } catch (err) {
       console.error('加载配置失败:', err)
