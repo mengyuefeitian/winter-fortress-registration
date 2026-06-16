@@ -1,0 +1,72 @@
+/* pages/user/feedback-inbox/feedback-inbox.wxss */
+.page {
+  padding: 20rpx 30rpx;
+  min-height: 100vh;
+  background: #f5f7fa;
+}
+
+.loading-state,
+.empty-state {
+  display: flex;
+  justify-content: center;
+  padding-top: 120rpx;
+}
+
+.loading-text,
+.empty-text {
+  font-size: 28rpx;
+  color: #999;
+}
+
+.feedback-list {
+  background: #fff;
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+
+.feedback-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.feedback-item:last-child {
+  border-bottom: none;
+}
+
+.item-main {
+  flex: 1;
+  margin-right: 16rpx;
+}
+
+.item-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.item-date {
+  font-size: 22rpx;
+  color: #999;
+  display: block;
+}
+
+.reply-badge {
+  font-size: 20rpx;
+  color: #52C41A;
+  background: #f0fff0;
+  border: 1rpx solid #52C41A;
+  border-radius: 8rpx;
+  padding: 4rpx 12rpx;
+  flex-shrink: 0;
+}
+
+.reply-badge-unread {
+  color: #fff;
+  background: #FF6B6B;
+  border-color: #FF6B6B;
+}

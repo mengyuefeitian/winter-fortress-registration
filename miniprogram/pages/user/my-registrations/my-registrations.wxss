@@ -123,25 +123,28 @@
   color: #5F5F5F;
 }
 
-/* 空状态 */
-.empty-state {
-  padding: 24px;
-  text-align: center;
+/* 紧凑空状态 - 横排，节省空间 */
+.empty-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 16px;
+  padding: 10px 16px;
+  background: #fff;
+  border-radius: 8px;
 }
 
-.empty-text {
+.empty-compact-text {
+  font-size: 14px;
   color: #A6A6A6;
-  font-size: 15px;
-  display: block;
 }
 
-.empty-action {
-  margin-top: 16px;
-}
-
-.empty-action .btn {
-  width: auto;
-  padding: 0 24px;
+.empty-compact-btn {
+  font-size: 13px;
+  color: #4A90D9;
+  background: #f0f7ff;
+  border-radius: 4px;
+  padding: 4px 12px;
 }
 
 /* 表格容器 */
@@ -258,6 +261,38 @@
   font-size: 13px;
   color: #999;
   font-weight: 500;
+}
+
+/* 分区+信封 垂直排列容器 */
+.side-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.letter-btn {
+  padding: 4px;
+}
+
+.letter-icon {
+  width: 26px;
+  height: 26px;
+}
+
+/* 退出登录 - 缩小版 */
+.btn-logout {
+  width: auto;
+  padding: 0 24px;
+  height: 36px;
+  line-height: 36px;
+  font-size: 14px;
+  background-color: #FA5151;
+  color: #FFFFFF;
+  border-radius: 4px;
+  border: none;
 }
 
 /* 意见反馈条目 */

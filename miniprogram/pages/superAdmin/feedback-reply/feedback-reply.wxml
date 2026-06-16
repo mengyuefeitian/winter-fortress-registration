@@ -1,0 +1,54 @@
+<!--pages/superAdmin/feedback-reply/feedback-reply.wxml-->
+<view class="page">
+  <view wx:if="{{loading}}" class="loading-state">
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <view wx:elif="{{detail}}" class="content">
+    <!-- 原始反馈（只读） -->
+    <view class="original-card">
+      <view class="original-header">
+        <text class="nick">{{detail.nickName}}</text>
+        <view class="type-tag">{{detail.type}}</view>
+      </view>
+      <text class="original-content">{{detail.content}}</text>
+      <view wx:if="{{detail.imageUrls.length > 0}}" class="image-list">
+        <image
+          wx:for="{{detail.imageUrls}}"
+          wx:key="index"
+          src="{{item}}"
+          mode="aspectFill"
+          class="feedback-img"
+          bindtap="previewImage"
+          data-url="{{item}}"
+        />
+      </view>
+      <text class="meta-date">{{detail.createTimeStr}}</text>
+    </view>
+
+    <!-- 已发送的回复列表 -->
+    <view wx:for="{{detail.replies}}" wx:key="index" class="sent-reply-card">
+      <view class="sent-reply-header">
+        <text class="sent-reply-label">开发者回复</text>
+        <text class="sent-reply-date">{{item.repliedAtStr}}</text>
+      </view>
+      <text class="sent-reply-content">{{item.content}}</text>
+    </view>
+
+    <!-- 回复表单（每次新增一条） -->
+    <view class="reply-form">
+      <text class="form-label">新增回复</text>
+      <textarea
+        class="reply-input"
+        placeholder="输入回复内容..."
+        maxlength="500"
+        bindinput="onReplyInput"
+        value="{{replyText}}"
+        auto-height
+      />
+      <text class="char-count">{{replyText.length}}/500</text>
+    </view>
+
+    <button class="btn-submit" bindtap="onSubmit" loading="{{submitting}}" disabled="{{submitting}}">发送回复</button>
+  </view>
+</view>

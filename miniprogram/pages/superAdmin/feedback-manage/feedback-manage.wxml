@@ -1,0 +1,32 @@
+<!--pages/superAdmin/feedback-manage/feedback-manage.wxml-->
+<view class="page">
+  <view wx:if="{{loading}}" class="loading-state">
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <view wx:elif="{{feedbacks.length === 0}}" class="empty-state">
+    <text class="empty-text">暂无反馈</text>
+  </view>
+
+  <view wx:else class="feedback-list">
+    <view
+      class="feedback-item"
+      wx:for="{{feedbacks}}"
+      wx:key="_id"
+      bindtap="goToReply"
+      data-id="{{item._id}}"
+    >
+      <view class="item-header">
+        <text class="item-nick">{{item.nickName}}</text>
+        <view class="type-tag">{{item.type}}</view>
+        <view wx:if="{{item.hasReply}}" class="replied-tag">已回复</view>
+      </view>
+      <text class="item-title">{{item.title}}{{item.titleTruncated ? '...' : ''}}</text>
+      <text class="item-date">{{item.createTimeStr}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{hasMore}}" class="load-more" bindtap="loadMore">
+    <text class="load-more-text">加载更多</text>
+  </view>
+</view>

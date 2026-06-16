@@ -118,5 +118,11 @@
         <text class="function-desc">定时清空报名</text>
       </view>
     </view>
+    <view class="function-card-compact" bindtap="goToFeedbackManage">
+      <view class="function-content">
+        <text class="function-name">反馈管理</text>
+        <text class="function-desc">查看并回复用户反馈</text>
+      </view>
+    </view>
   </view>
 </view>

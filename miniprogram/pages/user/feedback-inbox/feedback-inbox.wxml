@@ -1,0 +1,26 @@
+<!--pages/user/feedback-inbox/feedback-inbox.wxml-->
+<view class="page">
+  <view wx:if="{{loading}}" class="loading-state">
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <view wx:elif="{{feedbacks.length === 0}}" class="empty-state">
+    <text class="empty-text">暂无反馈记录</text>
+  </view>
+
+  <view wx:else class="feedback-list">
+    <view
+      class="feedback-item"
+      wx:for="{{feedbacks}}"
+      wx:key="_id"
+      bindtap="goToDetail"
+      data-id="{{item._id}}"
+    >
+      <view class="item-main">
+        <text class="item-title">{{item.title}}{{item.titleTruncated ? '...' : ''}}</text>
+        <text class="item-date">{{item.createTimeStr}}</text>
+      </view>
+      <view wx:if="{{item.hasReply}}" class="reply-badge {{item.isRead ? '' : 'reply-badge-unread'}}">已回复</view>
+    </view>
+  </view>
+</view>

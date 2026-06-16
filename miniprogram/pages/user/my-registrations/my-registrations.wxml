@@ -1,7 +1,7 @@
 <!-- pages/user/my-registrations/my-registrations.wxml -->
 <view class="page">
   <!-- 用户信息 -->
-  <view class="card mt-16">
+  <view class="card mt-16 user-card">
     <view class="card-body flex items-center">
       <image class="avatar-lg" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill" />
       <view class="ml-16 flex-1">
@@ -11,11 +11,16 @@
           <text class="text-secondary">{{roleName}}</text>
         </view>
       </view>
-      <!-- 分区选择器 -->
-      <zone-selector wx:if="{{isLoggedIn}}" value="{{currentZone}}" zones="{{zones}}" loaded="{{zonesLoaded}}" bind:change="onZoneChange" />
+      <!-- 分区选择器 + 信封入口（上下排列） -->
+      <view wx:if="{{isLoggedIn}}" class="side-actions">
+        <zone-selector value="{{currentZone}}" zones="{{zones}}" loaded="{{zonesLoaded}}" bind:change="onZoneChange" />
+        <view class="letter-btn" bindtap="goToInbox">
+          <image class="letter-icon" src="/images/icon-letter.svg" mode="aspectFit" />
+        </view>
+      </view>
     </view>
     <view class="card-footer">
-      <button wx:if="{{isLoggedIn}}" class="btn btn-danger btn-full" bindtap="logout">退出登录</button>
+      <button wx:if="{{isLoggedIn}}" class="btn btn-danger btn-logout" bindtap="logout">退出登录</button>
       <button wx:else class="btn btn-primary btn-full" bindtap="goToLogin">登录</button>
     </view>
   </view>
@@ -30,13 +35,9 @@
     <text class="section-title">堡垒报名记录</text>
   </view>
 
-  <view wx:if="{{registrations.length === 0}}" class="card">
-    <view class="empty-state">
-      <text class="empty-text">暂无报名记录</text>
-      <view class="empty-action">
-        <button class="btn btn-primary" bindtap="goToRegistration">去报名</button>
-      </view>
-    </view>
+  <view wx:if="{{registrations.length === 0}}" class="empty-compact">
+    <text class="empty-compact-text">暂无报名记录</text>
+    <view class="empty-compact-btn" bindtap="goToRegistration">去报名</view>
   </view>
 
   <view wx:else class="table-container">
@@ -71,10 +72,9 @@
     <text class="section-title">官职报名记录</text>
   </view>
 
-  <view wx:if="{{positionRegistrations.length === 0}}" class="card">
-    <view class="empty-state">
-      <text class="empty-text">暂无官职报名记录</text>
-    </view>
+  <view wx:if="{{positionRegistrations.length === 0}}" class="empty-compact">
+    <text class="empty-compact-text">暂无官职报名记录</text>
+    <view class="empty-compact-btn" bindtap="goToPositionList">去报名</view>
   </view>
 
   <view wx:else class="table-container">
@@ -104,10 +104,9 @@
     <text class="section-title">兵工厂报名</text>
   </view>
 
-  <view wx:if="{{arsenalRegistrations.length === 0}}" class="card">
-    <view class="empty-state">
-      <text class="empty-text">暂无兵工厂报名记录</text>
-    </view>
+  <view wx:if="{{arsenalRegistrations.length === 0}}" class="empty-compact">
+    <text class="empty-compact-text">暂无兵工厂报名记录</text>
+    <view class="empty-compact-btn" bindtap="goToArsenal">去报名</view>
   </view>
 
   <view wx:else class="table-container">
@@ -135,10 +134,9 @@
     <text class="section-title">峡谷会战报名</text>
   </view>
 
-  <view wx:if="{{canyonRegistrations.length === 0}}" class="card">
-    <view class="empty-state">
-      <text class="empty-text">暂无峡谷会战报名记录</text>
-    </view>
+  <view wx:if="{{canyonRegistrations.length === 0}}" class="empty-compact">
+    <text class="empty-compact-text">暂无峡谷会战报名记录</text>
+    <view class="empty-compact-btn" bindtap="goToCanyon">去报名</view>
   </view>
 
   <view wx:else class="table-container">
