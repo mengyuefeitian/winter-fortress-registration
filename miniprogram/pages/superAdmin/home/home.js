@@ -157,6 +157,12 @@ Page({
     })
   },
 
+  goToFeedbackManage: function () {
+    wx.navigateTo({
+      url: '/pages/superAdmin/feedback-manage/feedback-manage'
+    })
+  },
+
   goToBattleConfig: function () {
     wx.navigateTo({
       url: '/pages/user/battle-list/battle-list'
