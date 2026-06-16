@@ -9,7 +9,8 @@ App({
     currentAlliance: null,
     dbReady: false,
     roleReady: false,
-    firstLaunch: true
+    firstLaunch: true,
+    pageCache: {}
   },
 
   onLaunch: function () {
