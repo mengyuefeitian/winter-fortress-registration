@@ -12,6 +12,17 @@
         <view class="type-tag">{{detail.type}}</view>
       </view>
       <text class="original-content">{{detail.content}}</text>
+      <view wx:if="{{detail.imageUrls.length > 0}}" class="image-list">
+        <image
+          wx:for="{{detail.imageUrls}}"
+          wx:key="index"
+          src="{{item}}"
+          mode="aspectFill"
+          class="feedback-img"
+          bindtap="previewImage"
+          data-url="{{item}}"
+        />
+      </view>
       <text class="meta-date">{{detail.createTimeStr}}</text>
     </view>
 

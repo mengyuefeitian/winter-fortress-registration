@@ -49,6 +49,14 @@ Page({
     this.setData({ replyText: e.detail.value })
   },
 
+  previewImage: function (e) {
+    const url = e.currentTarget.dataset.url
+    wx.previewImage({
+      current: url,
+      urls: this.data.detail.imageUrls
+    })
+  },
+
   onSubmit: async function () {
     const reply = this.data.replyText.trim()
     if (!reply) {

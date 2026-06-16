@@ -57,7 +57,7 @@ Page({
 
       const newItems = res.result.data.map(item => ({
         ...item,
-        titleTruncated: item.title.length === 20,
+        titleTruncated: item.truncated,
         createTimeStr: util.formatDate(item.createTime, 'MM-DD HH:mm')
       }))
 

@@ -99,3 +99,16 @@
   font-size: 30rpx;
   width: 100%;
 }
+
+.image-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
+}
+
+.feedback-img {
+  width: 180rpx;
+  height: 180rpx;
+  border-radius: 8rpx;
+}

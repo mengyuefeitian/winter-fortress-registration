@@ -63,6 +63,7 @@ async function getMyFeedbacks(openid) {
     _id: item._id,
     type: item.type,
     title: item.content ? item.content.slice(0, 20) : '',
+    truncated: item.content ? item.content.length > 20 : false,
     createTime: item.createTime,
     hasReply: !!item.reply,
     isRead: item.isRead || false
@@ -119,6 +120,7 @@ async function getAllFeedbacks(data) {
     nickName: item.nickName || '匿名',
     type: item.type,
     title: item.content ? item.content.slice(0, 20) : '',
+    truncated: item.content ? item.content.length > 20 : false,
     createTime: item.createTime,
     hasReply: !!item.reply
   }))
