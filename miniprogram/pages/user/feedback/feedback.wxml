@@ -1,14 +1,15 @@
 <!--pages/user/feedback/feedback.wxml-->
 <view class="container">
-  <view class="header">
-    <text class="title">意见与建议</text>
-    <text class="hint">您的反馈帮助我们做得更好</text>
-  </view>
-
-  <!-- 反馈回信入口 -->
-  <view class="inbox-entry" bindtap="goToInbox">
-    <text class="inbox-text">反馈回信</text>
-    <text class="inbox-arrow">›</text>
+  <view class="header-area">
+    <view class="header">
+      <text class="title">意见与建议</text>
+      <text class="hint">您的反馈帮助我们做得更好</text>
+    </view>
+    <!-- 反馈回信入口 - 右上角 -->
+    <view class="inbox-entry" bindtap="goToInbox">
+      <image class="inbox-icon" src="/images/icon-letter.svg" mode="aspectFit" />
+      <text class="inbox-text">反馈回信</text>
+    </view>
   </view>
 
   <view class="form">

@@ -343,6 +343,30 @@ Page({
     })
   },
 
+  goToPositionList: function () {
+    wx.navigateTo({
+      url: '/pages/user/position-list/position-list'
+    })
+  },
+
+  goToArsenal: function () {
+    wx.navigateTo({
+      url: '/pages/user/arsenal-registration/arsenal-registration'
+    })
+  },
+
+  goToCanyon: function () {
+    wx.navigateTo({
+      url: '/pages/user/canyon-registration/canyon-registration'
+    })
+  },
+
+  goToInbox: function () {
+    wx.navigateTo({
+      url: '/pages/user/feedback-inbox/feedback-inbox'
+    })
+  },
+
   // 意见反馈
   goToFeedback: function () {
     wx.navigateTo({

@@ -55,10 +55,18 @@
   display: block;
 }
 
-.red-dot {
-  width: 16rpx;
-  height: 16rpx;
-  border-radius: 50%;
-  background: #FF6B6B;
+.reply-badge {
+  font-size: 20rpx;
+  color: #52C41A;
+  background: #f0fff0;
+  border: 1rpx solid #52C41A;
+  border-radius: 8rpx;
+  padding: 4rpx 12rpx;
   flex-shrink: 0;
+}
+
+.reply-badge-unread {
+  color: #fff;
+  background: #FF6B6B;
+  border-color: #FF6B6B;
 }

@@ -20,7 +20,7 @@
         <text class="item-title">{{item.title}}{{item.titleTruncated ? '...' : ''}}</text>
         <text class="item-date">{{item.createTimeStr}}</text>
       </view>
-      <view wx:if="{{item.hasReply && !item.isRead}}" class="red-dot"></view>
+      <view wx:if="{{item.hasReply}}" class="reply-badge {{item.isRead ? '' : 'reply-badge-unread'}}">已回复</view>
     </view>
   </view>
 </view>

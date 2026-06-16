@@ -33,9 +33,9 @@ Page({
       this.setData({
         detail: {
           ...item,
-          createTimeStr: util.formatDate(item.createTime, 'YYYY-MM-DD HH:mm')
+          createTimeStr: util.formatDate(item.createTime, 'YYYY-MM-DD HH:mm'),
+          repliedAtStr: item.repliedAt ? util.formatDate(item.repliedAt, 'YYYY-MM-DD HH:mm') : ''
         },
-        replyText: item.reply || '',
         loading: false
       })
     } catch (err) {
@@ -79,7 +79,8 @@ Page({
 
       util.hideLoading()
       util.showSuccess('回复成功')
-      setTimeout(() => wx.navigateBack(), 1500)
+      this.setData({ replyText: '' })
+      this.loadDetail(this.feedbackId)
     } catch (err) {
       util.hideLoading()
       console.error('回复失败:', err)

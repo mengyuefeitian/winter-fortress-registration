@@ -26,9 +26,18 @@
       <text class="meta-date">{{detail.createTimeStr}}</text>
     </view>
 
+    <!-- 已发送的回复展示 -->
+    <view wx:if="{{detail.reply}}" class="sent-reply-card">
+      <view class="sent-reply-header">
+        <text class="sent-reply-label">开发者回复</text>
+        <text wx:if="{{detail.repliedAtStr}}" class="sent-reply-date">{{detail.repliedAtStr}}</text>
+      </view>
+      <text class="sent-reply-content">{{detail.reply}}</text>
+    </view>
+
     <!-- 回复表单 -->
     <view class="reply-form">
-      <text class="form-label">回复内容</text>
+      <text class="form-label">{{detail.reply ? '修改回复' : '回复内容'}}</text>
       <textarea
         class="reply-input"
         placeholder="输入回复内容..."
@@ -40,6 +49,6 @@
       <text class="char-count">{{replyText.length}}/500</text>
     </view>
 
-    <button class="btn-submit" bindtap="onSubmit" loading="{{submitting}}" disabled="{{submitting}}">发送回复</button>
+    <button class="btn-submit" bindtap="onSubmit" loading="{{submitting}}" disabled="{{submitting}}">{{detail.reply ? '更新回复' : '发送回复'}}</button>
   </view>
 </view>
