@@ -3,6 +3,7 @@ const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const version = require('../../../utils/version')
+const cache = require('../../../utils/cache')
 
 Page({
   data: {
@@ -29,6 +30,22 @@ Page({
     if (app.globalData.roleReady) {
       this.loadUserInfo()
       this.loadZones()
+
+      // 快速路径：若有缓存先渲染
+      const myUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+      if (myUserId) {
+        const myCached = cache.get('myregs_' + myUserId)
+        if (myCached) {
+          this.setData({
+            registrations: myCached.registrations,
+            weeklyRegistrations: myCached.weeklyRegistrations,
+            positionRegistrations: myCached.positionRegistrations,
+            arsenalRegistrations: myCached.arsenalRegistrations,
+            canyonRegistrations: myCached.canyonRegistrations
+          })
+        }
+      }
+
       this.loadMyRegistrations()
     }
   },
@@ -216,6 +233,16 @@ Page({
         canyonRegistrations: processedCanyon
       })
 
+      if (userId) {
+        cache.set('myregs_' + userId, {
+          registrations: filteredRegistrations,
+          weeklyRegistrations: weeklyRegistrations,
+          positionRegistrations: processedPositionRegistrations,
+          arsenalRegistrations: processedArsenal,
+          canyonRegistrations: processedCanyon
+        })
+      }
+
     } catch (err) {
       console.error('加载报名记录失败:', err)
     }
@@ -256,6 +283,8 @@ Page({
 
       util.hideLoading()
       util.showSuccess('取消成功')
+      const cancelMyUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+      if (cancelMyUserId) cache.invalidate('myregs_' + cancelMyUserId)
 
     } catch (err) {
       util.hideLoading()
@@ -281,6 +310,8 @@ Page({
 
       util.hideLoading()
       util.showSuccess('取消成功')
+      const cancelMyUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+      if (cancelMyUserId) cache.invalidate('myregs_' + cancelMyUserId)
 
     } catch (err) {
       util.hideLoading()
@@ -305,6 +336,8 @@ Page({
 
       util.hideLoading()
       util.showSuccess('取消成功')
+      const cancelMyUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+      if (cancelMyUserId) cache.invalidate('myregs_' + cancelMyUserId)
 
     } catch (err) {
       util.hideLoading()
@@ -329,6 +362,8 @@ Page({
 
       util.hideLoading()
       util.showSuccess('取消成功')
+      const cancelMyUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+      if (cancelMyUserId) cache.invalidate('myregs_' + cancelMyUserId)
 
     } catch (err) {
       util.hideLoading()
