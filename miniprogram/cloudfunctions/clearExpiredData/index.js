@@ -84,10 +84,16 @@ async function autoClear() {
   })
   results.expiredTimeSlots = timeSlotUpdate.stats.updated
 
+  // 5. 清理已回复超过 30 天的反馈
+  const feedbackResult = await db.collection('feedbacks').where({
+    repliedAt: _.lt(thirtyDaysAgo)
+  }).remove()
+  results.repliedFeedbacks = feedbackResult.stats.removed
+
   return {
     success: true,
     data: results,
-    message: `自动清理完成：堡垒报名 ${results.registrations} 条，官职配置 ${results.positionConfigs} 条，官职报名 ${results.positionRegistrations} 条，过期时间段 ${results.expiredTimeSlots} 个`
+    message: `自动清理完成：堡垒报名 ${results.registrations} 条，官职配置 ${results.positionConfigs} 条，官职报名 ${results.positionRegistrations} 条，过期时间段 ${results.expiredTimeSlots} 个，已回复反馈 ${results.repliedFeedbacks} 条`
   }
 }
 
