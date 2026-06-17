@@ -85,16 +85,19 @@ Page({
             this.setData({ timeSlots: cachedSlots.timeSlots })
           }
         }
-        // 后台继续加载以刷新数据（不拦截，走正常流程）
+        // 后台静默刷新，不显示 loading
+        this.loadAlliancesFromCurrentZone(true)
+        return
       }
     }
     this.loadAlliancesFromCurrentZone()
   },
 
   // 从首页选择的分区加载联盟
-  loadAlliancesFromCurrentZone: async function () {
+  // silent=true 时跳过 loading: true，用于缓存命中后的后台刷新
+  loadAlliancesFromCurrentZone: async function (silent) {
     try {
-      this.setData({ loading: true })
+      if (!silent) this.setData({ loading: true })
 
       let zone = app.globalData.currentZone
 

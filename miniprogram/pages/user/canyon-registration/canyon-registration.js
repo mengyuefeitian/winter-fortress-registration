@@ -47,7 +47,7 @@ Page({
     if (options && options.zoneId) {
       this._pendingZoneId = options.zoneId
     }
-    this.onShow()
+    // onShow 由小程序框架在 onLoad 后自动调用，无需手动调用
   },
 
   onShow: function () {
@@ -85,6 +85,9 @@ Page({
           configs: cached.configs || [],
           loading: false
         })
+        // 后台静默刷新，不显示 loading
+        this.loadAlliancesFromCurrentZone(true)
+        return
       }
     }
 
@@ -92,9 +95,10 @@ Page({
   },
 
   // 从首页选择的分区加载联盟
-  loadAlliancesFromCurrentZone: async function () {
+  // silent=true 时跳过 loading: true，用于缓存命中后的后台刷新
+  loadAlliancesFromCurrentZone: async function (silent) {
     try {
-      this.setData({ loading: true })
+      if (!silent) this.setData({ loading: true })
 
       let zone = app.globalData.currentZone
 

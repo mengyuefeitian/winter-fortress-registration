@@ -91,16 +91,19 @@ Page({
           configs: cached.configs || [],
           loading: false
         })
-        // 后台继续正常加载
+        // 后台静默刷新，不显示 loading
+        this.loadConfigsFromCurrentZone(true)
+        return
       }
     }
 
     this.loadConfigsFromCurrentZone()
   },
 
-  loadConfigsFromCurrentZone: async function () {
+  // silent=true 时跳过 loading: true，用于缓存命中后的后台刷新
+  loadConfigsFromCurrentZone: async function (silent) {
     try {
-      this.setData({ loading: true })
+      if (!silent) this.setData({ loading: true })
 
       let zone = app.globalData.currentZone
 
