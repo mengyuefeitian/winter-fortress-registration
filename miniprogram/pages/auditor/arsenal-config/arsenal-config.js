@@ -3,6 +3,7 @@ const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const auth = require('../../../utils/auth')
+const cache = require('../../../utils/cache')
 
 // 活动类型和军团选项常量
 const ACTIVITY_TYPE_OPTIONS = ['兵工厂', '峡谷会战']
@@ -34,6 +35,18 @@ Page({
   onLoad: function (options) {
     this.initDateRange()
     this.waitForRoleReady(options)
+  },
+
+  onShow: function () {
+    // 快速路径：若 allianceId 已知（由 onLoad 设置），先渲染缓存
+    const audArAllianceId = this.data.allianceId
+    if (audArAllianceId) {
+      const audArCached = cache.get('cfg_auditor_arsenal_' + audArAllianceId)
+      if (audArCached) {
+        this.setData({ configs: audArCached.configs, loading: false })
+      }
+      this.loadConfigs()
+    }
   },
 
   // 初始化日期范围
@@ -249,6 +262,13 @@ Page({
       util.hideLoading()
       util.showSuccess('添加成功')
 
+      const audArAddId = this.data.allianceId
+      if (audArAddId) {
+        cache.invalidate('cfg_auditor_arsenal_' + audArAddId)
+        cache.invalidate('arsenal_')
+        cache.invalidate('canyon_')
+      }
+
       // 重置选择
       this.setData({
         selectedActivityType: '',
@@ -295,6 +315,13 @@ Page({
       util.hideLoading()
       util.showSuccess('删除成功')
 
+      const audArDelId = this.data.allianceId
+      if (audArDelId) {
+        cache.invalidate('cfg_auditor_arsenal_' + audArDelId)
+        cache.invalidate('arsenal_')
+        cache.invalidate('canyon_')
+      }
+
     } catch (err) {
       util.hideLoading()
       util.showError('删除失败')
@@ -327,6 +354,11 @@ Page({
         configs: allConfigs,
         loading: false
       })
+
+      const audArCacheId = this.data.allianceId
+      if (audArCacheId) {
+        cache.set('cfg_auditor_arsenal_' + audArCacheId, { configs: allConfigs }, 30 * 1000)
+      }
 
     } catch (err) {
       console.error('加载配置失败:', err)

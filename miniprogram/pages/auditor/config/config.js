@@ -3,6 +3,7 @@ const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const auth = require('../../../utils/auth')
+const cache = require('../../../utils/cache')
 
 // 标签选项常量
 const TAG_OPTIONS = ['高迁', '生命', '穿透', '加兵', '火晶', '橙碎', '加速', '螺丝', '宠石', '宠箱', '其他']
@@ -34,6 +35,18 @@ Page({
   onLoad: function (options) {
     this.initDateRange()
     this.waitForRoleReady(options)
+  },
+
+  onShow: function () {
+    // 快速路径：若 allianceId 已知（由 onLoad 设置），先渲染缓存
+    const audAllianceId = this.data.allianceId
+    if (audAllianceId) {
+      const audCached = cache.get('cfg_auditor_' + audAllianceId)
+      if (audCached) {
+        this.setData({ timeSlots: audCached.timeSlots, loading: false })
+      }
+      this.loadTimeSlots()
+    }
   },
 
   // 初始化日期范围
@@ -176,6 +189,12 @@ Page({
       util.hideLoading()
       util.showSuccess('添加成功')
 
+      const audAddId = this.data.allianceId
+      if (audAddId) {
+        cache.invalidate('cfg_auditor_' + audAddId)
+        cache.invalidate('fortress_slots_' + audAddId)
+      }
+
       // 重置标签和堡垒名称
       this.setData({
         selectedTag: '',
@@ -214,6 +233,12 @@ Page({
 
       util.hideLoading()
       util.showSuccess('删除成功')
+
+      const audDelId = this.data.allianceId
+      if (audDelId) {
+        cache.invalidate('cfg_auditor_' + audDelId)
+        cache.invalidate('fortress_slots_' + audDelId)
+      }
 
     } catch (err) {
       util.hideLoading()
@@ -272,6 +297,11 @@ Page({
         timeSlots: processedSlots,
         loading: false
       })
+
+      const audCacheAllianceId = this.data.allianceId
+      if (audCacheAllianceId) {
+        cache.set('cfg_auditor_' + audCacheAllianceId, { timeSlots: processedSlots }, 30 * 1000)
+      }
 
     } catch (err) {
       console.error('加载时间段失败:', err)

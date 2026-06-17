@@ -3,6 +3,7 @@ const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const auth = require('../../../utils/auth')
+const cache = require('../../../utils/cache')
 
 Page({
   data: {
@@ -45,6 +46,14 @@ Page({
   onShow: async function () {
     // 每次显示时重新加载分区和配置（角色已就绪）
     if (app.globalData.roleReady) {
+      // 快速路径：若分区已知且有缓存，先渲染
+      const pmZone = this.data.currentZone || app.globalData.currentZone
+      if (pmZone) {
+        const pmCached = cache.get('cfg_position_' + pmZone._id)
+        if (pmCached) {
+          this.setData({ configs: pmCached.configs, loading: false })
+        }
+      }
       await this.loadZones()
       this.loadConfigs()
     }
@@ -261,6 +270,12 @@ Page({
       util.hideLoading()
       util.showSuccess('创建成功')
 
+      const pmCreateZoneId = this.data.currentZone ? this.data.currentZone._id : null
+      if (pmCreateZoneId) {
+        cache.invalidate('cfg_position_' + pmCreateZoneId)
+        cache.invalidate('position_' + pmCreateZoneId)
+      }
+
       // 重置表单（保留分区选择）
       this.setData({
         selectedDate: this.data.minDate,
@@ -319,6 +334,11 @@ Page({
         loading: false
       })
 
+      const pmCacheZoneId = this.data.currentZone ? this.data.currentZone._id : null
+      if (pmCacheZoneId) {
+        cache.set('cfg_position_' + pmCacheZoneId, { configs: processedConfigs }, 30 * 1000)
+      }
+
     } catch (err) {
       console.error('加载配置失败:', err)
       this.setData({ loading: false })
@@ -375,6 +395,12 @@ Page({
 
       util.hideLoading()
       util.showSuccess('删除成功')
+
+      const pmDeleteZoneId = this.data.currentZone ? this.data.currentZone._id : null
+      if (pmDeleteZoneId) {
+        cache.invalidate('cfg_position_' + pmDeleteZoneId)
+        cache.invalidate('position_' + pmDeleteZoneId)
+      }
 
       // 重新加载配置列表
       this.loadConfigs()

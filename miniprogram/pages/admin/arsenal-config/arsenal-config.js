@@ -3,6 +3,7 @@ const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const auth = require('../../../utils/auth')
+const cache = require('../../../utils/cache')
 
 // 活动类型和军团选项常量
 const ACTIVITY_TYPE_OPTIONS = ['兵工厂', '峡谷会战']
@@ -44,6 +45,18 @@ Page({
     // 只在从其他页面返回时刷新（例如添加配置后返回）
     // 首次加载由 onLoad → waitForRoleReady → checkPermission 处理
     if (app.globalData.roleReady && this.data.zonesLoaded) {
+      // 快速路径：若已选分区有缓存，先渲染
+      const arZone = this.data.selectedZone
+      if (arZone) {
+        const arCached = cache.get('cfg_arsenal_' + arZone._id)
+        if (arCached) {
+          this.setData({
+            configs: arCached.configs || [],
+            alliances: arCached.alliances || [],
+            loading: false
+          })
+        }
+      }
       this.loadZones()
     }
   },
@@ -304,6 +317,13 @@ Page({
       util.hideLoading()
       util.showSuccess('添加成功')
 
+      const arAddZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (arAddZoneId) {
+        cache.invalidate('cfg_arsenal_' + arAddZoneId)
+        cache.invalidate('arsenal_' + arAddZoneId)
+        cache.invalidate('canyon_' + arAddZoneId)
+      }
+
       // 重置选择
       this.setData({
         selectedActivityType: '',
@@ -348,6 +368,13 @@ Page({
       util.hideLoading()
       util.showSuccess('删除成功')
 
+      const arDelZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (arDelZoneId) {
+        cache.invalidate('cfg_arsenal_' + arDelZoneId)
+        cache.invalidate('arsenal_' + arDelZoneId)
+        cache.invalidate('canyon_' + arDelZoneId)
+      }
+
     } catch (err) {
       util.hideLoading()
       util.showError('删除失败')
@@ -385,6 +412,15 @@ Page({
         configs: allConfigs,
         loading: false
       })
+
+      const arCacheZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (arCacheZoneId) {
+        cache.set('cfg_arsenal_' + arCacheZoneId, {
+          configs: allConfigs,
+          alliances: this.data.alliances || [],
+          selectedZone: this.data.selectedZone
+        }, 30 * 1000)
+      }
 
     } catch (err) {
       console.error('加载配置失败:', err)
