@@ -233,7 +233,6 @@ Page({
     this.loadConfigs()
   },
 
-  // 加载兵工厂配置列表（全部直接 DB 查询，无云函数调用）
   loadConfigs: async function () {
     try {
       if (!this.data.selectedAlliance) {
@@ -244,8 +243,9 @@ Page({
       const configs = await db.getArsenalConfigs({ allianceId: this.data.selectedAlliance._id })
 
       const today = this.getTodayString()
-      const activeConfigs = configs.filter(function (cfg) {
-        return !cfg.date || cfg.date >= today
+      const activeConfigs = configs.filter(cfg => {
+        if (!cfg.date) return true
+        return cfg.date >= today
       })
 
       if (activeConfigs.length === 0) {
@@ -254,53 +254,36 @@ Page({
       }
 
       const currentUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
-      const configIds = activeConfigs.map(function (c) { return c._id })
-      const wxdb = wx.cloud.database()
 
-      // 并行：每个 config 的参战/替补人数 + 当前用户跨 config 的报名记录
-      const [combatCounts, substituteCounts, myRegRes] = await Promise.all([
-        Promise.all(configIds.map(function (id) {
-          return wxdb.collection('arsenalRegistrations').where({
-            configId: id, position: 'combat', status: 'active'
-          }).count()
-        })),
-        Promise.all(configIds.map(function (id) {
-          return wxdb.collection('arsenalRegistrations').where({
-            configId: id, position: 'substitute', status: 'active'
-          }).count()
-        })),
-        currentUserId ? wxdb.collection('arsenalRegistrations').where({
-          configId: wxdb.command.in(configIds),
-          userId: currentUserId,
-          status: 'active'
-        }).get() : Promise.resolve({ data: [] })
-      ])
-
-      const myPositionsByConfig = {}
-      myRegRes.data.forEach(function (r) {
-        if (!myPositionsByConfig[r.configId]) myPositionsByConfig[r.configId] = []
-        myPositionsByConfig[r.configId].push(r.position)
-      })
-
-      const processed = activeConfigs.map(function (cfg, i) {
-        const combatCount = combatCounts[i].total
-        const substituteCount = substituteCounts[i].total
+      // 并行查询所有配置的统计数据
+      const processed = await Promise.all(activeConfigs.map(async (cfg) => {
+        const stats = await this.getConfigStats(cfg._id)
+        const combatCount = stats.combatCount || stats.combat || 0
+        const substituteCount = stats.substituteCount || stats.substitute || 0
         const combatFull = combatCount >= CAPACITY_LIMITS.combat
         const substituteFull = substituteCount >= CAPACITY_LIMITS.substitute
-        return Object.assign({}, cfg, {
-          combatCount: combatCount,
-          substituteCount: substituteCount,
-          totalCount: combatCount + substituteCount,
-          totalCapacity: CAPACITY_LIMITS.combat + CAPACITY_LIMITS.substitute,
-          combatFull: combatFull,
-          substituteFull: substituteFull,
-          isFull: combatFull && substituteFull,
-          isMyConfig: (myPositionsByConfig[cfg._id] || []).length > 0,
-          myPositions: myPositionsByConfig[cfg._id] || []
-        })
-      })
+        const totalCount = combatCount + substituteCount
+        const totalCapacity = CAPACITY_LIMITS.combat + CAPACITY_LIMITS.substitute
+        const myRegistrations = stats.myRegistrations || stats.registrations || []
 
-      this.setData({ configs: processed, loading: false })
+        return {
+          ...cfg,
+          combatCount,
+          substituteCount,
+          totalCount,
+          totalCapacity,
+          combatFull,
+          substituteFull,
+          isFull: combatFull && substituteFull,
+          isMyConfig: currentUserId ? myRegistrations.some(r => r.userId === currentUserId) : false,
+          myPositions: currentUserId ? myRegistrations.filter(r => r.userId === currentUserId).map(r => r.position) : []
+        }
+      }))
+
+      this.setData({
+        configs: processed,
+        loading: false
+      })
 
       const arsenalZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
       if (arsenalZoneId) {
@@ -313,6 +296,17 @@ Page({
     } catch (err) {
       console.error('加载配置失败:', err)
       this.setData({ loading: false })
+    }
+  },
+
+  getConfigStats: async function (configId) {
+    try {
+      const currentUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+      const stats = await db.getArsenalStats(configId, { userId: currentUserId })
+      return stats || { combatCount: 0, combat: 0, substituteCount: 0, substitute: 0, myRegistrations: [] }
+    } catch (err) {
+      console.error('获取配置统计失败:', err)
+      return { combatCount: 0, combat: 0, substituteCount: 0, substitute: 0, myRegistrations: [] }
     }
   },
 

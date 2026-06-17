@@ -1538,17 +1538,25 @@ async function createArsenalConfig(data) {
   return res.result
 }
 
-// 获取兵营配置列表（直接 DB 查询，避免云函数冷启动延迟）
+// 获取兵营配置列表（需云函数：arsenalConfigs 集合权限为仅创建者可读写）
 async function getArsenalConfigs(filters = {}) {
-  const db = getDb()
-  const query = { activityType: 'arsenal', status: 'active' }
-  if (filters.zoneId) query.zoneId = filters.zoneId
-  if (filters.allianceId) query.allianceId = filters.allianceId
-  if (filters.date) query.date = filters.date
-  if (filters.creatorId) query.creatorId = filters.creatorId
-  const res = await db.collection('arsenalConfigs').where(query)
-    .orderBy('date', 'asc').orderBy('createTime', 'desc').limit(100).get()
-  return res.data
+  const filterData = { activityType: 'arsenal' }
+  if (filters.zoneId) filterData.zoneId = filters.zoneId
+  if (filters.allianceId) filterData.allianceId = filters.allianceId
+  if (filters.date) filterData.date = filters.date
+  if (filters.creatorId) filterData.creatorId = filters.creatorId
+
+  const res = await wx.cloud.callFunction({
+    name: 'manageArsenal',
+    data: {
+      action: 'getConfigs',
+      data: filterData
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '获取兵营配置列表失败')
+  }
+  return res.result.data || []
 }
 
 // 删除兵营配置
@@ -1584,17 +1592,25 @@ async function createCanyonConfig(data) {
   return res.result
 }
 
-// 获取峡谷配置列表（直接 DB 查询，避免云函数冷启动延迟）
+// 获取峡谷配置列表（需云函数：canyonConfigs 集合权限为仅创建者可读写）
 async function getCanyonConfigs(filters = {}) {
-  const db = getDb()
-  const query = { activityType: 'canyon', status: 'active' }
-  if (filters.zoneId) query.zoneId = filters.zoneId
-  if (filters.allianceId) query.allianceId = filters.allianceId
-  if (filters.date) query.date = filters.date
-  if (filters.creatorId) query.creatorId = filters.creatorId
-  const res = await db.collection('canyonConfigs').where(query)
-    .orderBy('date', 'asc').orderBy('createTime', 'desc').limit(100).get()
-  return res.data
+  const filterData = { activityType: 'canyon' }
+  if (filters.zoneId) filterData.zoneId = filters.zoneId
+  if (filters.allianceId) filterData.allianceId = filters.allianceId
+  if (filters.date) filterData.date = filters.date
+  if (filters.creatorId) filterData.creatorId = filters.creatorId
+
+  const res = await wx.cloud.callFunction({
+    name: 'manageArsenal',
+    data: {
+      action: 'getConfigs',
+      data: filterData
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '获取峡谷配置列表失败')
+  }
+  return res.result.data || []
 }
 
 // 删除峡谷配置
