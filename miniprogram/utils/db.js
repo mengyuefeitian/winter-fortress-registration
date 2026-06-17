@@ -1538,25 +1538,16 @@ async function createArsenalConfig(data) {
   return res.result
 }
 
-// 获取兵营配置列表（需云函数：arsenalConfigs 集合权限为仅创建者可读写）
+// 获取兵营配置列表（权限已改为所有人可读，直接查询）
 async function getArsenalConfigs(filters = {}) {
-  const filterData = { activityType: 'arsenal' }
-  if (filters.zoneId) filterData.zoneId = filters.zoneId
-  if (filters.allianceId) filterData.allianceId = filters.allianceId
-  if (filters.date) filterData.date = filters.date
-  if (filters.creatorId) filterData.creatorId = filters.creatorId
-
-  const res = await wx.cloud.callFunction({
-    name: 'manageArsenal',
-    data: {
-      action: 'getConfigs',
-      data: filterData
-    }
-  })
-  if (!res.result || !res.result.success) {
-    throw new Error((res.result && res.result.error) || '获取兵营配置列表失败')
-  }
-  return res.result.data || []
+  const db = getDb()
+  const query = { status: 'active' }
+  if (filters.zoneId) query.zoneId = filters.zoneId
+  if (filters.allianceId) query.allianceId = filters.allianceId
+  if (filters.date) query.date = filters.date
+  if (filters.creatorId) query.creatorId = filters.creatorId
+  const res = await db.collection('arsenalConfigs').where(query).orderBy('date', 'asc').orderBy('timeValue', 'asc').limit(100).get()
+  return res.data
 }
 
 // 删除兵营配置
@@ -1592,25 +1583,16 @@ async function createCanyonConfig(data) {
   return res.result
 }
 
-// 获取峡谷配置列表（需云函数：canyonConfigs 集合权限为仅创建者可读写）
+// 获取峡谷配置列表（权限已改为所有人可读，直接查询）
 async function getCanyonConfigs(filters = {}) {
-  const filterData = { activityType: 'canyon' }
-  if (filters.zoneId) filterData.zoneId = filters.zoneId
-  if (filters.allianceId) filterData.allianceId = filters.allianceId
-  if (filters.date) filterData.date = filters.date
-  if (filters.creatorId) filterData.creatorId = filters.creatorId
-
-  const res = await wx.cloud.callFunction({
-    name: 'manageArsenal',
-    data: {
-      action: 'getConfigs',
-      data: filterData
-    }
-  })
-  if (!res.result || !res.result.success) {
-    throw new Error((res.result && res.result.error) || '获取峡谷配置列表失败')
-  }
-  return res.result.data || []
+  const db = getDb()
+  const query = { status: 'active' }
+  if (filters.zoneId) query.zoneId = filters.zoneId
+  if (filters.allianceId) query.allianceId = filters.allianceId
+  if (filters.date) query.date = filters.date
+  if (filters.creatorId) query.creatorId = filters.creatorId
+  const res = await db.collection('canyonConfigs').where(query).orderBy('date', 'asc').orderBy('timeValue', 'asc').limit(100).get()
+  return res.data
 }
 
 // 删除峡谷配置
@@ -1651,19 +1633,11 @@ async function createArsenalRegistration(data) {
   return res.result
 }
 
-// 获取兵营配置的报名列表
+// 获取兵营配置的报名列表（权限已改为所有人可读，直接查询）
 async function getArsenalRegistrations(configId) {
-  const res = await wx.cloud.callFunction({
-    name: 'manageArsenal',
-    data: {
-      action: 'getRegistrations',
-      data: { configId, activityType: 'arsenal' }
-    }
-  })
-  if (!res.result || !res.result.success) {
-    throw new Error((res.result && res.result.error) || '获取兵营报名列表失败')
-  }
-  return res.result.data || []
+  const db = getDb()
+  const res = await db.collection('arsenalRegistrations').where({ configId, status: 'active' }).orderBy('createTime', 'asc').limit(100).get()
+  return res.data
 }
 
 // 取消兵营报名
@@ -1681,19 +1655,11 @@ async function cancelArsenalRegistration(registrationId) {
   return res.result
 }
 
-// 获取用户的兵营报名记录
+// 获取用户的兵营报名记录（权限已改为所有人可读，直接查询）
 async function getArsenalRegistrationsByUser(userId) {
-  const res = await wx.cloud.callFunction({
-    name: 'manageArsenal',
-    data: {
-      action: 'getRegistrationsByUser',
-      data: { userId, activityType: 'arsenal' }
-    }
-  })
-  if (!res.result || !res.result.success) {
-    throw new Error((res.result && res.result.error) || '获取用户兵营报名记录失败')
-  }
-  return res.result.data || []
+  const db = getDb()
+  const res = await db.collection('arsenalRegistrations').where({ userId, status: 'active' }).orderBy('createTime', 'desc').limit(100).get()
+  return res.data
 }
 
 /**
@@ -1719,19 +1685,11 @@ async function createCanyonRegistration(data) {
   return res.result
 }
 
-// 获取峡谷配置的报名列表
+// 获取峡谷配置的报名列表（权限已改为所有人可读，直接查询）
 async function getCanyonRegistrations(configId) {
-  const res = await wx.cloud.callFunction({
-    name: 'manageArsenal',
-    data: {
-      action: 'getRegistrations',
-      data: { configId, activityType: 'canyon' }
-    }
-  })
-  if (!res.result || !res.result.success) {
-    throw new Error((res.result && res.result.error) || '获取峡谷报名列表失败')
-  }
-  return res.result.data || []
+  const db = getDb()
+  const res = await db.collection('canyonRegistrations').where({ configId, status: 'active' }).orderBy('createTime', 'asc').limit(100).get()
+  return res.data
 }
 
 // 取消峡谷报名
@@ -1749,53 +1707,51 @@ async function cancelCanyonRegistration(registrationId) {
   return res.result
 }
 
-// 获取用户的峡谷报名记录
+// 获取用户的峡谷报名记录（权限已改为所有人可读，直接查询）
 async function getCanyonRegistrationsByUser(userId) {
-  const res = await wx.cloud.callFunction({
-    name: 'manageArsenal',
-    data: {
-      action: 'getRegistrationsByUser',
-      data: { userId, activityType: 'canyon' }
-    }
-  })
-  if (!res.result || !res.result.success) {
-    throw new Error((res.result && res.result.error) || '获取用户峡谷报名记录失败')
-  }
-  return res.result.data || []
+  const db = getDb()
+  const res = await db.collection('canyonRegistrations').where({ userId, status: 'active' }).orderBy('createTime', 'desc').limit(100).get()
+  return res.data
 }
 
 /**
  * 兵营/峡谷统计
  */
 
-// 获取兵营统计数据
+// 获取兵营统计数据（权限已改为所有人可读，直接 count() 查询，无云函数开销）
 async function getArsenalStats(configId, options = {}) {
-  const res = await wx.cloud.callFunction({
-    name: 'manageArsenal',
-    data: {
-      action: 'getStats',
-      data: { configId, activityType: 'arsenal', includeRegistrations: options.includeRegistrations || false, userId: options.userId || null }
-    }
-  })
-  if (!res.result || !res.result.success) {
-    throw new Error((res.result && res.result.error) || '获取兵营统计失败')
+  const db = getDb()
+  const base = { configId, status: 'active' }
+  const [combatRes, substituteRes, myRes] = await Promise.all([
+    db.collection('arsenalRegistrations').where(Object.assign({}, base, { position: 'combat' })).count(),
+    db.collection('arsenalRegistrations').where(Object.assign({}, base, { position: 'substitute' })).count(),
+    options.userId
+      ? db.collection('arsenalRegistrations').where(Object.assign({}, base, { userId: options.userId })).get()
+      : Promise.resolve({ data: [] })
+  ])
+  return {
+    combatCount: combatRes.total,
+    substituteCount: substituteRes.total,
+    myRegistrations: myRes.data || []
   }
-  return res.result.data
 }
 
-// 获取峡谷统计数据
+// 获取峡谷统计数据（权限已改为所有人可读，直接 count() 查询，无云函数开销）
 async function getCanyonStats(configId, options = {}) {
-  const res = await wx.cloud.callFunction({
-    name: 'manageArsenal',
-    data: {
-      action: 'getStats',
-      data: { configId, activityType: 'canyon', includeRegistrations: options.includeRegistrations || false, userId: options.userId || null }
-    }
-  })
-  if (!res.result || !res.result.success) {
-    throw new Error((res.result && res.result.error) || '获取峡谷统计失败')
+  const db = getDb()
+  const base = { configId, status: 'active' }
+  const [combatRes, substituteRes, myRes] = await Promise.all([
+    db.collection('canyonRegistrations').where(Object.assign({}, base, { position: 'combat' })).count(),
+    db.collection('canyonRegistrations').where(Object.assign({}, base, { position: 'substitute' })).count(),
+    options.userId
+      ? db.collection('canyonRegistrations').where(Object.assign({}, base, { userId: options.userId })).get()
+      : Promise.resolve({ data: [] })
+  ])
+  return {
+    combatCount: combatRes.total,
+    substituteCount: substituteRes.total,
+    myRegistrations: myRes.data || []
   }
-  return res.result.data
 }
 
 /**
