@@ -2,6 +2,7 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
+const cache = require('../../../utils/cache')
 
 // 位置选项：参战/替补
 const POSITION_OPTIONS = [
@@ -46,7 +47,7 @@ Page({
     if (options && options.zoneId) {
       this._pendingZoneId = options.zoneId
     }
-    this.onShow()
+    // onShow 由小程序框架在 onLoad 后自动调用，无需手动调用
   },
 
   onShow: function () {
@@ -74,13 +75,30 @@ Page({
       })
     }
 
+    const zone = app.globalData.currentZone
+    if (zone) {
+      const cached = cache.get('canyon_' + zone._id)
+      if (cached) {
+        this.setData({
+          selectedZone: cached.selectedZone,
+          alliances: cached.alliances || [],
+          configs: cached.configs || [],
+          loading: false
+        })
+        // 后台静默刷新，不显示 loading
+        this.loadAlliancesFromCurrentZone(true)
+        return
+      }
+    }
+
     this.loadAlliancesFromCurrentZone()
   },
 
   // 从首页选择的分区加载联盟
-  loadAlliancesFromCurrentZone: async function () {
+  // silent=true 时跳过 loading: true，用于缓存命中后的后台刷新
+  loadAlliancesFromCurrentZone: async function (silent) {
     try {
-      this.setData({ loading: true })
+      if (!silent) this.setData({ loading: true })
 
       let zone = app.globalData.currentZone
 
@@ -213,7 +231,7 @@ Page({
 
       const currentUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
 
-      // 并行查询所有配置的统计数据（云函数端权限，count查询快速返回）
+      // 并行查询所有配置的统计数据
       const processedConfigs = await Promise.all(filteredConfigs.map(async (cfg) => {
         const stats = await this.getConfigStats(cfg._id)
         const combatCount = stats.combatCount || stats.combat || 0
@@ -241,6 +259,15 @@ Page({
       this.setData({
         configs: processedConfigs
       })
+
+      const canyonZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (canyonZoneId) {
+        cache.set('canyon_' + canyonZoneId, {
+          selectedZone: this.data.selectedZone,
+          alliances: this.data.alliances || [],
+          configs: processedConfigs
+        }, 5 * 60 * 1000)
+      }
 
     } catch (err) {
       console.error('加载配置失败:', err)
@@ -410,6 +437,11 @@ Page({
 
       util.hideLoading()
       util.showSuccess('报名成功')
+
+      const canyonClearZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (canyonClearZoneId) cache.invalidate('canyon_' + canyonClearZoneId)
+      const canyonClearUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+      if (canyonClearUserId) cache.invalidate('myregs_' + canyonClearUserId)
 
       this.setData({
         selectedConfig: null,

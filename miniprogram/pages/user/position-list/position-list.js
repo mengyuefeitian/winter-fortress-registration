@@ -2,6 +2,7 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
+const cache = require('../../../utils/cache')
 
 Page({
   data: {
@@ -26,10 +27,26 @@ Page({
   },
 
   onShow: function () {
+    // 快速路径：若分区已知且有缓存，先渲染
+    const zone = app.globalData.currentZone
+    if (zone) {
+      const cached = cache.get('position_' + zone._id)
+      if (cached) {
+        this.setData({
+          configs: cached.configs,
+          selectedZone: cached.selectedZone,
+          noZoneSelected: false,
+          loading: false
+        })
+        this.loadConfigs(true)
+        return
+      }
+    }
     this.loadConfigs()
   },
 
-  loadConfigs: async function () {
+  // silent=true 时跳过 loading: true，用于缓存命中后的后台刷新
+  loadConfigs: async function (silent) {
     try {
       // 使用首页选择的分区，如果没有则从分享链接恢复
       let selectedZone = app.globalData.currentZone
@@ -95,7 +112,7 @@ Page({
       this.setData({
         selectedZone: selectedZone,
         noZoneSelected: false,
-        loading: true
+        loading: silent ? false : true
       })
 
       // 获取今天的日期字符串（只保留日期部分）
@@ -148,6 +165,14 @@ Page({
         configs: processedConfigs,
         loading: false
       })
+
+      const cacheZoneId = selectedZone ? selectedZone._id : null
+      if (cacheZoneId) {
+        cache.set('position_' + cacheZoneId, {
+          configs: processedConfigs,
+          selectedZone: selectedZone
+        })
+      }
 
     } catch (err) {
       console.error('加载配置失败:', err)

@@ -3,6 +3,7 @@ const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const auth = require('../../../utils/auth')
+const cache = require('../../../utils/cache')
 
 // 标签选项常量
 const TAG_OPTIONS = ['高迁', '生命', '穿透', '加兵', '火晶', '橙碎', '加速', '螺丝', '宠石', '宠箱', '其他']
@@ -34,6 +35,20 @@ Page({
   onLoad: function (options) {
     this.initDateRange()
     this.waitForRoleReady(options)
+  },
+
+  onShow: function () {
+    // 快速路径：若 allianceId 已知（由 onLoad 设置），先渲染缓存
+    const audAllianceId = this.data.allianceId
+    if (audAllianceId) {
+      const audCached = cache.get('cfg_auditor_' + audAllianceId)
+      if (audCached) {
+        this.setData({ timeSlots: audCached.timeSlots, loading: false })
+        this.loadTimeSlots(true)
+        return
+      }
+      this.loadTimeSlots()
+    }
   },
 
   // 初始化日期范围
@@ -176,6 +191,12 @@ Page({
       util.hideLoading()
       util.showSuccess('添加成功')
 
+      const audAddId = this.data.allianceId
+      if (audAddId) {
+        cache.invalidate('cfg_auditor_' + audAddId)
+        cache.invalidate('fortress_slots_' + audAddId)
+      }
+
       // 重置标签和堡垒名称
       this.setData({
         selectedTag: '',
@@ -215,6 +236,12 @@ Page({
       util.hideLoading()
       util.showSuccess('删除成功')
 
+      const audDelId = this.data.allianceId
+      if (audDelId) {
+        cache.invalidate('cfg_auditor_' + audDelId)
+        cache.invalidate('fortress_slots_' + audDelId)
+      }
+
     } catch (err) {
       util.hideLoading()
       util.showError('删除失败')
@@ -222,9 +249,10 @@ Page({
   },
 
   // 加载时间段列表
-  loadTimeSlots: async function () {
+  // silent=true 时跳过 loading: true，用于缓存命中后的后台刷新
+  loadTimeSlots: async function (silent) {
     try {
-      this.setData({ loading: true })
+      if (!silent) this.setData({ loading: true })
 
       const timeSlots = await db.getTimeSlotsByAlliance(this.data.allianceId)
 
@@ -239,25 +267,16 @@ Page({
       let countBySlot = {}
 
       if (timeSlotIds.length > 0) {
-        // 分页获取所有报名记录（一次查询，替代 N+1 循环查询）
-        let allRegs = []
-        let offset = 0
-        const batchSize = 20
-        while (true) {
-          const res = await wxdb.collection('registrations').where({
-            timeSlotId: wxdb.command.in(timeSlotIds),
+        // 并行 count() 查询，只取总数不拉文档，避免分页串行循环
+        const countResults = await Promise.all(timeSlotIds.map(function (tsId) {
+          return wxdb.collection('registrations').where({
+            timeSlotId: tsId,
             status: 'active'
-          }).skip(offset).limit(batchSize).get()
-          allRegs = allRegs.concat(res.data)
-          if (res.data.length < batchSize) break
-          offset += batchSize
-          if (offset > 500) break
-        }
-
-        // 按 timeSlotId 分组计数
-        for (const reg of allRegs) {
-          countBySlot[reg.timeSlotId] = (countBySlot[reg.timeSlotId] || 0) + 1
-        }
+          }).count()
+        }))
+        timeSlotIds.forEach(function (tsId, i) {
+          countBySlot[tsId] = countResults[i].total
+        })
       }
 
       const processedSlots = timeSlots.map(slot => ({
@@ -272,6 +291,11 @@ Page({
         timeSlots: processedSlots,
         loading: false
       })
+
+      const audCacheAllianceId = this.data.allianceId
+      if (audCacheAllianceId) {
+        cache.set('cfg_auditor_' + audCacheAllianceId, { timeSlots: processedSlots }, 5 * 60 * 1000)
+      }
 
     } catch (err) {
       console.error('加载时间段失败:', err)

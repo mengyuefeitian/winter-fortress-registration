@@ -2,6 +2,7 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
+const cache = require('../../../utils/cache')
 
 Page({
   data: {
@@ -56,13 +57,47 @@ Page({
       })
     }
 
+    // 快速路径：若分区已知，尝试立即渲染缓存
+    const zone = app.globalData.currentZone
+    if (zone) {
+      const alliancesKey = 'fortress_alliances_' + zone._id
+      const cachedAlliances = cache.get(alliancesKey)
+      if (cachedAlliances) {
+        const lastAllianceId = wx.getStorageSync('lastAllianceId')
+        const alliances = cachedAlliances.alliances
+        let selectedAlliance = null
+        let allianceIndex = -1
+        if (lastAllianceId) {
+          allianceIndex = alliances.findIndex(function(a) { return a._id === lastAllianceId })
+          if (allianceIndex >= 0) selectedAlliance = alliances[allianceIndex]
+        }
+        this.setData({
+          selectedZone: zone,
+          alliances: alliances,
+          selectedAlliance: selectedAlliance,
+          allianceIndex: allianceIndex,
+          loading: false
+        })
+        if (selectedAlliance) {
+          const slotsKey = 'fortress_slots_' + selectedAlliance._id
+          const cachedSlots = cache.get(slotsKey)
+          if (cachedSlots) {
+            this.setData({ timeSlots: cachedSlots.timeSlots })
+          }
+        }
+        // 后台静默刷新，不显示 loading
+        this.loadAlliancesFromCurrentZone(true)
+        return
+      }
+    }
     this.loadAlliancesFromCurrentZone()
   },
 
   // 从首页选择的分区加载联盟
-  loadAlliancesFromCurrentZone: async function () {
+  // silent=true 时跳过 loading: true，用于缓存命中后的后台刷新
+  loadAlliancesFromCurrentZone: async function (silent) {
     try {
-      this.setData({ loading: true })
+      if (!silent) this.setData({ loading: true })
 
       let zone = app.globalData.currentZone
 
@@ -159,6 +194,7 @@ Page({
           allianceIndex: allianceIndex,
           loading: false
         })
+        cache.set('fortress_alliances_' + zoneId, { alliances: alliances || [] })
 
         if (selectedAlliance) {
           this.loadTimeSlots()
@@ -170,6 +206,7 @@ Page({
           allianceIndex: -1,
           loading: false
         })
+        cache.set('fortress_alliances_' + zoneId, { alliances: [] })
       }
 
     } catch (err) {
@@ -206,44 +243,44 @@ Page({
       let registrationsBySlot = {}
 
       if (timeSlotIds.length > 0) {
-        // 分页获取所有报名记录
-        let allRegs = []
-        let offset = 0
-        const batchSize = 20
-        while (true) {
-          const res = await wxdb.collection('registrations').where({
+        // 并行 count() 查询 + 单次查当前用户已报的时间段，避免拉取所有文档
+        const [countResults, myRegRes] = await Promise.all([
+          Promise.all(timeSlotIds.map(function (tsId) {
+            return wxdb.collection('registrations').where({
+              timeSlotId: tsId,
+              status: 'active'
+            }).count()
+          })),
+          currentUserId ? wxdb.collection('registrations').where({
             timeSlotId: wxdb.command.in(timeSlotIds),
+            userId: currentUserId,
             status: 'active'
-          }).skip(offset).limit(batchSize).get()
-          allRegs = allRegs.concat(res.data)
-          if (res.data.length < batchSize) break
-          offset += batchSize
-          if (offset > 500) break
-        }
+          }).get() : Promise.resolve({ data: [] })
+        ])
 
-        // 按 timeSlotId 分组
-        for (const reg of allRegs) {
-          if (!registrationsBySlot[reg.timeSlotId]) {
-            registrationsBySlot[reg.timeSlotId] = []
-          }
-          registrationsBySlot[reg.timeSlotId].push(reg)
-        }
+        const mySlotIds = new Set(myRegRes.data.map(function (r) { return r.timeSlotId }))
+        timeSlotIds.forEach(function (tsId, i) {
+          registrationsBySlot[tsId] = { count: countResults[i].total, isMySlot: mySlotIds.has(tsId) }
+        })
       }
 
       const processedSlots = filteredSlots.map(slot => {
-        const regs = registrationsBySlot[slot._id] || []
-        const count = regs.length
+        const info = registrationsBySlot[slot._id] || { count: 0, isMySlot: false }
         return {
           ...slot,
-          count: count,
-          isFull: util.isTimeSlotFull(count, slot.maxCount),
-          isMySlot: currentUserId ? regs.some(r => r.userId === currentUserId) : false
+          count: info.count,
+          isFull: util.isTimeSlotFull(info.count, slot.maxCount),
+          isMySlot: info.isMySlot
         }
       })
 
       this.setData({
         timeSlots: processedSlots
       })
+      const cacheAllianceId = this.data.selectedAlliance ? this.data.selectedAlliance._id : null
+      if (cacheAllianceId) {
+        cache.set('fortress_slots_' + cacheAllianceId, { timeSlots: this.data.timeSlots })
+      }
 
     } catch (err) {
       console.error('加载时间段失败:', err)
@@ -395,6 +432,11 @@ Page({
 
       util.hideLoading()
       util.showSuccess('报名成功')
+
+      const regAllianceId = this.data.selectedAlliance ? this.data.selectedAlliance._id : null
+      if (regAllianceId) cache.invalidate('fortress_slots_' + regAllianceId)
+      const regUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+      if (regUserId) cache.invalidate('myregs_' + regUserId)
 
       this.setData({
         selectedTimeSlot: null,

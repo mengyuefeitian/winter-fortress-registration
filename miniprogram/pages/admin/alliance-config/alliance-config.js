@@ -3,6 +3,7 @@ const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const auth = require('../../../utils/auth')
+const cache = require('../../../utils/cache')
 
 Page({
   data: {
@@ -23,6 +24,13 @@ Page({
   onShow: function () {
     // 每次显示时重新加载分区和联盟（角色已就绪）
     if (app.globalData.roleReady && this.data.selectedZone) {
+      const alcZone = this.data.selectedZone || app.globalData.currentZone
+      if (alcZone) {
+        const alcCached = cache.get('cfg_alliance_' + alcZone._id)
+        if (alcCached) {
+          this.setData({ alliances: alcCached.alliances, loading: false })
+        }
+      }
       this.loadZones()
       this.loadAlliances(this.data.selectedZone._id)
       this.loadAuditors()
@@ -146,6 +154,11 @@ Page({
         alliances: processedAlliances
       })
 
+      const alcZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (alcZoneId) {
+        cache.set('cfg_alliance_' + alcZoneId, { alliances: processedAlliances }, 30 * 1000)
+      }
+
       // 加载每个联盟的盟管信息
       for (let i = 0; i < processedAlliances.length; i++) {
         const alliance = processedAlliances[i]
@@ -243,6 +256,11 @@ Page({
         alliances: alliances
       })
 
+      const alcClearZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (alcClearZoneId) {
+        cache.invalidate('cfg_alliance_' + alcClearZoneId)
+        cache.invalidate('fortress_alliances_' + alcClearZoneId)
+      }
       util.hideLoading()
       util.showSuccess('保存成功')
 
@@ -314,6 +332,11 @@ Page({
       alliances[allianceIndex].showAddAuditor = false
 
       this.setData({ alliances })
+      const alcClearZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (alcClearZoneId) {
+        cache.invalidate('cfg_alliance_' + alcClearZoneId)
+        cache.invalidate('fortress_alliances_' + alcClearZoneId)
+      }
       util.hideLoading()
       util.showSuccess('绑定成功')
 
@@ -415,6 +438,11 @@ Page({
       })
 
       this.loadAuditors()
+      const alcClearZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (alcClearZoneId) {
+        cache.invalidate('cfg_alliance_' + alcClearZoneId)
+        cache.invalidate('fortress_alliances_' + alcClearZoneId)
+      }
       util.hideLoading()
       util.showSuccess('绑定成功')
 
@@ -444,6 +472,11 @@ Page({
       }
 
       // 重新加载联盟列表以反映所有变更
+      const alcClearZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (alcClearZoneId) {
+        cache.invalidate('cfg_alliance_' + alcClearZoneId)
+        cache.invalidate('fortress_alliances_' + alcClearZoneId)
+      }
       this.loadAlliances(this.data.selectedZone._id)
       this.loadAuditors()
       util.hideLoading()

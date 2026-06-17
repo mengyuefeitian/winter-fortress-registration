@@ -7,7 +7,6 @@
       "Write(*)",
       "WebSearch(*)",
       "WebFetch(*)",
-      "mcp__*"
     ]
   },
   "enabledPlugins": {}

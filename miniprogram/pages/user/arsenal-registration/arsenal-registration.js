@@ -2,6 +2,7 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
+const cache = require('../../../utils/cache')
 
 const POSITION_OPTIONS = [
   { label: '参战', value: 'combat' },
@@ -80,12 +81,29 @@ Page({
       })
     }
 
+    const zone = app.globalData.currentZone
+    if (zone) {
+      const cached = cache.get('arsenal_' + zone._id)
+      if (cached) {
+        this.setData({
+          selectedZone: cached.selectedZone,
+          alliances: cached.alliances || [],
+          configs: cached.configs || [],
+          loading: false
+        })
+        // 后台静默刷新，不显示 loading
+        this.loadConfigsFromCurrentZone(true)
+        return
+      }
+    }
+
     this.loadConfigsFromCurrentZone()
   },
 
-  loadConfigsFromCurrentZone: async function () {
+  // silent=true 时跳过 loading: true，用于缓存命中后的后台刷新
+  loadConfigsFromCurrentZone: async function (silent) {
     try {
-      this.setData({ loading: true })
+      if (!silent) this.setData({ loading: true })
 
       let zone = app.globalData.currentZone
 
@@ -237,7 +255,7 @@ Page({
 
       const currentUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
 
-      // 并行查询所有配置的统计数据（云函数端权限，count查询快速返回）
+      // 并行查询所有配置的统计数据
       const processed = await Promise.all(activeConfigs.map(async (cfg) => {
         const stats = await this.getConfigStats(cfg._id)
         const combatCount = stats.combatCount || stats.combat || 0
@@ -266,6 +284,15 @@ Page({
         configs: processed,
         loading: false
       })
+
+      const arsenalZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (arsenalZoneId) {
+        cache.set('arsenal_' + arsenalZoneId, {
+          selectedZone: this.data.selectedZone,
+          alliances: this.data.alliances || [],
+          configs: processed
+        }, 5 * 60 * 1000)
+      }
     } catch (err) {
       console.error('加载配置失败:', err)
       this.setData({ loading: false })
@@ -397,6 +424,11 @@ Page({
 
       util.hideLoading()
       util.showSuccess('报名成功')
+
+      const arsenalClearZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (arsenalClearZoneId) cache.invalidate('arsenal_' + arsenalClearZoneId)
+      const arsenalClearUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+      if (arsenalClearUserId) cache.invalidate('myregs_' + arsenalClearUserId)
 
       this.setData({
         selectedConfig: null,

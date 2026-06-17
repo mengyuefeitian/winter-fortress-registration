@@ -3,6 +3,7 @@ const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const auth = require('../../../utils/auth')
+const cache = require('../../../utils/cache')
 
 // 活动类型和军团选项常量
 const ACTIVITY_TYPE_OPTIONS = ['兵工厂', '峡谷会战']
@@ -41,10 +42,25 @@ Page({
   },
 
   onShow: function () {
-    // 只在从其他页面返回时刷新（例如添加配置后返回）
-    // 首次加载由 onLoad → waitForRoleReady → checkPermission 处理
-    if (app.globalData.roleReady && this.data.zonesLoaded) {
-      this.loadZones()
+    if (!app.globalData.roleReady) return
+    // 快速路径：用 app.globalData.currentZone 查缓存（新实例也有效）
+    const arZone = this.data.selectedZone || app.globalData.currentZone
+    let hadCache = false
+    if (arZone) {
+      const arCached = cache.get('cfg_arsenal_' + arZone._id)
+      if (arCached) {
+        this.setData({
+          configs: arCached.configs || [],
+          alliances: arCached.alliances || [],
+          loading: false
+        })
+        hadCache = true
+      }
+    }
+    this._silentLoad = hadCache
+    // 已初始化的页面实例：主动刷新；新实例：checkPermission → loadZones 会处理
+    if (this.data.zonesLoaded) {
+      this.loadZones(hadCache)
     }
   },
 
@@ -90,13 +106,15 @@ Page({
       })
       return
     }
-    this.loadZones()
+    // onShow 已展示缓存时静默加载，避免 loading:true 覆盖缓存渲染
+    this.loadZones(this._silentLoad)
   },
 
   // 加载分区列表（区管只能看到自己管理的分区）
-  loadZones: async function () {
+  // silent=true 时跳过 loading: true，用于缓存命中后的后台刷新
+  loadZones: async function (silent) {
     try {
-      this.setData({ loading: true })
+      if (!silent) this.setData({ loading: true })
 
       // 确保 userInfo 已加载
       if (!app.globalData.userInfo || !app.globalData.userInfo._id) {
@@ -134,10 +152,9 @@ Page({
         this.setData({
           zones: zones,
           selectedZone: selectedZone,
-          loading: false,
           zonesLoaded: true
         })
-        this.loadAlliances(selectedZone._id)
+        this.loadAlliances(selectedZone._id, silent)
       } else {
         console.log('No zones found for userId:', userId, 'role:', role)
         // 诊断：直接查询 zones 中 adminIds 包含当前 userId 的记录
@@ -171,7 +188,7 @@ Page({
   },
 
   // 加载联盟列表
-  loadAlliances: async function (zoneId) {
+  loadAlliances: async function (zoneId, silent) {
     try {
       const alliances = await db.getAlliancesByZone(zoneId)
       this.setData({
@@ -181,16 +198,18 @@ Page({
 
       if (alliances && alliances.length > 0) {
         this.setData({ selectedAlliance: alliances[0] })
-        this.loadConfigs()
+        this.loadConfigs(silent)
       } else {
         this.setData({
           selectedAlliance: null,
-          configs: []
+          configs: [],
+          loading: false
         })
       }
     } catch (err) {
       console.error('加载联盟失败:', err)
       util.showError('加载联盟失败')
+      this.setData({ loading: false })
     }
   },
 
@@ -304,6 +323,13 @@ Page({
       util.hideLoading()
       util.showSuccess('添加成功')
 
+      const arAddZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (arAddZoneId) {
+        cache.invalidate('cfg_arsenal_' + arAddZoneId)
+        cache.invalidate('arsenal_' + arAddZoneId)
+        cache.invalidate('canyon_' + arAddZoneId)
+      }
+
       // 重置选择
       this.setData({
         selectedActivityType: '',
@@ -348,6 +374,13 @@ Page({
       util.hideLoading()
       util.showSuccess('删除成功')
 
+      const arDelZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (arDelZoneId) {
+        cache.invalidate('cfg_arsenal_' + arDelZoneId)
+        cache.invalidate('arsenal_' + arDelZoneId)
+        cache.invalidate('canyon_' + arDelZoneId)
+      }
+
     } catch (err) {
       util.hideLoading()
       util.showError('删除失败')
@@ -355,14 +388,15 @@ Page({
   },
 
   // 加载配置列表
-  loadConfigs: async function () {
+  // silent=true 时跳过 loading: true，用于缓存命中后的后台刷新
+  loadConfigs: async function (silent) {
     try {
       if (!this.data.selectedAlliance) {
         this.setData({ configs: [], loading: false })
         return
       }
 
-      this.setData({ loading: true })
+      if (!silent) this.setData({ loading: true })
 
       const [arsenalConfigs, canyonConfigs] = await Promise.all([
         db.getArsenalConfigs({ allianceId: this.data.selectedAlliance._id }),
@@ -385,6 +419,15 @@ Page({
         configs: allConfigs,
         loading: false
       })
+
+      const arCacheZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (arCacheZoneId) {
+        cache.set('cfg_arsenal_' + arCacheZoneId, {
+          configs: allConfigs,
+          alliances: this.data.alliances || [],
+          selectedZone: this.data.selectedZone
+        }, 5 * 60 * 1000)
+      }
 
     } catch (err) {
       console.error('加载配置失败:', err)

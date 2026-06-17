@@ -3,6 +3,7 @@ const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const auth = require('../../../utils/auth')
+const cache = require('../../../utils/cache')
 
 // 标签选项常量
 const TAG_OPTIONS = ['高迁', '生命', '穿透', '加兵', '火晶', '橙碎', '加速', '螺丝', '宠石', '宠箱', '其他']
@@ -48,8 +49,26 @@ Page({
   },
 
   onShow: function () {
-    if (app.globalData.roleReady && this.data.zonesLoaded) {
-      this.loadZones()
+    if (!app.globalData.roleReady) return
+    // 快速路径：用区级缓存（新实例用 app.globalData.currentZone 也能命中）
+    const tsZone = this.data.selectedZone || app.globalData.currentZone
+    let hadCache = false
+    if (tsZone) {
+      const tsCached = cache.get('cfg_fortress_zone_' + tsZone._id)
+      if (tsCached) {
+        this.setData({
+          timeSlots: tsCached.timeSlots,
+          selectedSlots: [],
+          selectAllChecked: false,
+          loading: false
+        })
+        hadCache = true
+      }
+    }
+    this._silentLoad = hadCache
+    // 已初始化的页面实例：主动刷新；新实例：checkPermission → loadZones 会处理
+    if (this.data.zonesLoaded) {
+      this.loadZones(hadCache)
     }
   },
 
@@ -95,13 +114,15 @@ Page({
       })
       return
     }
-    this.loadZones()
+    // onShow 已展示缓存时静默加载，避免 loading:true 覆盖缓存渲染
+    this.loadZones(this._silentLoad)
   },
 
   // 加载分区列表
-  loadZones: async function () {
+  // silent=true 时跳过 loading: true，用于缓存命中后的后台刷新
+  loadZones: async function (silent) {
     try {
-      this.setData({ loading: true })
+      if (!silent) this.setData({ loading: true })
       const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
       const role = app.globalData.role || 'admin'
 
@@ -125,10 +146,9 @@ Page({
         this.setData({
           zones: zones,
           selectedZone: selectedZone,
-          loading: false,
           zonesLoaded: true
         })
-        this.loadAlliances(selectedZone._id)
+        this.loadAlliances(selectedZone._id, silent)
       } else {
         this.setData({
           zones: [],
@@ -148,7 +168,7 @@ Page({
   },
 
   // 加载联盟列表
-  loadAlliances: async function (zoneId) {
+  loadAlliances: async function (zoneId, silent) {
     try {
       const alliances = await db.getAlliancesByZone(zoneId)
       this.setData({
@@ -158,25 +178,28 @@ Page({
 
       if (alliances && alliances.length > 0) {
         this.setData({ selectedAlliance: alliances[0] })
-        this.loadTimeSlots()
+        this.loadTimeSlots(silent)
       } else {
         this.setData({
           selectedAlliance: null,
-          timeSlots: []
+          timeSlots: [],
+          loading: false
         })
       }
     } catch (err) {
       console.error('加载联盟失败:', err)
       util.showError('加载联盟失败')
+      this.setData({ loading: false })
     }
   },
 
   // 加载时间段列表
-  loadTimeSlots: async function () {
+  // silent=true 时跳过 loading: true，用于缓存命中后的后台刷新
+  loadTimeSlots: async function (silent) {
     try {
       if (!this.data.selectedAlliance) return
 
-      this.setData({ loading: true })
+      if (!silent) this.setData({ loading: true })
       const allianceId = this.data.selectedAlliance._id
       const timeSlots = await db.getTimeSlotsByAlliance(allianceId)
 
@@ -196,25 +219,16 @@ Page({
       let countBySlot = {}
 
       if (timeSlotIds.length > 0) {
-        // 分页获取所有报名记录（一次查询，替代 N+1 循环查询）
-        let allRegs = []
-        let offset = 0
-        const batchSize = 20
-        while (true) {
-          const res = await wxdb.collection('registrations').where({
-            timeSlotId: wxdb.command.in(timeSlotIds),
+        // 并行 count() 查询，只取总数不拉文档，避免分页串行循环
+        const countResults = await Promise.all(timeSlotIds.map(function (tsId) {
+          return wxdb.collection('registrations').where({
+            timeSlotId: tsId,
             status: 'active'
-          }).skip(offset).limit(batchSize).get()
-          allRegs = allRegs.concat(res.data)
-          if (res.data.length < batchSize) break
-          offset += batchSize
-          if (offset > 500) break
-        }
-
-        // 按 timeSlotId 分组计数
-        for (const reg of allRegs) {
-          countBySlot[reg.timeSlotId] = (countBySlot[reg.timeSlotId] || 0) + 1
-        }
+          }).count()
+        }))
+        timeSlotIds.forEach(function (tsId, i) {
+          countBySlot[tsId] = countResults[i].total
+        })
       }
 
       const processedSlots = timeSlots.map(slot => ({
@@ -232,6 +246,10 @@ Page({
         selectAllChecked: false,
         loading: false
       })
+      const tsZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (tsZoneId) {
+        cache.set('cfg_fortress_zone_' + tsZoneId, { timeSlots: this.data.timeSlots }, 5 * 60 * 1000)
+      }
     } catch (err) {
       console.error('加载时间段失败:', err)
       util.showError('加载时间段失败')
@@ -321,6 +339,11 @@ Page({
       util.hideLoading()
       util.showSuccess('添加成功')
 
+      const addZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (addZoneId) {
+        cache.invalidate('cfg_fortress_zone_' + addZoneId)
+        cache.invalidate('fortress_slots_')
+      }
       this.setData({ selectedTag: '', selectedFortress: '' })
       this.loadTimeSlots()
     } catch (err) {
@@ -408,6 +431,11 @@ Page({
       this.setData({ timeSlots })
       util.hideLoading()
       util.showSuccess('删除成功')
+      const delZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (delZoneId) {
+        cache.invalidate('cfg_fortress_zone_' + delZoneId)
+        cache.invalidate('fortress_slots_')
+      }
     } catch (err) {
       util.hideLoading()
       util.showError('删除失败')

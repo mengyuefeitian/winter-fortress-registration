@@ -3,6 +3,7 @@ const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const auth = require('../../../utils/auth')
+const cache = require('../../../utils/cache')
 
 Page({
   data: {
@@ -45,8 +46,18 @@ Page({
   onShow: async function () {
     // 每次显示时重新加载分区和配置（角色已就绪）
     if (app.globalData.roleReady) {
+      // 快速路径：若分区已知且有缓存，先渲染
+      const pmZone = this.data.currentZone || app.globalData.currentZone
+      let hadCache = false
+      if (pmZone) {
+        const pmCached = cache.get('cfg_position_' + pmZone._id)
+        if (pmCached) {
+          this.setData({ configs: pmCached.configs, loading: false })
+          hadCache = true
+        }
+      }
       await this.loadZones()
-      this.loadConfigs()
+      this.loadConfigs(hadCache)  // hadCache=true 时静默刷新，不显示 loading
     }
   },
 
@@ -261,6 +272,12 @@ Page({
       util.hideLoading()
       util.showSuccess('创建成功')
 
+      const pmCreateZoneId = this.data.currentZone ? this.data.currentZone._id : null
+      if (pmCreateZoneId) {
+        cache.invalidate('cfg_position_' + pmCreateZoneId)
+        cache.invalidate('position_' + pmCreateZoneId)
+      }
+
       // 重置表单（保留分区选择）
       this.setData({
         selectedDate: this.data.minDate,
@@ -290,9 +307,10 @@ Page({
   },
 
   // 加载配置列表
-  loadConfigs: async function () {
+  // silent=true 时跳过 loading: true，用于缓存命中后的后台刷新
+  loadConfigs: async function (silent) {
     try {
-      this.setData({ loading: true })
+      if (!silent) this.setData({ loading: true })
 
       const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
 
@@ -304,20 +322,25 @@ Page({
         configs = []
       }
 
-      // 获取每个配置的报名人数
-      const processedConfigs = []
-      for (const config of configs) {
-        const registrations = await db.getPositionRegistrationsByConfig(config._id)
-        processedConfigs.push({
-          ...config,
-          registrationCount: registrations.length
-        })
-      }
+      // 并行 count() 查询报名人数，只取总数不拉文档
+      const wxdb2 = wx.cloud.database()
+      const processedConfigs = await Promise.all(configs.map(async function (config) {
+        const res = await wxdb2.collection('positionRegistrations').where({
+          configId: config._id,
+          status: 'active'
+        }).count()
+        return Object.assign({}, config, { registrationCount: res.total })
+      }))
 
       this.setData({
         configs: processedConfigs,
         loading: false
       })
+
+      const pmCacheZoneId = this.data.currentZone ? this.data.currentZone._id : null
+      if (pmCacheZoneId) {
+        cache.set('cfg_position_' + pmCacheZoneId, { configs: processedConfigs }, 5 * 60 * 1000)
+      }
 
     } catch (err) {
       console.error('加载配置失败:', err)
@@ -375,6 +398,12 @@ Page({
 
       util.hideLoading()
       util.showSuccess('删除成功')
+
+      const pmDeleteZoneId = this.data.currentZone ? this.data.currentZone._id : null
+      if (pmDeleteZoneId) {
+        cache.invalidate('cfg_position_' + pmDeleteZoneId)
+        cache.invalidate('position_' + pmDeleteZoneId)
+      }
 
       // 重新加载配置列表
       this.loadConfigs()
