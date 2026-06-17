@@ -243,38 +243,34 @@ Page({
       let registrationsBySlot = {}
 
       if (timeSlotIds.length > 0) {
-        // 分页获取所有报名记录
-        let allRegs = []
-        let offset = 0
-        const batchSize = 20
-        while (true) {
-          const res = await wxdb.collection('registrations').where({
+        // 并行 count() 查询 + 单次查当前用户已报的时间段，避免拉取所有文档
+        const [countResults, myRegRes] = await Promise.all([
+          Promise.all(timeSlotIds.map(function (tsId) {
+            return wxdb.collection('registrations').where({
+              timeSlotId: tsId,
+              status: 'active'
+            }).count()
+          })),
+          currentUserId ? wxdb.collection('registrations').where({
             timeSlotId: wxdb.command.in(timeSlotIds),
+            userId: currentUserId,
             status: 'active'
-          }).skip(offset).limit(batchSize).get()
-          allRegs = allRegs.concat(res.data)
-          if (res.data.length < batchSize) break
-          offset += batchSize
-          if (offset > 500) break
-        }
+          }).get() : Promise.resolve({ data: [] })
+        ])
 
-        // 按 timeSlotId 分组
-        for (const reg of allRegs) {
-          if (!registrationsBySlot[reg.timeSlotId]) {
-            registrationsBySlot[reg.timeSlotId] = []
-          }
-          registrationsBySlot[reg.timeSlotId].push(reg)
-        }
+        const mySlotIds = new Set(myRegRes.data.map(function (r) { return r.timeSlotId }))
+        timeSlotIds.forEach(function (tsId, i) {
+          registrationsBySlot[tsId] = { count: countResults[i].total, isMySlot: mySlotIds.has(tsId) }
+        })
       }
 
       const processedSlots = filteredSlots.map(slot => {
-        const regs = registrationsBySlot[slot._id] || []
-        const count = regs.length
+        const info = registrationsBySlot[slot._id] || { count: 0, isMySlot: false }
         return {
           ...slot,
-          count: count,
-          isFull: util.isTimeSlotFull(count, slot.maxCount),
-          isMySlot: currentUserId ? regs.some(r => r.userId === currentUserId) : false
+          count: info.count,
+          isFull: util.isTimeSlotFull(info.count, slot.maxCount),
+          isMySlot: info.isMySlot
         }
       })
 

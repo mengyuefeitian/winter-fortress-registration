@@ -339,7 +339,7 @@ Page({
 
       const pmCacheZoneId = this.data.currentZone ? this.data.currentZone._id : null
       if (pmCacheZoneId) {
-        cache.set('cfg_position_' + pmCacheZoneId, { configs: processedConfigs }, 30 * 1000)
+        cache.set('cfg_position_' + pmCacheZoneId, { configs: processedConfigs }, 5 * 60 * 1000)
       }
 
     } catch (err) {

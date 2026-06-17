@@ -49,25 +49,26 @@ Page({
   },
 
   onShow: function () {
-    if (app.globalData.roleReady && this.data.zonesLoaded) {
-      // 快速路径：若已选联盟有缓存，先渲染
-      const tsAlliance = this.data.selectedAlliance
-      if (tsAlliance) {
-        const tsCached = cache.get('cfg_fortress_' + tsAlliance._id)
-        if (tsCached) {
-          this.setData({
-            timeSlots: tsCached.timeSlots,
-            selectedSlots: [],
-            selectAllChecked: false,
-            loading: false
-          })
-        }
-      }
+    if (!app.globalData.roleReady) return
+    // 快速路径：用区级缓存（新实例用 app.globalData.currentZone 也能命中）
+    const tsZone = this.data.selectedZone || app.globalData.currentZone
+    let hadCache = false
+    if (tsZone) {
+      const tsCached = cache.get('cfg_fortress_zone_' + tsZone._id)
       if (tsCached) {
-        this.loadZones(true)
-        return
+        this.setData({
+          timeSlots: tsCached.timeSlots,
+          selectedSlots: [],
+          selectAllChecked: false,
+          loading: false
+        })
+        hadCache = true
       }
-      this.loadZones()
+    }
+    this._silentLoad = hadCache
+    // 已初始化的页面实例：主动刷新；新实例：checkPermission → loadZones 会处理
+    if (this.data.zonesLoaded) {
+      this.loadZones(hadCache)
     }
   },
 
@@ -113,7 +114,8 @@ Page({
       })
       return
     }
-    this.loadZones()
+    // onShow 已展示缓存时静默加载，避免 loading:true 覆盖缓存渲染
+    this.loadZones(this._silentLoad)
   },
 
   // 加载分区列表
@@ -244,9 +246,9 @@ Page({
         selectAllChecked: false,
         loading: false
       })
-      const tsAllianceId = this.data.selectedAlliance ? this.data.selectedAlliance._id : null
-      if (tsAllianceId) {
-        cache.set('cfg_fortress_' + tsAllianceId, { timeSlots: this.data.timeSlots }, 30 * 1000)
+      const tsZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (tsZoneId) {
+        cache.set('cfg_fortress_zone_' + tsZoneId, { timeSlots: this.data.timeSlots }, 5 * 60 * 1000)
       }
     } catch (err) {
       console.error('加载时间段失败:', err)
@@ -337,10 +339,10 @@ Page({
       util.hideLoading()
       util.showSuccess('添加成功')
 
-      const addAllianceId = this.data.selectedAlliance ? this.data.selectedAlliance._id : null
-      if (addAllianceId) {
-        cache.invalidate('cfg_fortress_' + addAllianceId)
-        cache.invalidate('fortress_slots_' + addAllianceId)
+      const addZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (addZoneId) {
+        cache.invalidate('cfg_fortress_zone_' + addZoneId)
+        cache.invalidate('fortress_slots_')
       }
       this.setData({ selectedTag: '', selectedFortress: '' })
       this.loadTimeSlots()
@@ -429,10 +431,10 @@ Page({
       this.setData({ timeSlots })
       util.hideLoading()
       util.showSuccess('删除成功')
-      const delAllianceId = this.data.selectedAlliance ? this.data.selectedAlliance._id : null
-      if (delAllianceId) {
-        cache.invalidate('cfg_fortress_' + delAllianceId)
-        cache.invalidate('fortress_slots_' + delAllianceId)
+      const delZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+      if (delZoneId) {
+        cache.invalidate('cfg_fortress_zone_' + delZoneId)
+        cache.invalidate('fortress_slots_')
       }
     } catch (err) {
       util.hideLoading()

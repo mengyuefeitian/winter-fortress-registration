@@ -42,26 +42,25 @@ Page({
   },
 
   onShow: function () {
-    // 只在从其他页面返回时刷新（例如添加配置后返回）
-    // 首次加载由 onLoad → waitForRoleReady → checkPermission 处理
-    if (app.globalData.roleReady && this.data.zonesLoaded) {
-      // 快速路径：若已选分区有缓存，先渲染
-      const arZone = this.data.selectedZone
-      if (arZone) {
-        const arCached = cache.get('cfg_arsenal_' + arZone._id)
-        if (arCached) {
-          this.setData({
-            configs: arCached.configs || [],
-            alliances: arCached.alliances || [],
-            loading: false
-          })
-        }
-      }
+    if (!app.globalData.roleReady) return
+    // 快速路径：用 app.globalData.currentZone 查缓存（新实例也有效）
+    const arZone = this.data.selectedZone || app.globalData.currentZone
+    let hadCache = false
+    if (arZone) {
+      const arCached = cache.get('cfg_arsenal_' + arZone._id)
       if (arCached) {
-        this.loadZones(true)
-        return
+        this.setData({
+          configs: arCached.configs || [],
+          alliances: arCached.alliances || [],
+          loading: false
+        })
+        hadCache = true
       }
-      this.loadZones()
+    }
+    this._silentLoad = hadCache
+    // 已初始化的页面实例：主动刷新；新实例：checkPermission → loadZones 会处理
+    if (this.data.zonesLoaded) {
+      this.loadZones(hadCache)
     }
   },
 
@@ -107,7 +106,8 @@ Page({
       })
       return
     }
-    this.loadZones()
+    // onShow 已展示缓存时静默加载，避免 loading:true 覆盖缓存渲染
+    this.loadZones(this._silentLoad)
   },
 
   // 加载分区列表（区管只能看到自己管理的分区）
@@ -426,7 +426,7 @@ Page({
           configs: allConfigs,
           alliances: this.data.alliances || [],
           selectedZone: this.data.selectedZone
-        }, 30 * 1000)
+        }, 5 * 60 * 1000)
       }
 
     } catch (err) {

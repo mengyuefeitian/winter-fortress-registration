@@ -294,7 +294,7 @@ Page({
 
       const audCacheAllianceId = this.data.allianceId
       if (audCacheAllianceId) {
-        cache.set('cfg_auditor_' + audCacheAllianceId, { timeSlots: processedSlots }, 30 * 1000)
+        cache.set('cfg_auditor_' + audCacheAllianceId, { timeSlots: processedSlots }, 5 * 60 * 1000)
       }
 
     } catch (err) {

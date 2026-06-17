@@ -654,19 +654,14 @@ async function createTimeSlot(zoneId, allianceId, timeValue, slotIndex, date, ta
   return { _id: res.result._id }
 }
 
-// 获取联盟的时间段列表
+// 获取联盟的时间段列表（直接 DB 查询，避免云函数冷启动延迟）
 async function getTimeSlotsByAlliance(allianceId) {
-  const res = await wx.cloud.callFunction({
-    name: 'manageTimeSlot',
-    data: {
-      action: 'getByAlliance',
-      data: { allianceId }
-    }
-  })
-  if (!res.result || res.result.err) {
-    throw new Error((res.result && res.result.err) || '获取时间段失败')
-  }
-  return res.result.data
+  const db = getDb()
+  const res = await db.collection('timeSlots').where({
+    allianceId: allianceId,
+    status: 'active'
+  }).orderBy('timeValue', 'asc').orderBy('slotIndex', 'asc').limit(100).get()
+  return res.data
 }
 
 // 获取时间段某个基础时间的最大序号
