@@ -210,7 +210,7 @@ Page({
     }
   },
 
-  // 加载峡谷配置列表
+  // 加载峡谷配置列表（全部直接 DB 查询，无云函数调用）
   loadConfigs: async function () {
     try {
       if (!this.data.selectedAlliance) return
@@ -219,69 +219,83 @@ Page({
       const configs = await db.getCanyonConfigs({ allianceId: allianceId })
 
       const today = this.getTodayString()
-      const filteredConfigs = configs.filter(cfg => {
-        if (!cfg.date) return true
-        return cfg.date >= today
+      const filteredConfigs = configs.filter(function (cfg) {
+        return !cfg.date || cfg.date >= today
       })
 
       if (filteredConfigs.length === 0) {
         this.setData({ configs: [] })
+        const emptyZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
+        if (emptyZoneId) {
+          cache.set('canyon_' + emptyZoneId, {
+            selectedZone: this.data.selectedZone,
+            alliances: this.data.alliances || [],
+            configs: []
+          }, 5 * 60 * 1000)
+        }
         return
       }
 
       const currentUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+      const configIds = filteredConfigs.map(function (c) { return c._id })
+      const wxdb = wx.cloud.database()
 
-      // 并行查询所有配置的统计数据（云函数端权限，count查询快速返回）
-      const processedConfigs = await Promise.all(filteredConfigs.map(async (cfg) => {
-        const stats = await this.getConfigStats(cfg._id)
-        const combatCount = stats.combatCount || stats.combat || 0
-        const substituteCount = stats.substituteCount || stats.substitute || 0
+      // 并行：每个 config 的参战/替补人数 + 当前用户跨 config 的报名记录
+      const [combatCounts, substituteCounts, myRegRes] = await Promise.all([
+        Promise.all(configIds.map(function (id) {
+          return wxdb.collection('canyonRegistrations').where({
+            configId: id, position: 'combat', status: 'active'
+          }).count()
+        })),
+        Promise.all(configIds.map(function (id) {
+          return wxdb.collection('canyonRegistrations').where({
+            configId: id, position: 'substitute', status: 'active'
+          }).count()
+        })),
+        currentUserId ? wxdb.collection('canyonRegistrations').where({
+          configId: wxdb.command.in(configIds),
+          userId: currentUserId,
+          status: 'active'
+        }).get() : Promise.resolve({ data: [] })
+      ])
+
+      const myPositionsByConfig = {}
+      myRegRes.data.forEach(function (r) {
+        if (!myPositionsByConfig[r.configId]) myPositionsByConfig[r.configId] = []
+        myPositionsByConfig[r.configId].push(r.position)
+      })
+
+      const processedConfigs = filteredConfigs.map(function (cfg, i) {
+        const combatCount = combatCounts[i].total
+        const substituteCount = substituteCounts[i].total
         const combatFull = combatCount >= POSITION_CAPACITY.combat
         const substituteFull = substituteCount >= POSITION_CAPACITY.substitute
-        const totalCount = combatCount + substituteCount
-        const totalCapacity = POSITION_CAPACITY.combat + POSITION_CAPACITY.substitute
-        const myRegistrations = stats.myRegistrations || stats.registrations || []
-
-        return {
-          ...cfg,
-          combatCount,
-          substituteCount,
-          totalCount,
-          totalCapacity,
-          combatFull,
-          substituteFull,
+        return Object.assign({}, cfg, {
+          combatCount: combatCount,
+          substituteCount: substituteCount,
+          totalCount: combatCount + substituteCount,
+          totalCapacity: POSITION_CAPACITY.combat + POSITION_CAPACITY.substitute,
+          combatFull: combatFull,
+          substituteFull: substituteFull,
           isFull: combatFull && substituteFull,
-          isMyConfig: currentUserId ? myRegistrations.some(r => r.userId === currentUserId) : false,
-          myPositions: currentUserId ? myRegistrations.filter(r => r.userId === currentUserId).map(r => r.position) : []
-        }
-      }))
-
-      this.setData({
-        configs: processedConfigs
+          isMyConfig: (myPositionsByConfig[cfg._id] || []).length > 0,
+          myPositions: myPositionsByConfig[cfg._id] || []
+        })
       })
+
+      this.setData({ configs: processedConfigs })
 
       const canyonZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
       if (canyonZoneId) {
         cache.set('canyon_' + canyonZoneId, {
           selectedZone: this.data.selectedZone,
           alliances: this.data.alliances || [],
-          configs: this.data.configs || []
-        })
+          configs: processedConfigs
+        }, 5 * 60 * 1000)
       }
 
     } catch (err) {
       console.error('加载配置失败:', err)
-    }
-  },
-
-  getConfigStats: async function (configId) {
-    try {
-      const currentUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
-      const stats = await db.getCanyonStats(configId, { userId: currentUserId })
-      return stats || { combatCount: 0, combat: 0, substituteCount: 0, substitute: 0, myRegistrations: [] }
-    } catch (err) {
-      console.error('获取配置统计失败:', err)
-      return { combatCount: 0, combat: 0, substituteCount: 0, substitute: 0, myRegistrations: [] }
     }
   },
 
