@@ -217,25 +217,16 @@ Page({
       let countBySlot = {}
 
       if (timeSlotIds.length > 0) {
-        // 分页获取所有报名记录（一次查询，替代 N+1 循环查询）
-        let allRegs = []
-        let offset = 0
-        const batchSize = 20
-        while (true) {
-          const res = await wxdb.collection('registrations').where({
-            timeSlotId: wxdb.command.in(timeSlotIds),
+        // 并行 count() 查询，只取总数不拉文档，避免分页串行循环
+        const countResults = await Promise.all(timeSlotIds.map(function (tsId) {
+          return wxdb.collection('registrations').where({
+            timeSlotId: tsId,
             status: 'active'
-          }).skip(offset).limit(batchSize).get()
-          allRegs = allRegs.concat(res.data)
-          if (res.data.length < batchSize) break
-          offset += batchSize
-          if (offset > 500) break
-        }
-
-        // 按 timeSlotId 分组计数
-        for (const reg of allRegs) {
-          countBySlot[reg.timeSlotId] = (countBySlot[reg.timeSlotId] || 0) + 1
-        }
+          }).count()
+        }))
+        timeSlotIds.forEach(function (tsId, i) {
+          countBySlot[tsId] = countResults[i].total
+        })
       }
 
       const processedSlots = timeSlots.map(slot => ({

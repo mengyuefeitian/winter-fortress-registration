@@ -322,10 +322,14 @@ Page({
         configs = []
       }
 
-      // 并行获取每个配置的报名人数（消除串行 N+1 查询）
+      // 并行 count() 查询报名人数，只取总数不拉文档
+      const wxdb2 = wx.cloud.database()
       const processedConfigs = await Promise.all(configs.map(async function (config) {
-        const registrations = await db.getPositionRegistrationsByConfig(config._id)
-        return Object.assign({}, config, { registrationCount: registrations.length })
+        const res = await wxdb2.collection('positionRegistrations').where({
+          configId: config._id,
+          status: 'active'
+        }).count()
+        return Object.assign({}, config, { registrationCount: res.total })
       }))
 
       this.setData({
