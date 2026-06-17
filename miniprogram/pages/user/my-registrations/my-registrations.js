@@ -34,7 +34,16 @@ Page({
       // 快速路径：若有缓存先渲染
       const myUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
       if (myUserId) {
-        const myCached = cache.get('myregs_' + myUserId)
+        // 优先内存缓存，没有则读持久化缓存（跨 app 重启仍有效，TTL 5 分钟）
+        let myCached = cache.get('myregs_' + myUserId)
+        if (!myCached) {
+          try {
+            const persisted = wx.getStorageSync('myregs_persist_' + myUserId)
+            if (persisted && persisted.timestamp && (Date.now() - persisted.timestamp < 5 * 60 * 1000)) {
+              myCached = persisted
+            }
+          } catch (e) {}
+        }
         if (myCached) {
           this.setData({
             registrations: myCached.registrations,
@@ -101,6 +110,11 @@ Page({
 
   // 加载我的报名记录
   loadMyRegistrations: async function () {
+    // 防止 waitForRoleReady 与 onShow 并发触发时重复加载（2 秒内去重）
+    const now = Date.now()
+    if (this._lastLoadTime && (now - this._lastLoadTime < 2000)) return
+    this._lastLoadTime = now
+
     try {
       const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
 
@@ -234,13 +248,17 @@ Page({
       })
 
       if (userId) {
-        cache.set('myregs_' + userId, {
+        const cachePayload = {
           registrations: filteredRegistrations,
           weeklyRegistrations: weeklyRegistrations,
           positionRegistrations: processedPositionRegistrations,
           arsenalRegistrations: processedArsenal,
-          canyonRegistrations: processedCanyon
-        })
+          canyonRegistrations: processedCanyon,
+          timestamp: Date.now()
+        }
+        cache.set('myregs_' + userId, cachePayload)
+        // 持久化到 storage，跨 app 重启仍可快速显示上次数据
+        try { wx.setStorageSync('myregs_persist_' + userId, cachePayload) } catch (e) {}
       }
 
     } catch (err) {

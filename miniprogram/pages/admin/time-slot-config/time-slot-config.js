@@ -144,7 +144,6 @@ Page({
         this.setData({
           zones: zones,
           selectedZone: selectedZone,
-          loading: false,
           zonesLoaded: true
         })
         this.loadAlliances(selectedZone._id, silent)
@@ -181,12 +180,14 @@ Page({
       } else {
         this.setData({
           selectedAlliance: null,
-          timeSlots: []
+          timeSlots: [],
+          loading: false
         })
       }
     } catch (err) {
       console.error('加载联盟失败:', err)
       util.showError('加载联盟失败')
+      this.setData({ loading: false })
     }
   },
 

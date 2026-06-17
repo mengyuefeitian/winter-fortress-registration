@@ -44,21 +44,21 @@ Page({
   },
 
   onShow: async function () {
-    // 每次显示时重新加载分区和配置（角色已就绪）
-    if (app.globalData.roleReady) {
-      // 快速路径：若分区已知且有缓存，先渲染
-      const pmZone = this.data.currentZone || app.globalData.currentZone
-      let hadCache = false
-      if (pmZone) {
-        const pmCached = cache.get('cfg_position_' + pmZone._id)
-        if (pmCached) {
-          this.setData({ configs: pmCached.configs, loading: false })
-          hadCache = true
-        }
+    // 首次进入由 checkPermission 处理，_loading 标志防止并发重复加载
+    if (!app.globalData.roleReady || this._loading) return
+
+    // 快速路径：若分区已知且有缓存，先渲染
+    const pmZone = this.data.currentZone || app.globalData.currentZone
+    let hadCache = false
+    if (pmZone) {
+      const pmCached = cache.get('cfg_position_' + pmZone._id)
+      if (pmCached) {
+        this.setData({ configs: pmCached.configs, loading: false })
+        hadCache = true
       }
-      await this.loadZones()
-      this.loadConfigs(hadCache)  // hadCache=true 时静默刷新，不显示 loading
     }
+    await this.loadZones()
+    this.loadConfigs(hadCache)  // hadCache=true 时静默刷新，不显示 loading
   },
 
   // 等待角色就绪
@@ -82,6 +82,7 @@ Page({
       })
       return
     }
+    this._loading = true  // 同步设置，防止 onShow 并发触发
     this.initRole()
     await this.loadZones()
     this.loadConfigs()
@@ -336,6 +337,7 @@ Page({
         configs: processedConfigs,
         loading: false
       })
+      this._loading = false
 
       const pmCacheZoneId = this.data.currentZone ? this.data.currentZone._id : null
       if (pmCacheZoneId) {
@@ -344,6 +346,7 @@ Page({
 
     } catch (err) {
       console.error('加载配置失败:', err)
+      this._loading = false
       this.setData({ loading: false })
       util.showError('加载配置失败')
     }
