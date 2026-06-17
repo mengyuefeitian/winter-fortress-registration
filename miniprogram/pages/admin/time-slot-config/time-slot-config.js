@@ -63,6 +63,10 @@ Page({
           })
         }
       }
+      if (tsCached) {
+        this.loadZones(true)
+        return
+      }
       this.loadZones()
     }
   },
@@ -113,9 +117,10 @@ Page({
   },
 
   // 加载分区列表
-  loadZones: async function () {
+  // silent=true 时跳过 loading: true，用于缓存命中后的后台刷新
+  loadZones: async function (silent) {
     try {
-      this.setData({ loading: true })
+      if (!silent) this.setData({ loading: true })
       const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
       const role = app.globalData.role || 'admin'
 
@@ -142,7 +147,7 @@ Page({
           loading: false,
           zonesLoaded: true
         })
-        this.loadAlliances(selectedZone._id)
+        this.loadAlliances(selectedZone._id, silent)
       } else {
         this.setData({
           zones: [],
@@ -162,7 +167,7 @@ Page({
   },
 
   // 加载联盟列表
-  loadAlliances: async function (zoneId) {
+  loadAlliances: async function (zoneId, silent) {
     try {
       const alliances = await db.getAlliancesByZone(zoneId)
       this.setData({
@@ -172,7 +177,7 @@ Page({
 
       if (alliances && alliances.length > 0) {
         this.setData({ selectedAlliance: alliances[0] })
-        this.loadTimeSlots()
+        this.loadTimeSlots(silent)
       } else {
         this.setData({
           selectedAlliance: null,
@@ -186,11 +191,12 @@ Page({
   },
 
   // 加载时间段列表
-  loadTimeSlots: async function () {
+  // silent=true 时跳过 loading: true，用于缓存命中后的后台刷新
+  loadTimeSlots: async function (silent) {
     try {
       if (!this.data.selectedAlliance) return
 
-      this.setData({ loading: true })
+      if (!silent) this.setData({ loading: true })
       const allianceId = this.data.selectedAlliance._id
       const timeSlots = await db.getTimeSlotsByAlliance(allianceId)
 

@@ -57,6 +57,10 @@ Page({
           })
         }
       }
+      if (arCached) {
+        this.loadZones(true)
+        return
+      }
       this.loadZones()
     }
   },
@@ -107,9 +111,10 @@ Page({
   },
 
   // 加载分区列表（区管只能看到自己管理的分区）
-  loadZones: async function () {
+  // silent=true 时跳过 loading: true，用于缓存命中后的后台刷新
+  loadZones: async function (silent) {
     try {
-      this.setData({ loading: true })
+      if (!silent) this.setData({ loading: true })
 
       // 确保 userInfo 已加载
       if (!app.globalData.userInfo || !app.globalData.userInfo._id) {
@@ -150,7 +155,7 @@ Page({
           loading: false,
           zonesLoaded: true
         })
-        this.loadAlliances(selectedZone._id)
+        this.loadAlliances(selectedZone._id, silent)
       } else {
         console.log('No zones found for userId:', userId, 'role:', role)
         // 诊断：直接查询 zones 中 adminIds 包含当前 userId 的记录
@@ -184,7 +189,7 @@ Page({
   },
 
   // 加载联盟列表
-  loadAlliances: async function (zoneId) {
+  loadAlliances: async function (zoneId, silent) {
     try {
       const alliances = await db.getAlliancesByZone(zoneId)
       this.setData({
@@ -194,7 +199,7 @@ Page({
 
       if (alliances && alliances.length > 0) {
         this.setData({ selectedAlliance: alliances[0] })
-        this.loadConfigs()
+        this.loadConfigs(silent)
       } else {
         this.setData({
           selectedAlliance: null,
@@ -382,14 +387,15 @@ Page({
   },
 
   // 加载配置列表
-  loadConfigs: async function () {
+  // silent=true 时跳过 loading: true，用于缓存命中后的后台刷新
+  loadConfigs: async function (silent) {
     try {
       if (!this.data.selectedAlliance) {
         this.setData({ configs: [], loading: false })
         return
       }
 
-      this.setData({ loading: true })
+      if (!silent) this.setData({ loading: true })
 
       const [arsenalConfigs, canyonConfigs] = await Promise.all([
         db.getArsenalConfigs({ allianceId: this.data.selectedAlliance._id }),

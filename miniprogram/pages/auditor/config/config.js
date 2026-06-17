@@ -44,6 +44,8 @@ Page({
       const audCached = cache.get('cfg_auditor_' + audAllianceId)
       if (audCached) {
         this.setData({ timeSlots: audCached.timeSlots, loading: false })
+        this.loadTimeSlots(true)
+        return
       }
       this.loadTimeSlots()
     }
@@ -247,9 +249,10 @@ Page({
   },
 
   // 加载时间段列表
-  loadTimeSlots: async function () {
+  // silent=true 时跳过 loading: true，用于缓存命中后的后台刷新
+  loadTimeSlots: async function (silent) {
     try {
-      this.setData({ loading: true })
+      if (!silent) this.setData({ loading: true })
 
       const timeSlots = await db.getTimeSlotsByAlliance(this.data.allianceId)
 

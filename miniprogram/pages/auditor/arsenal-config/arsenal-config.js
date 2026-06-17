@@ -44,6 +44,8 @@ Page({
       const audArCached = cache.get('cfg_auditor_arsenal_' + audArAllianceId)
       if (audArCached) {
         this.setData({ configs: audArCached.configs, loading: false })
+        this.loadConfigs(true)
+        return
       }
       this.loadConfigs()
     }
@@ -329,9 +331,10 @@ Page({
   },
 
   // 加载配置列表
-  loadConfigs: async function () {
+  // silent=true 时跳过 loading: true，用于缓存命中后的后台刷新
+  loadConfigs: async function (silent) {
     try {
-      this.setData({ loading: true })
+      if (!silent) this.setData({ loading: true })
 
       const [arsenalConfigs, canyonConfigs] = await Promise.all([
         db.getArsenalConfigs({ allianceId: this.data.allianceId }),

@@ -48,14 +48,16 @@ Page({
     if (app.globalData.roleReady) {
       // 快速路径：若分区已知且有缓存，先渲染
       const pmZone = this.data.currentZone || app.globalData.currentZone
+      let hadCache = false
       if (pmZone) {
         const pmCached = cache.get('cfg_position_' + pmZone._id)
         if (pmCached) {
           this.setData({ configs: pmCached.configs, loading: false })
+          hadCache = true
         }
       }
       await this.loadZones()
-      this.loadConfigs()
+      this.loadConfigs(hadCache)  // hadCache=true 时静默刷新，不显示 loading
     }
   },
 
@@ -305,9 +307,10 @@ Page({
   },
 
   // 加载配置列表
-  loadConfigs: async function () {
+  // silent=true 时跳过 loading: true，用于缓存命中后的后台刷新
+  loadConfigs: async function (silent) {
     try {
-      this.setData({ loading: true })
+      if (!silent) this.setData({ loading: true })
 
       const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
 
