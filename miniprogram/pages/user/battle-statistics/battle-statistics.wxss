@@ -24,16 +24,20 @@
   display: block;
 }
 
-.table-wrapper {
-  background: #fff;
-  border-radius: 12rpx;
-  overflow: hidden;
-  margin-top: 20rpx;
+.section-header {
+  background: #f5f5f5;
+  padding: 16rpx 20rpx;
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #333;
+  border-radius: 8rpx 8rpx 0 0;
 }
 
-.table-body {
-  width: 100%;
-  max-height: 800rpx;
+.table-wrapper {
+  background: #fff;
+  border-radius: 0 0 12rpx 12rpx;
+  overflow: hidden;
+  margin-bottom: 4rpx;
 }
 
 .table-header {
@@ -41,51 +45,72 @@
   background: #4A90D9;
   color: #fff;
   font-size: 24rpx;
-  min-width: 1100rpx;
 }
 
 .table-row {
   display: flex;
   border-bottom: 1rpx solid #f0f0f0;
   font-size: 24rpx;
-  min-width: 1100rpx;
 }
 
 .table-row:nth-child(even) {
   background: #fafbfc;
 }
 
-.row-head {
-  background: #f0f0f0;
-  color: #bbb;
-}
-
-.row-head .col {
-  color: #bbb;
-}
-
 .col {
-  padding: 16rpx 8rpx;
+  padding: 12rpx 8rpx;
   text-align: center;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 60rpx;
+  min-height: 80rpx;
 }
 
-.col-checkbox { width: 80rpx; }
-.col-name { width: 160rpx; }
-.col-alliance { width: 140rpx; }
-.col-furnace { width: 80rpx; }
-.col-barracks { width: 80rpx; }
-.col-troop { width: 100rpx; }
-.col-diamonds { width: 100rpx; }
-.col-voice { width: 100rpx; }
-.col-position { width: 100rpx; }
-.col-assignment {
-  width: 140rpx;
+.col-checkbox { width: 60rpx; }
+.col-furnace  { width: 65rpx; }
+.col-diamonds { width: 85rpx; }
+.col-voice    { width: 60rpx; }
+.col-assignment { width: 120rpx; }
+
+/* 宽度设计目标：含 checkbox 的车身表总宽 ≤ 710rpx（750 - 2×20 padding）
+   60+165+65+115+85+60+120 = 670rpx ✓ */
+.col-name-alliance {
+  width: 165rpx;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  text-align: left;
 }
 
+.col-barracks-troop {
+  width: 115rpx;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  text-align: left;
+}
+
+.cell-nickname {
+  font-size: 24rpx;
+  color: #333;
+}
+
+.cell-alliance {
+  font-size: 20rpx;
+  color: #6BB3F0;
+  margin-top: 4rpx;
+}
+
+.cell-barracks-level {
+  font-size: 22rpx;
+  color: #333;
+}
+
+.cell-troop-count {
+  font-size: 20rpx;
+  color: #4A90D9;
+  margin-top: 4rpx;
+}
 
 .assignment-cell {
   display: flex;
@@ -111,7 +136,7 @@
 .empty-row {
   display: flex;
   justify-content: center;
-  padding: 60rpx 0;
+  padding: 40rpx 0;
 }
 
 .empty-text {
@@ -123,7 +148,7 @@
   display: flex;
   gap: 16rpx;
   margin-top: 20rpx;
-  padding: 0 20rpx;
+  padding: 0 4rpx;
 }
 
 .btn-select-all {
