@@ -32,8 +32,8 @@
 }
 
 .table-body {
+  width: 100%;
   max-height: 800rpx;
-  min-width: 750rpx;
 }
 
 .table-header {
@@ -41,21 +41,27 @@
   background: #4A90D9;
   color: #fff;
   font-size: 24rpx;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  min-width: 750rpx;
+  min-width: 1100rpx;
 }
 
 .table-row {
   display: flex;
   border-bottom: 1rpx solid #f0f0f0;
   font-size: 24rpx;
-  min-width: 750rpx;
+  min-width: 1100rpx;
 }
 
 .table-row:nth-child(even) {
   background: #fafbfc;
+}
+
+.row-head {
+  background: #f0f0f0;
+  color: #bbb;
+}
+
+.row-head .col {
+  color: #bbb;
 }
 
 .col {
@@ -78,20 +84,8 @@
 .col-position { width: 100rpx; }
 .col-assignment {
   width: 140rpx;
-  position: sticky;
-  right: 0;
-  z-index: 5;
-  background: #fff;
 }
 
-.table-header .col-assignment {
-  background: #4A90D9;
-  z-index: 15;
-}
-
-.table-row:nth-child(even) .col-assignment {
-  background: #fafbfc;
-}
 
 .assignment-cell {
   display: flex;

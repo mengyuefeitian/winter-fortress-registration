@@ -20,10 +20,10 @@
         <view class="col col-assignment">分配</view>
       </view>
 
-      <view class="table-row" wx:for="{{registrations}}" wx:key="_id">
+      <view class="table-row {{item.position === '车头' ? 'row-head' : ''}}" wx:for="{{registrations}}" wx:key="_id">
         <view class="col col-checkbox" wx:if="{{canDeleteRegistration}}">
           <checkbox-group bindchange="onSlotCheckChange" data-index="{{index}}">
-            <checkbox value="{{item._id}}" checked="{{item.selected}}" />
+            <checkbox value="{{item._id}}" checked="{{item.selected}}" disabled="{{item.position === '车头'}}" />
           </checkbox-group>
         </view>
         <view class="col col-name">{{displayNames[index]}}</view>
