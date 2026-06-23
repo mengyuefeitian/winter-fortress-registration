@@ -122,3 +122,36 @@ input {
   font-size: 30rpx;
   border: 1rpx solid #4A90D9;
 }
+
+.triple-input-row {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12rpx;
+}
+
+.triple-cell {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.triple-label {
+  font-size: 22rpx;
+  color: #999;
+  white-space: nowrap;
+}
+
+.triple-cell input {
+  width: 80rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: #333;
+  border-bottom: 1rpx solid #ddd;
+}
+
+.unit-suffix {
+  font-size: 22rpx;
+  color: #999;
+  white-space: nowrap;
+}
