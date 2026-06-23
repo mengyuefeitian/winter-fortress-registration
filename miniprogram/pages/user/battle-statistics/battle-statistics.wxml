@@ -11,7 +11,7 @@
     <view class="table-header">
       <view class="col col-name-alliance">昵称/联盟</view>
       <view class="col col-furnace">熔炉</view>
-      <view class="col col-barracks-troop">兵营实(万)</view>
+      <view class="col col-barracks-troop">兵种实力(万)</view>
       <view class="col col-diamonds">钻石(万)</view>
       <view class="col col-voice">开麦</view>
     </view>
@@ -40,7 +40,7 @@
       <view class="col col-checkbox" wx:if="{{canDeleteRegistration}}">选择</view>
       <view class="col col-name-alliance">昵称/联盟</view>
       <view class="col col-furnace">熔炉</view>
-      <view class="col col-barracks-troop">兵营实(万)</view>
+      <view class="col col-barracks-troop">兵种实力(万)</view>
       <view class="col col-diamonds">钻石(万)</view>
       <view class="col col-voice">开麦</view>
       <view class="col col-assignment">分配</view>

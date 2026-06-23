@@ -225,14 +225,14 @@ Page({
       const headColDefs = [
         { key: '昵称/联盟',  ratio: 0.30 },
         { key: '熔炉',       ratio: 0.13 },
-        { key: '兵营实(万)', ratio: 0.22 },
+        { key: '兵种实力(万)', ratio: 0.22 },
         { key: '钻石(万)',   ratio: 0.18 },
         { key: '开麦',       ratio: 0.17 },
       ]
       const bodyColDefs = [
         { key: '昵称/联盟',  ratio: 0.26 },
         { key: '熔炉',       ratio: 0.11 },
-        { key: '兵营实(万)', ratio: 0.19 },
+        { key: '兵种实力(万)', ratio: 0.19 },
         { key: '钻石(万)',   ratio: 0.15 },
         { key: '开麦',       ratio: 0.11 },
         { key: '分配',       ratio: 0.18 },
@@ -291,7 +291,7 @@ Page({
             ctx.fillStyle = '#6BB3F0'
             ctx.font = '20px sans-serif'
             ctx.fillText(row.allianceName || '-', col.x + 8, line2Y)
-          } else if (col.key === '兵营实(万)') {
+          } else if (col.key === '兵种实力(万)') {
             ctx.fillStyle = '#333333'
             ctx.font = '22px sans-serif'
             ctx.fillText(row.barracksLevel || '-', col.x + 8, line1Y)
