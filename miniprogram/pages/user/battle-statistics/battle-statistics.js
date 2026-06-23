@@ -372,7 +372,7 @@ Page({
     const bottomMargin = 40
     const margin = 40
     const canvasWidth = 750
-    const nameMaxWidth = Math.floor((canvasWidth - margin * 2) * 0.18) - 16
+    const nameMaxWidth = Math.floor((canvasWidth - margin * 2) * 0.17) - 16
 
     let totalHeight = topArea
     for (let i = 0; i < this.data.displayNames.length; i++) {
