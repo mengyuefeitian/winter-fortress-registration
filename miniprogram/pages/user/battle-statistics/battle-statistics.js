@@ -36,7 +36,8 @@ Page({
       const processed = (registrations || []).map(r => ({
         ...r,
         selected: false,
-        editAssignment: r.assignment || ''
+        editAssignment: r.assignment || '',
+        allianceShortName: (r.allianceName || '').substring(0, 3)
       }))
 
       // 找出重名昵称
@@ -238,14 +239,15 @@ Page({
 
       // 表头 - 按比例分配，确保宽字段有足够空间
       const colDefs = [
-        { key: '昵称', ratio: 0.18 },
-        { key: '联盟', ratio: 0.13 },
-        { key: '熔炉', ratio: 0.09 },
-        { key: '兵营', ratio: 0.09 },
-        { key: '钻石(万)', ratio: 0.14 },
-        { key: '开麦', ratio: 0.08 },
-        { key: '位置', ratio: 0.09 },
-        { key: '分配', ratio: 0.20 }
+        { key: '昵称',    ratio: 0.17 },
+        { key: '联盟',    ratio: 0.10 },
+        { key: '熔炉',    ratio: 0.08 },
+        { key: '兵营',    ratio: 0.09 },
+        { key: '兵种(万)', ratio: 0.09 },
+        { key: '钻石(万)', ratio: 0.11 },
+        { key: '开麦',    ratio: 0.08 },
+        { key: '位置',    ratio: 0.09 },
+        { key: '分配',    ratio: 0.19 }
       ]
 
       let colX = margin
@@ -292,10 +294,11 @@ Page({
         ctx.fillText((r.allianceName || '').substring(0, 3), colDefs[1].x + 8, rowStartY)
         ctx.fillText(r.furnaceLevel || '-', colDefs[2].x + 8, rowStartY)
         ctx.fillText(r.barracksLevel || '-', colDefs[3].x + 8, rowStartY)
-        ctx.fillText(r.diamonds || '-', colDefs[4].x + 8, rowStartY)
-        ctx.fillText(r.voice || '-', colDefs[5].x + 8, rowStartY)
-        ctx.fillText(r.position || '-', colDefs[6].x + 8, rowStartY)
-        ctx.fillText(r.assignment || '-', colDefs[7].x + 8, rowStartY)
+        ctx.fillText(r.troopCount || '-', colDefs[4].x + 8, rowStartY)
+        ctx.fillText(r.diamonds || '-', colDefs[5].x + 8, rowStartY)
+        ctx.fillText(r.voice || '-', colDefs[6].x + 8, rowStartY)
+        ctx.fillText(r.position || '-', colDefs[7].x + 8, rowStartY)
+        ctx.fillText(r.assignment || '-', colDefs[8].x + 8, rowStartY)
 
         // 行高根据昵称行数动态计算
         const lineCount = Math.max(1, nameLines.length)

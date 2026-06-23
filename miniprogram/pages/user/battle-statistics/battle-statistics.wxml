@@ -13,6 +13,7 @@
         <view class="col col-alliance">联盟</view>
         <view class="col col-furnace">熔炉</view>
         <view class="col col-barracks">兵营</view>
+        <view class="col col-troop">兵种(万)</view>
         <view class="col col-diamonds">钻石(万)</view>
         <view class="col col-voice">开麦</view>
         <view class="col col-position">位置</view>
@@ -26,9 +27,10 @@
           </checkbox-group>
         </view>
         <view class="col col-name">{{displayNames[index]}}</view>
-        <view class="col col-alliance">{{item.allianceName}}</view>
+        <view class="col col-alliance">{{item.allianceShortName}}</view>
         <view class="col col-furnace">{{item.furnaceLevel}}</view>
         <view class="col col-barracks">{{item.barracksLevel}}</view>
+        <view class="col col-troop">{{item.troopCount || '-'}}</view>
         <view class="col col-diamonds">{{item.diamonds}}</view>
         <view class="col col-voice">{{item.voice}}</view>
         <view class="col col-position">{{item.position}}</view>

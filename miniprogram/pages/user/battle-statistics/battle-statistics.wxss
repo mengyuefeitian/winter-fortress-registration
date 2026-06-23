@@ -33,7 +33,7 @@
 
 .table-body {
   max-height: 800rpx;
-  min-width: 650rpx;
+  min-width: 750rpx;
 }
 
 .table-header {
@@ -44,14 +44,14 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  min-width: 650rpx;
+  min-width: 750rpx;
 }
 
 .table-row {
   display: flex;
   border-bottom: 1rpx solid #f0f0f0;
   font-size: 24rpx;
-  min-width: 650rpx;
+  min-width: 750rpx;
 }
 
 .table-row:nth-child(even) {
@@ -72,6 +72,7 @@
 .col-alliance { width: 140rpx; }
 .col-furnace { width: 80rpx; }
 .col-barracks { width: 80rpx; }
+.col-troop { width: 100rpx; }
 .col-diamonds { width: 100rpx; }
 .col-voice { width: 100rpx; }
 .col-position { width: 100rpx; }
