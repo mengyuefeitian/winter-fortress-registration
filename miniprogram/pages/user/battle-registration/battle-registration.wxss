@@ -122,3 +122,43 @@ input {
   font-size: 30rpx;
   border: 1rpx solid #4A90D9;
 }
+
+.triple-input-row {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12rpx;
+}
+
+.triple-cell {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.triple-label {
+  font-size: 22rpx;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.label-shield { color: #4A90D9; }
+.label-spear  { color: #E8703A; }
+.label-archer { color: #52C41A; }
+
+.triple-cell input {
+  width: 80rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: #333;
+  background: #f7f8fa;
+  border: 1rpx solid #ddd;
+  border-radius: 8rpx;
+  padding: 4rpx 0;
+}
+
+.unit-suffix {
+  font-size: 22rpx;
+  color: #999;
+  white-space: nowrap;
+}

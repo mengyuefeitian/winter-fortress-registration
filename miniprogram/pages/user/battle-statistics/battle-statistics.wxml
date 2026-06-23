@@ -5,48 +5,76 @@
     <text class="date">{{date}}</text>
   </view>
 
+  <!-- 车头表 -->
+  <view class="section-header">车头（{{headRegistrations.length}}人）</view>
   <view class="table-wrapper">
-    <scroll-view class="table-body" scroll-x scroll-y>
-      <view class="table-header">
-        <view class="col col-checkbox" wx:if="{{canDeleteRegistration}}">选择</view>
-        <view class="col col-name">昵称</view>
-        <view class="col col-alliance">联盟</view>
-        <view class="col col-furnace">熔炉</view>
-        <view class="col col-barracks">兵营</view>
-        <view class="col col-diamonds">钻石(万)</view>
-        <view class="col col-voice">开麦</view>
-        <view class="col col-position">位置</view>
-        <view class="col col-assignment">分配</view>
+    <view class="table-header">
+      <view class="col col-name-alliance">昵称/联盟</view>
+      <view class="col col-furnace">熔炉</view>
+      <view class="col col-barracks-troop">兵种实力(万)</view>
+      <view class="col col-diamonds">钻石(万)</view>
+      <view class="col col-voice">开麦</view>
+    </view>
+    <view class="table-row" wx:for="{{headRegistrations}}" wx:key="_id">
+      <view class="col col-name-alliance">
+        <view class="cell-nickname">{{item.nickName}}</view>
+        <view class="cell-alliance">{{item.allianceName || '-'}}</view>
       </view>
+      <view class="col col-furnace">{{item.furnaceLevel || '-'}}</view>
+      <view class="col col-barracks-troop">
+        <view class="cell-barracks-level">{{item.barracksLevel || '-'}}</view>
+        <view class="cell-troop-count">{{item.troopCount || '-'}}</view>
+      </view>
+      <view class="col col-diamonds">{{item.diamonds || '-'}}</view>
+      <view class="col col-voice">{{item.voice || '-'}}</view>
+    </view>
+    <view class="empty-row" wx:if="{{headRegistrations.length === 0}}">
+      <text class="empty-text">暂无车头报名</text>
+    </view>
+  </view>
 
-      <view class="table-row" wx:for="{{registrations}}" wx:key="_id">
-        <view class="col col-checkbox" wx:if="{{canDeleteRegistration}}">
-          <checkbox-group bindchange="onSlotCheckChange" data-index="{{index}}">
-            <checkbox value="{{item._id}}" checked="{{item.selected}}" />
-          </checkbox-group>
-        </view>
-        <view class="col col-name">{{displayNames[index]}}</view>
-        <view class="col col-alliance">{{item.allianceName}}</view>
-        <view class="col col-furnace">{{item.furnaceLevel}}</view>
-        <view class="col col-barracks">{{item.barracksLevel}}</view>
-        <view class="col col-diamonds">{{item.diamonds}}</view>
-        <view class="col col-voice">{{item.voice}}</view>
-        <view class="col col-position">{{item.position}}</view>
-        <view class="col col-assignment">
-          <picker wx:if="{{canDeleteRegistration}}" mode="selector" range="{{headNickNames}}" value="{{item.pickerIdx}}" bindchange="onPickerChange" data-id="{{item._id}}" data-index="{{index}}">
-            <view class="assignment-cell">
-              <text class="assignment-value {{item.assignment ? '' : 'unassigned'}}">{{item.assignment || '未分配'}}</text>
-              <text class="assignment-arrow">▾</text>
-            </view>
-          </picker>
-          <text wx:else>{{item.assignment || '-'}}</text>
-        </view>
+  <!-- 车身表 -->
+  <view class="section-header" style="margin-top:20rpx">车身（{{bodyRegistrations.length}}人）</view>
+  <view class="table-wrapper">
+    <view class="table-header">
+      <view class="col col-checkbox" wx:if="{{canDeleteRegistration}}">选择</view>
+      <view class="col col-name-alliance">昵称/联盟</view>
+      <view class="col col-furnace">熔炉</view>
+      <view class="col col-barracks-troop">兵种实力(万)</view>
+      <view class="col col-diamonds">钻石(万)</view>
+      <view class="col col-voice">开麦</view>
+      <view class="col col-assignment">分配</view>
+    </view>
+    <view class="table-row" wx:for="{{bodyRegistrations}}" wx:key="_id">
+      <view class="col col-checkbox" wx:if="{{canDeleteRegistration}}">
+        <checkbox-group bindchange="onSlotCheckChange" data-index="{{index}}">
+          <checkbox value="{{item._id}}" checked="{{item.selected}}" />
+        </checkbox-group>
       </view>
-
-      <view class="empty-row" wx:if="{{registrations.length === 0}}">
-        <text class="empty-text">暂无报名记录</text>
+      <view class="col col-name-alliance">
+        <view class="cell-nickname">{{item.nickName}}</view>
+        <view class="cell-alliance">{{item.allianceName || '-'}}</view>
       </view>
-    </scroll-view>
+      <view class="col col-furnace">{{item.furnaceLevel || '-'}}</view>
+      <view class="col col-barracks-troop">
+        <view class="cell-barracks-level">{{item.barracksLevel || '-'}}</view>
+        <view class="cell-troop-count">{{item.troopCount || '-'}}</view>
+      </view>
+      <view class="col col-diamonds">{{item.diamonds || '-'}}</view>
+      <view class="col col-voice">{{item.voice || '-'}}</view>
+      <view class="col col-assignment">
+        <picker wx:if="{{canDeleteRegistration}}" mode="selector" range="{{headNickNames}}" value="{{item.pickerIdx}}" bindchange="onPickerChange" data-id="{{item._id}}" data-index="{{index}}">
+          <view class="assignment-cell">
+            <text class="assignment-value {{item.assignment ? '' : 'unassigned'}}">{{item.assignment || '未分配'}}</text>
+            <text class="assignment-arrow">▾</text>
+          </view>
+        </picker>
+        <text wx:else>{{item.assignment || '-'}}</text>
+      </view>
+    </view>
+    <view class="empty-row" wx:if="{{bodyRegistrations.length === 0}}">
+      <text class="empty-text">暂无车身报名</text>
+    </view>
   </view>
 
   <view class="action-bar">
@@ -54,7 +82,7 @@
       {{selectAllChecked ? '取消全选' : '全选'}}
     </view>
     <view class="btn btn-delete" wx:if="{{canDeleteRegistration}}" bindtap="onDeleteSelected">删除选中</view>
-    <view class="btn btn-clear" wx:if="{{isSuperAdmin}}" bindtap="onClearAll">清空全部</view>
+    <view class="btn btn-assign" wx:if="{{canDeleteRegistration}}" bindtap="onBatchAssign">分配</view>
     <view class="btn btn-save" bindtap="onSaveScreenshot">保存截图</view>
   </view>
 </view>

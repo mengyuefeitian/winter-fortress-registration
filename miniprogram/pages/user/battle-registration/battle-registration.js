@@ -12,7 +12,12 @@ Page({
     allianceIndex: -1,
     inputNickName: '',
     furnaceLevel: '',
-    barracksLevel: '',
+    barracksShield: '',
+    barracksSpear: '',
+    barracksArcher: '',
+    troopShield: '',
+    troopSpear: '',
+    troopArcher: '',
     diamonds: '',
     voiceOptions: db.VOICE_OPTIONS,
     voiceIndex: 0,
@@ -38,7 +43,16 @@ Page({
       const zone = app.globalData.currentZone
       if (zone) {
         const alliances = await db.getAlliancesByZone(zone._id)
-        this.setData({ alliances: alliances || [] })
+        const list = alliances || []
+        this.setData({ alliances: list })
+
+        const lastId = wx.getStorageSync('lastBattleAllianceId')
+        if (lastId) {
+          const idx = list.findIndex(a => a._id === lastId)
+          if (idx >= 0) {
+            this.setData({ allianceIndex: idx })
+          }
+        }
       }
     } catch (err) {
       console.error('加载联盟失败:', err)
@@ -57,8 +71,28 @@ Page({
     this.setData({ furnaceLevel: e.detail.value })
   },
 
-  onBarracksInput: function (e) {
-    this.setData({ barracksLevel: e.detail.value })
+  onBarracksShieldInput: function (e) {
+    this.setData({ barracksShield: e.detail.value })
+  },
+
+  onBarracksSpearInput: function (e) {
+    this.setData({ barracksSpear: e.detail.value })
+  },
+
+  onBarracksArcherInput: function (e) {
+    this.setData({ barracksArcher: e.detail.value })
+  },
+
+  onTroopShieldInput: function (e) {
+    this.setData({ troopShield: e.detail.value })
+  },
+
+  onTroopSpearInput: function (e) {
+    this.setData({ troopSpear: e.detail.value })
+  },
+
+  onTroopArcherInput: function (e) {
+    this.setData({ troopArcher: e.detail.value })
   },
 
   onDiamondsInput: function (e) {
@@ -74,7 +108,13 @@ Page({
   },
 
   validate: function () {
-    const { allianceIndex, alliances, inputNickName, furnaceLevel, barracksLevel, diamonds } = this.data
+    const {
+      allianceIndex, inputNickName, furnaceLevel,
+      barracksShield, barracksSpear, barracksArcher,
+      troopShield, troopSpear, troopArcher,
+      diamonds
+    } = this.data
+
     if (allianceIndex < 0) {
       util.showError('请选择联盟')
       return false
@@ -87,8 +127,17 @@ Page({
       util.showError('请输入熔炉等级')
       return false
     }
-    if (!barracksLevel || barracksLevel.trim().length === 0) {
-      util.showError('请输入兵营等级')
+    if (!barracksShield.trim() || !barracksSpear.trim() || !barracksArcher.trim()) {
+      util.showError('请完整填写兵营等级（盾/矛/射）')
+      return false
+    }
+    if (!troopShield.trim() || !troopSpear.trim() || !troopArcher.trim()) {
+      util.showError('请完整填写兵种数量（盾/矛/射）')
+      return false
+    }
+    const isValidNumber = v => v.trim() !== '' && !isNaN(parseFloat(v.trim()))
+    if (!isValidNumber(troopShield) || !isValidNumber(troopSpear) || !isValidNumber(troopArcher)) {
+      util.showError('兵种数量请填写有效数字（如 10 或 1.5）')
       return false
     }
     if (!diamonds || diamonds.trim().length === 0) {
@@ -101,18 +150,25 @@ Page({
   onSubmit: async function () {
     if (!this.validate()) return
 
-    const { configId, alliances, allianceIndex, inputNickName, furnaceLevel, barracksLevel, diamonds, voiceIndex, positionIndex } = this.data
+    const {
+      configId, alliances, allianceIndex, inputNickName, furnaceLevel,
+      barracksShield, barracksSpear, barracksArcher,
+      troopShield, troopSpear, troopArcher,
+      diamonds, voiceIndex, positionIndex
+    } = this.data
     const userInfo = app.globalData.userInfo
 
     try {
       this.setData({ loading: true })
       util.showLoading('提交中...')
 
-      // 保存昵称供下次使用
       wx.setStorageSync('lastBattleNickName', inputNickName.trim())
 
       const alliance = alliances[allianceIndex]
       const zone = app.globalData.currentZone
+      const barracksLevel = `${barracksShield.trim()}/${barracksSpear.trim()}/${barracksArcher.trim()}`
+      const troopCount = `${troopShield.trim()}/${troopSpear.trim()}/${troopArcher.trim()}`
+
       const registrationData = {
         configId,
         zoneId: zone ? zone._id : '',
@@ -121,13 +177,16 @@ Page({
         allianceId: alliance._id,
         allianceName: alliance.allianceName,
         furnaceLevel: furnaceLevel.trim(),
-        barracksLevel: barracksLevel.trim(),
+        barracksLevel,
+        troopCount,
         diamonds: diamonds.trim(),
         voice: db.VOICE_OPTIONS[voiceIndex],
         position: db.BATTLE_POSITION_OPTIONS[positionIndex]
       }
 
       await db.createBattleRegistration(registrationData)
+
+      wx.setStorageSync('lastBattleAllianceId', alliance._id)
 
       util.hideLoading()
       util.showSuccess('报名成功')

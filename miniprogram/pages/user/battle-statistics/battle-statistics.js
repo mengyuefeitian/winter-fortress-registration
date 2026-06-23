@@ -2,17 +2,14 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
-const auth = require('../../../utils/auth')
-
 Page({
   data: {
     configId: '',
     date: '',
-    registrations: [],
-    displayNames: [],
+    headRegistrations: [],
+    bodyRegistrations: [],
     headNickNames: [],
     loading: false,
-    isSuperAdmin: false,
     canDeleteRegistration: false,
     selectAllChecked: false,
     selectedIds: []
@@ -22,7 +19,6 @@ Page({
     this.setData({
       configId: options.configId,
       date: options.date,
-      isSuperAdmin: app.globalData.role === 'superAdmin',
       canDeleteRegistration: app.globalData.role === 'superAdmin' || app.globalData.role === 'admin'
     })
     this.loadRegistrations()
@@ -36,35 +32,20 @@ Page({
       const processed = (registrations || []).map(r => ({
         ...r,
         selected: false,
-        editAssignment: r.assignment || ''
+        editAssignment: r.assignment || '',
       }))
 
-      // 找出重名昵称
-      const allNames = processed.map(r => r.nickName)
-      const nameCount = {}
-      for (const name of allNames) {
-        nameCount[name] = (nameCount[name] || 0) + 1
-      }
+      const headRegistrations = processed.filter(r => r.position === '车头')
+      const headNickNames = headRegistrations.map(r => r.nickName)
 
-      const displayNames = processed.map(r => {
-        if (nameCount[r.nickName] > 1) {
-          return `${r.nickName}(${r.allianceName})`
-        }
-        return r.nickName
-      })
-
-      // 提取车头昵称列表供分配选择
-      const headNickNames = processed.filter(r => r.position === '车头').map(r => r.nickName)
-
-      // 为每条记录计算 picker 初始索引
-      processed.forEach(r => {
-        const idx = r.assignment ? headNickNames.indexOf(r.assignment) : -1
-        r.pickerIdx = idx >= 0 ? idx : 0
-      })
+      const bodyRegistrations = processed.filter(r => r.position !== '车头').map(r => ({
+        ...r,
+        pickerIdx: r.assignment ? Math.max(headNickNames.indexOf(r.assignment), 0) : 0
+      }))
 
       this.setData({
-        registrations: processed,
-        displayNames,
+        headRegistrations,
+        bodyRegistrations,
         headNickNames,
         selectedIds: [],
         selectAllChecked: false,
@@ -79,17 +60,14 @@ Page({
 
   onSelectAll: function () {
     const checked = !this.data.selectAllChecked
-    const registrations = this.data.registrations.map(r => ({
+    const bodyRegistrations = this.data.bodyRegistrations.map(r => ({
       ...r,
       selected: checked
     }))
-    const selectedIds = checked ? registrations.map(r => r._id) : []
+    const selectedIds = checked ? bodyRegistrations.map(r => r._id) : []
+    const selectAllChecked = checked && bodyRegistrations.length > 0
 
-    this.setData({
-      registrations,
-      selectAllChecked: checked,
-      selectedIds
-    })
+    this.setData({ bodyRegistrations, selectAllChecked, selectedIds })
   },
 
   onSlotCheckChange: function (e) {
@@ -97,18 +75,14 @@ Page({
     const value = e.detail.value
     const selected = value.length > 0
 
-    const registrations = this.data.registrations.map((r, i) =>
+    const bodyRegistrations = this.data.bodyRegistrations.map((r, i) =>
       i === index ? { ...r, selected } : r
     )
 
-    const selectedIds = registrations.filter(r => r.selected).map(r => r._id)
-    const selectAllChecked = selectedIds.length === registrations.length
+    const selectedIds = bodyRegistrations.filter(r => r.selected).map(r => r._id)
+    const selectAllChecked = bodyRegistrations.length > 0 && selectedIds.length === bodyRegistrations.length
 
-    this.setData({
-      registrations,
-      selectedIds,
-      selectAllChecked
-    })
+    this.setData({ bodyRegistrations, selectedIds, selectAllChecked })
   },
 
   onDeleteSelected: async function () {
@@ -138,7 +112,6 @@ Page({
     }
   },
 
-  // 选择器变化 - 直接更新分配
   onPickerChange: async function (e) {
     const registrationId = e.currentTarget.dataset.id
     const index = e.currentTarget.dataset.index
@@ -147,44 +120,64 @@ Page({
 
     try {
       await db.updateBattleRegistrationAssignment(registrationId, selectedName)
-
-      // 更新本地数据
-      const registrations = this.data.registrations.map((r, i) =>
+      const bodyRegistrations = this.data.bodyRegistrations.map((r, i) =>
         i === index ? { ...r, assignment: selectedName, editAssignment: selectedName, pickerIdx } : r
       )
-      this.setData({ registrations })
+      this.setData({ bodyRegistrations })
     } catch (err) {
       console.error('更新分配失败:', err)
       util.showError('更新失败')
     }
   },
 
-  onClearAll: async function () {
-    if (!auth.isSuperAdmin(app.globalData.role)) {
-      util.showError('仅超级管理员可清空')
+  onBatchAssign: function () {
+    if (this.data.selectedIds.length === 0) {
+      util.showInfo('请先勾选车身报名者')
       return
     }
 
-    const confirm = await util.showConfirm(
-      '确认清空',
-      '确定要清空该日期的所有报名记录吗？此操作不可恢复。'
-    )
-    if (!confirm) return
-
-    try {
-      util.showLoading('正在清空...')
-      await db.clearBattleRegistrations(this.data.configId)
-      util.hideLoading()
-      util.showSuccess('已清空')
-      this.loadRegistrations()
-    } catch (err) {
-      util.hideLoading()
-      util.showError('清空失败')
+    if (this.data.headNickNames.length === 0) {
+      util.showInfo('暂无车头可分配')
+      return
     }
+
+    wx.showActionSheet({
+      itemList: this.data.headNickNames,
+      success: async (res) => {
+        const headName = this.data.headNickNames[res.tapIndex]
+        try {
+          util.showLoading('分配中...')
+          for (const id of this.data.selectedIds) {
+            await db.updateBattleRegistrationAssignment(id, headName)
+          }
+          util.hideLoading()
+          util.showSuccess(`已将 ${this.data.selectedIds.length} 人分配到 ${headName}`)
+          this.loadRegistrations()
+        } catch (err) {
+          util.hideLoading()
+          console.error('批量分配失败:', err)
+          util.showError('分配失败')
+        }
+      }
+    })
+  },
+
+  buildScreenshotData: function () {
+    const sectionHeaderH = 40
+    const tableHeaderH = 50
+    const rowH = 70
+    const sectionGap = 20
+    const bottomMargin = 40
+    const topArea = 155
+
+    const headH = sectionHeaderH + tableHeaderH + this.data.headRegistrations.length * rowH
+    const bodyH = sectionHeaderH + tableHeaderH + this.data.bodyRegistrations.length * rowH
+
+    return { height: topArea + headH + sectionGap + bodyH + bottomMargin }
   },
 
   onSaveScreenshot: async function () {
-    if (this.data.registrations.length === 0) {
+    if (this.data.headRegistrations.length === 0 && this.data.bodyRegistrations.length === 0) {
       util.showInfo('暂无数据可截图')
       return
     }
@@ -193,20 +186,12 @@ Page({
       util.showLoading('正在生成截图...')
 
       const screenshotData = this.buildScreenshotData()
-
-      // 页边距和间距配置
       const margin = 40
       const canvasWidth = 750
-      const rowHeight = 45
-      const headerHeight = 50
-      const titleY = 70
-      const dateY = 115
-      const lineY = 135
-      const headerY = 155
-      const dataStartY = headerY + headerHeight
-
       const innerWidth = canvasWidth - margin * 2
-      const colTotalWidth = innerWidth
+      const rowH = 70
+      const tableHeaderH = 50
+      const sectionHeaderH = 40
 
       const canvas = wx.createOffscreenCanvas({
         type: '2d',
@@ -221,88 +206,137 @@ Page({
       // 标题
       ctx.fillStyle = '#07C160'
       ctx.font = 'bold 36px sans-serif'
-      ctx.fillText('国战统计表', margin, titleY)
+      ctx.fillText('国战统计表', margin, 70)
 
       // 日期
       ctx.fillStyle = '#999999'
       ctx.font = '26px sans-serif'
-      ctx.fillText(this.data.date, margin, dateY)
+      ctx.fillText(this.data.date, margin, 115)
 
       // 分隔线
       ctx.strokeStyle = '#E8E8E8'
       ctx.lineWidth = 1
       ctx.beginPath()
-      ctx.moveTo(margin, lineY)
-      ctx.lineTo(canvasWidth - margin, lineY)
+      ctx.moveTo(margin, 135)
+      ctx.lineTo(canvasWidth - margin, 135)
       ctx.stroke()
 
-      // 表头 - 按比例分配，确保宽字段有足够空间
-      const colDefs = [
-        { key: '昵称', ratio: 0.18 },
-        { key: '联盟', ratio: 0.13 },
-        { key: '熔炉', ratio: 0.09 },
-        { key: '兵营', ratio: 0.09 },
-        { key: '钻石(万)', ratio: 0.14 },
-        { key: '开麦', ratio: 0.08 },
-        { key: '位置', ratio: 0.09 },
-        { key: '分配', ratio: 0.20 }
+      // 列定义 — ratios 之和必须 = 1.0
+      const headColDefs = [
+        { key: '昵称/联盟',  ratio: 0.30 },
+        { key: '熔炉',       ratio: 0.13 },
+        { key: '兵种实力(万)', ratio: 0.22 },
+        { key: '钻石(万)',   ratio: 0.18 },
+        { key: '开麦',       ratio: 0.17 },
+      ]
+      const bodyColDefs = [
+        { key: '昵称/联盟',  ratio: 0.26 },
+        { key: '熔炉',       ratio: 0.11 },
+        { key: '兵种实力(万)', ratio: 0.19 },
+        { key: '钻石(万)',   ratio: 0.15 },
+        { key: '开麦',       ratio: 0.11 },
+        { key: '分配',       ratio: 0.18 },
       ]
 
-      let colX = margin
-      for (const col of colDefs) {
-        col.w = Math.floor(colTotalWidth * col.ratio)
-        col.x = colX
-        colX += col.w
+      // 计算每列 x 坐标和宽度
+      const buildCols = (colDefs) => {
+        let x = margin
+        return colDefs.map(col => {
+          const w = Math.floor(innerWidth * col.ratio)
+          const result = { key: col.key, w, x }
+          x += w
+          return result
+        })
       }
 
-      ctx.fillStyle = '#4A90D9'
-      ctx.fillRect(margin, headerY, innerWidth, headerHeight)
-      ctx.fillStyle = '#FFFFFF'
-      ctx.font = 'bold 24px sans-serif'
-      for (const col of colDefs) {
-        ctx.fillText(col.key, col.x + 8, headerY + 32)
-      }
-
-      // 数据行 - 昵称自动换行
-      let y = dataStartY
-      const namePaddingX = colDefs[0].x + 8
-      const nameMaxWidth = colDefs[0].w - 16
-      ctx.textBaseline = 'top'
-
-      for (let i = 0; i < this.data.registrations.length; i++) {
-        const r = this.data.registrations[i]
-        const displayName = this.data.displayNames[i]
-
-        if (i % 2 === 1) {
-          ctx.fillStyle = '#F5F5F5'
-          ctx.fillRect(margin, y, innerWidth, rowHeight)
-        }
-
-        const rowStartY = y + 5
-
-        // 昵称 - 自动换行
+      // 渲染 section header（灰底标题行）
+      const drawSectionHeader = (title, y) => {
+        ctx.fillStyle = '#F5F5F5'
+        ctx.fillRect(margin, y, innerWidth, sectionHeaderH)
         ctx.fillStyle = '#333333'
-        ctx.font = '22px sans-serif'
-        const nameLines = this._wrapTextFixed(ctx, displayName, nameMaxWidth)
-        for (let j = 0; j < nameLines.length; j++) {
-          ctx.fillText(nameLines[j], namePaddingX, rowStartY + j * 26)
-        }
-
-        // 其他字段 - 对齐到第一行
-        ctx.fillText((r.allianceName || '').substring(0, 3), colDefs[1].x + 8, rowStartY)
-        ctx.fillText(r.furnaceLevel || '-', colDefs[2].x + 8, rowStartY)
-        ctx.fillText(r.barracksLevel || '-', colDefs[3].x + 8, rowStartY)
-        ctx.fillText(r.diamonds || '-', colDefs[4].x + 8, rowStartY)
-        ctx.fillText(r.voice || '-', colDefs[5].x + 8, rowStartY)
-        ctx.fillText(r.position || '-', colDefs[6].x + 8, rowStartY)
-        ctx.fillText(r.assignment || '-', colDefs[7].x + 8, rowStartY)
-
-        // 行高根据昵称行数动态计算
-        const lineCount = Math.max(1, nameLines.length)
-        y += Math.max(rowHeight, lineCount * 26 + 10)
+        ctx.font = 'bold 26px sans-serif'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(title, margin + 12, y + sectionHeaderH / 2)
+        ctx.textBaseline = 'alphabetic'
       }
 
-      ctx.textBaseline = 'alphabetic'
+      // 渲染表头行（蓝底白字）
+      const drawTableHeader = (cols, y) => {
+        ctx.fillStyle = '#4A90D9'
+        ctx.fillRect(margin, y, innerWidth, tableHeaderH)
+        ctx.fillStyle = '#FFFFFF'
+        ctx.font = 'bold 22px sans-serif'
+        ctx.textBaseline = 'middle'
+        for (const col of cols) {
+          ctx.fillText(col.key, col.x + 8, y + tableHeaderH / 2)
+        }
+        ctx.textBaseline = 'alphabetic'
+      }
+
+      // 渲染数据行（双行单元格）
+      const drawRow = (row, cols, rowIndex, y) => {
+        if (rowIndex % 2 === 1) {
+          ctx.fillStyle = '#F5F5F5'
+          ctx.fillRect(margin, y, innerWidth, rowH)
+        }
+        ctx.textBaseline = 'top'
+        const line1Y = y + 8
+        const line2Y = y + 8 + 28
+
+        for (const col of cols) {
+          if (col.key === '昵称/联盟') {
+            ctx.fillStyle = '#333333'
+            ctx.font = '22px sans-serif'
+            ctx.fillText(row.nickName || '-', col.x + 8, line1Y)
+            ctx.fillStyle = '#6BB3F0'
+            ctx.font = '20px sans-serif'
+            ctx.fillText(row.allianceName || '-', col.x + 8, line2Y)
+          } else if (col.key === '兵种实力(万)') {
+            ctx.fillStyle = '#333333'
+            ctx.font = '22px sans-serif'
+            ctx.fillText(row.barracksLevel || '-', col.x + 8, line1Y)
+            ctx.fillStyle = '#4A90D9'
+            ctx.font = '20px sans-serif'
+            ctx.fillText(row.troopCount || '-', col.x + 8, line2Y)
+          } else {
+            ctx.fillStyle = '#333333'
+            ctx.font = '22px sans-serif'
+            const val = col.key === '熔炉'    ? (row.furnaceLevel || '-')
+                      : col.key === '钻石(万)' ? (row.diamonds || '-')
+                      : col.key === '开麦'    ? (row.voice || '-')
+                      : col.key === '分配'    ? (row.assignment || '-')
+                      : '-'
+            ctx.fillText(val, col.x + 8, line1Y)
+          }
+        }
+        ctx.textBaseline = 'alphabetic'
+      }
+
+      const headCols = buildCols(headColDefs)
+      const bodyCols = buildCols(bodyColDefs)
+
+      // 渲染车头区
+      let y = 155
+      drawSectionHeader(`车头（${this.data.headRegistrations.length}人）`, y)
+      y += sectionHeaderH
+      drawTableHeader(headCols, y)
+      y += tableHeaderH
+      for (let i = 0; i < this.data.headRegistrations.length; i++) {
+        drawRow(this.data.headRegistrations[i], headCols, i, y)
+        y += rowH
+      }
+
+      y += 20  // section gap
+
+      // 渲染车身区
+      drawSectionHeader(`车身（${this.data.bodyRegistrations.length}人）`, y)
+      y += sectionHeaderH
+      drawTableHeader(bodyCols, y)
+      y += tableHeaderH
+      for (let i = 0; i < this.data.bodyRegistrations.length; i++) {
+        drawRow(this.data.bodyRegistrations[i], bodyCols, i, y)
+        y += rowH
+      }
 
       wx.canvasToTempFilePath({
         canvas: canvas,
@@ -344,47 +378,5 @@ Page({
       console.error('截图失败:', err)
       util.showError('截图失败')
     }
-  },
-
-  buildScreenshotData: function () {
-    const topArea = 155 + 50
-    const rowHeight = 45
-    const bottomMargin = 40
-    const margin = 40
-    const canvasWidth = 750
-    const nameMaxWidth = Math.floor((canvasWidth - margin * 2) * 0.18) - 16
-
-    let totalHeight = topArea
-    for (let i = 0; i < this.data.displayNames.length; i++) {
-      const displayName = this.data.displayNames[i]
-      const lineCount = this._countLines(displayName, nameMaxWidth)
-      const h = Math.max(rowHeight, lineCount * 26 + 10)
-      totalHeight += h
-    }
-    return { height: totalHeight + bottomMargin }
-  },
-
-  _countLines: function (text, maxWidth) {
-    // 粗略估算：22px 字体每个中文字约 22px 宽
-    const charWidth = 22
-    const charsPerLine = Math.floor(maxWidth / charWidth)
-    return Math.ceil(text.length / charsPerLine)
-  },
-
-  _wrapTextFixed: function (ctx, text, maxWidth) {
-    const lines = []
-    let currentLine = ''
-    for (const char of text) {
-      const testLine = currentLine + char
-      const metrics = ctx.measureText(testLine)
-      if (metrics.width > maxWidth && currentLine) {
-        lines.push(currentLine)
-        currentLine = char
-      } else {
-        currentLine = testLine
-      }
-    }
-    if (currentLine) lines.push(currentLine)
-    return lines
   }
 })

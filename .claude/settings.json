@@ -6,7 +6,7 @@
       "Edit(*)",
       "Write(*)",
       "WebSearch(*)",
-      "WebFetch(*)",
+      "WebFetch(*)"
     ]
   },
   "enabledPlugins": {}

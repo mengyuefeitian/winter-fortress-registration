@@ -32,8 +32,40 @@
 
     <view class="form-item">
       <text class="label">兵营等级</text>
-      <view class="input-group">
-        <input type="text" placeholder="可输入兵营等级如555,543,30/30/30等" maxlength="20" bindinput="onBarracksInput" value="{{barracksLevel}}" />
+      <view class="triple-input-row">
+        <view class="triple-cell">
+          <text class="triple-label label-shield">盾</text>
+          <input type="text" placeholder="30" maxlength="5" bindinput="onBarracksShieldInput" value="{{barracksShield}}" />
+        </view>
+        <view class="triple-cell">
+          <text class="triple-label label-spear">矛</text>
+          <input type="text" placeholder="30" maxlength="5" bindinput="onBarracksSpearInput" value="{{barracksSpear}}" />
+        </view>
+        <view class="triple-cell">
+          <text class="triple-label label-archer">射</text>
+          <input type="text" placeholder="30" maxlength="5" bindinput="onBarracksArcherInput" value="{{barracksArcher}}" />
+        </view>
+      </view>
+    </view>
+
+    <view class="form-item">
+      <text class="label">兵种数量</text>
+      <view class="triple-input-row">
+        <view class="triple-cell">
+          <text class="triple-label label-shield">盾</text>
+          <input type="digit" placeholder="10" maxlength="6" bindinput="onTroopShieldInput" value="{{troopShield}}" />
+          <text class="unit-suffix">万</text>
+        </view>
+        <view class="triple-cell">
+          <text class="triple-label label-spear">矛</text>
+          <input type="digit" placeholder="20" maxlength="6" bindinput="onTroopSpearInput" value="{{troopSpear}}" />
+          <text class="unit-suffix">万</text>
+        </view>
+        <view class="triple-cell">
+          <text class="triple-label label-archer">射</text>
+          <input type="digit" placeholder="30" maxlength="6" bindinput="onTroopArcherInput" value="{{troopArcher}}" />
+          <text class="unit-suffix">万</text>
+        </view>
       </view>
     </view>
 
