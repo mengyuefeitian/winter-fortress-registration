@@ -56,7 +56,7 @@
       {{selectAllChecked ? '取消全选' : '全选'}}
     </view>
     <view class="btn btn-delete" wx:if="{{canDeleteRegistration}}" bindtap="onDeleteSelected">删除选中</view>
-    <view class="btn btn-clear" wx:if="{{isSuperAdmin}}" bindtap="onClearAll">清空全部</view>
+    <view class="btn btn-assign" wx:if="{{canDeleteRegistration}}" bindtap="onBatchAssign">分配</view>
     <view class="btn btn-save" bindtap="onSaveScreenshot">保存截图</view>
   </view>
 </view>

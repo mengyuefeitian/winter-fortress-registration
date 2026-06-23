@@ -2,8 +2,6 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
-const auth = require('../../../utils/auth')
-
 Page({
   data: {
     configId: '',
@@ -12,7 +10,6 @@ Page({
     displayNames: [],
     headNickNames: [],
     loading: false,
-    isSuperAdmin: false,
     canDeleteRegistration: false,
     selectAllChecked: false,
     selectedIds: []
@@ -22,7 +19,6 @@ Page({
     this.setData({
       configId: options.configId,
       date: options.date,
-      isSuperAdmin: app.globalData.role === 'superAdmin',
       canDeleteRegistration: app.globalData.role === 'superAdmin' || app.globalData.role === 'admin'
     })
     this.loadRegistrations()
@@ -82,19 +78,26 @@ Page({
     const checked = !this.data.selectAllChecked
     const registrations = this.data.registrations.map(r => ({
       ...r,
-      selected: checked
+      selected: checked && r.position !== '车头'
     }))
-    const selectedIds = checked ? registrations.map(r => r._id) : []
+    const selectedIds = checked
+      ? registrations.filter(r => r.selected).map(r => r._id)
+      : []
+    const bodyCount = registrations.filter(r => r.position !== '车头').length
+    const selectAllChecked = bodyCount > 0 && selectedIds.length === bodyCount
 
     this.setData({
       registrations,
-      selectAllChecked: checked,
+      selectAllChecked,
       selectedIds
     })
   },
 
   onSlotCheckChange: function (e) {
     const index = e.currentTarget.dataset.index
+    const item = this.data.registrations[index]
+    if (item.position === '车头') return
+
     const value = e.detail.value
     const selected = value.length > 0
 
@@ -103,7 +106,8 @@ Page({
     )
 
     const selectedIds = registrations.filter(r => r.selected).map(r => r._id)
-    const selectAllChecked = selectedIds.length === registrations.length
+    const bodyCount = registrations.filter(r => r.position !== '车头').length
+    const selectAllChecked = bodyCount > 0 && selectedIds.length === bodyCount
 
     this.setData({
       registrations,
@@ -160,28 +164,41 @@ Page({
     }
   },
 
-  onClearAll: async function () {
-    if (!auth.isSuperAdmin(app.globalData.role)) {
-      util.showError('仅超级管理员可清空')
+  onBatchAssign: function () {
+    const bodyIds = this.data.selectedIds.filter(id => {
+      const reg = this.data.registrations.find(r => r._id === id)
+      return reg && reg.position !== '车头'
+    })
+
+    if (bodyIds.length === 0) {
+      util.showInfo('请先勾选车身报名者')
       return
     }
 
-    const confirm = await util.showConfirm(
-      '确认清空',
-      '确定要清空该日期的所有报名记录吗？此操作不可恢复。'
-    )
-    if (!confirm) return
-
-    try {
-      util.showLoading('正在清空...')
-      await db.clearBattleRegistrations(this.data.configId)
-      util.hideLoading()
-      util.showSuccess('已清空')
-      this.loadRegistrations()
-    } catch (err) {
-      util.hideLoading()
-      util.showError('清空失败')
+    if (this.data.headNickNames.length === 0) {
+      util.showInfo('暂无车头可分配')
+      return
     }
+
+    wx.showActionSheet({
+      itemList: this.data.headNickNames,
+      success: async (res) => {
+        const headName = this.data.headNickNames[res.tapIndex]
+        try {
+          util.showLoading('分配中...')
+          for (const id of bodyIds) {
+            await db.updateBattleRegistrationAssignment(id, headName)
+          }
+          util.hideLoading()
+          util.showSuccess(`已将 ${bodyIds.length} 人分配到 ${headName}`)
+          this.loadRegistrations()
+        } catch (err) {
+          util.hideLoading()
+          console.error('批量分配失败:', err)
+          util.showError('分配失败')
+        }
+      }
+    })
   },
 
   onSaveScreenshot: async function () {
