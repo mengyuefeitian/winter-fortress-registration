@@ -47,12 +47,17 @@ function getCollectionNames(activityType) {
   throw new Error('无效的活动类型')
 }
 
+let collectionsEnsured = false
+
 // 云函数入口函数
 exports.main = async (event, context) => {
   const { action, data } = event
 
-  // 首次调用时自动创建集合
-  await ensureCollections()
+  // 每个实例只初始化一次集合，避免并发时重复创建导致 ResourceUnavailable
+  if (!collectionsEnsured) {
+    await ensureCollections()
+    collectionsEnsured = true
+  }
 
   try {
     switch (action) {

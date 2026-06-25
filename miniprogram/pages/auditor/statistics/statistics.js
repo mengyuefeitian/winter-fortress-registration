@@ -539,7 +539,7 @@ Page({
             },
             fail: (err) => {
               util.hideLoading()
-              if (err.errMsg.indexOf('auth deny') !== -1) {
+              if (err.errMsg && err.errMsg.indexOf('auth deny') !== -1) {
                 wx.showModal({
                   title: '提示',
                   content: '需要您授权保存图片权限',
@@ -549,7 +549,7 @@ Page({
                   }
                 })
               } else {
-                util.showError('保存失败')
+                wx.previewImage({ urls: [res.tempFilePath] })
               }
               resolve()
             }

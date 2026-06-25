@@ -1636,9 +1636,18 @@ async function createArsenalRegistration(data) {
 
 // 获取兵营配置的报名列表（权限已改为所有人可读，直接查询）
 async function getArsenalRegistrations(configId) {
-  const db = getDb()
-  const res = await db.collection('arsenalRegistrations').where({ configId, status: 'active' }).orderBy('createTime', 'asc').limit(100).get()
-  return res.data
+  const wxdb = getDb()
+  let allData = []
+  let skip = 0
+  const batchSize = 20
+  while (true) {
+    const res = await wxdb.collection('arsenalRegistrations').where({ configId, status: 'active' }).orderBy('createTime', 'asc').skip(skip).limit(batchSize).get()
+    allData = allData.concat(res.data)
+    if (res.data.length < batchSize) break
+    skip += batchSize
+    if (skip > 500) break
+  }
+  return allData
 }
 
 // 取消兵营报名
@@ -1658,9 +1667,18 @@ async function cancelArsenalRegistration(registrationId) {
 
 // 获取用户的兵营报名记录（权限已改为所有人可读，直接查询）
 async function getArsenalRegistrationsByUser(userId) {
-  const db = getDb()
-  const res = await db.collection('arsenalRegistrations').where({ userId, status: 'active' }).orderBy('createTime', 'desc').limit(100).get()
-  return res.data
+  const wxdb = getDb()
+  let allData = []
+  let skip = 0
+  const batchSize = 20
+  while (true) {
+    const res = await wxdb.collection('arsenalRegistrations').where({ userId, status: 'active' }).orderBy('createTime', 'desc').skip(skip).limit(batchSize).get()
+    allData = allData.concat(res.data)
+    if (res.data.length < batchSize) break
+    skip += batchSize
+    if (skip > 500) break
+  }
+  return allData
 }
 
 /**
@@ -1688,9 +1706,18 @@ async function createCanyonRegistration(data) {
 
 // 获取峡谷配置的报名列表（权限已改为所有人可读，直接查询）
 async function getCanyonRegistrations(configId) {
-  const db = getDb()
-  const res = await db.collection('canyonRegistrations').where({ configId, status: 'active' }).orderBy('createTime', 'asc').limit(100).get()
-  return res.data
+  const wxdb = getDb()
+  let allData = []
+  let skip = 0
+  const batchSize = 20
+  while (true) {
+    const res = await wxdb.collection('canyonRegistrations').where({ configId, status: 'active' }).orderBy('createTime', 'asc').skip(skip).limit(batchSize).get()
+    allData = allData.concat(res.data)
+    if (res.data.length < batchSize) break
+    skip += batchSize
+    if (skip > 500) break
+  }
+  return allData
 }
 
 // 取消峡谷报名
@@ -1710,9 +1737,18 @@ async function cancelCanyonRegistration(registrationId) {
 
 // 获取用户的峡谷报名记录（权限已改为所有人可读，直接查询）
 async function getCanyonRegistrationsByUser(userId) {
-  const db = getDb()
-  const res = await db.collection('canyonRegistrations').where({ userId, status: 'active' }).orderBy('createTime', 'desc').limit(100).get()
-  return res.data
+  const wxdb = getDb()
+  let allData = []
+  let skip = 0
+  const batchSize = 20
+  while (true) {
+    const res = await wxdb.collection('canyonRegistrations').where({ userId, status: 'active' }).orderBy('createTime', 'desc').skip(skip).limit(batchSize).get()
+    allData = allData.concat(res.data)
+    if (res.data.length < batchSize) break
+    skip += batchSize
+    if (skip > 500) break
+  }
+  return allData
 }
 
 /**
@@ -1721,37 +1757,73 @@ async function getCanyonRegistrationsByUser(userId) {
 
 // 获取兵营统计数据（权限已改为所有人可读，直接 count() 查询，无云函数开销）
 async function getArsenalStats(configId, options = {}) {
-  const db = getDb()
+  const wxdb = getDb()
   const base = { configId, status: 'active' }
   const [combatRes, substituteRes, myRes] = await Promise.all([
-    db.collection('arsenalRegistrations').where(Object.assign({}, base, { position: 'combat' })).count(),
-    db.collection('arsenalRegistrations').where(Object.assign({}, base, { position: 'substitute' })).count(),
+    wxdb.collection('arsenalRegistrations').where(Object.assign({}, base, { position: 'combat' })).count(),
+    wxdb.collection('arsenalRegistrations').where(Object.assign({}, base, { position: 'substitute' })).count(),
     options.userId
-      ? db.collection('arsenalRegistrations').where(Object.assign({}, base, { userId: options.userId })).get()
+      ? wxdb.collection('arsenalRegistrations').where(Object.assign({}, base, { userId: options.userId })).get()
       : Promise.resolve({ data: [] })
   ])
+  const combatCount = combatRes.total
+  const substituteCount = substituteRes.total
+  const totalCount = combatCount + substituteCount
+  let allRegs = []
+  if (options.includeRegistrations) {
+    let skip = 0
+    const batchSize = 20
+    while (true) {
+      const res = await wxdb.collection('arsenalRegistrations').where(base).skip(skip).limit(batchSize).get()
+      allRegs = allRegs.concat(res.data)
+      if (res.data.length < batchSize) break
+      skip += batchSize
+      if (skip > 500) break
+    }
+  }
   return {
-    combatCount: combatRes.total,
-    substituteCount: substituteRes.total,
-    myRegistrations: myRes.data || []
+    combatCount,
+    substituteCount,
+    count: totalCount,
+    totalRegistered: totalCount,
+    myRegistrations: myRes.data || [],
+    registrations: allRegs
   }
 }
 
 // 获取峡谷统计数据（权限已改为所有人可读，直接 count() 查询，无云函数开销）
 async function getCanyonStats(configId, options = {}) {
-  const db = getDb()
+  const wxdb = getDb()
   const base = { configId, status: 'active' }
   const [combatRes, substituteRes, myRes] = await Promise.all([
-    db.collection('canyonRegistrations').where(Object.assign({}, base, { position: 'combat' })).count(),
-    db.collection('canyonRegistrations').where(Object.assign({}, base, { position: 'substitute' })).count(),
+    wxdb.collection('canyonRegistrations').where(Object.assign({}, base, { position: 'combat' })).count(),
+    wxdb.collection('canyonRegistrations').where(Object.assign({}, base, { position: 'substitute' })).count(),
     options.userId
-      ? db.collection('canyonRegistrations').where(Object.assign({}, base, { userId: options.userId })).get()
+      ? wxdb.collection('canyonRegistrations').where(Object.assign({}, base, { userId: options.userId })).get()
       : Promise.resolve({ data: [] })
   ])
+  const combatCount = combatRes.total
+  const substituteCount = substituteRes.total
+  const totalCount = combatCount + substituteCount
+  let allRegs = []
+  if (options.includeRegistrations) {
+    let skip = 0
+    const batchSize = 20
+    while (true) {
+      const res = await wxdb.collection('canyonRegistrations').where(base).skip(skip).limit(batchSize).get()
+      allRegs = allRegs.concat(res.data)
+      if (res.data.length < batchSize) break
+      skip += batchSize
+      if (skip > 500) break
+    }
+  }
   return {
-    combatCount: combatRes.total,
-    substituteCount: substituteRes.total,
-    myRegistrations: myRes.data || []
+    combatCount,
+    substituteCount,
+    count: totalCount,
+    totalRegistered: totalCount,
+    myRegistrations: myRes.data || [],
+    registrations: allRegs
   }
 }
 
