@@ -4,6 +4,13 @@ const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const auth = require('../../../utils/auth')
 
+function truncateText(ctx, text, maxW) {
+  if (ctx.measureText(text).width <= maxW) return text
+  let t = text
+  while (t.length > 0 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1)
+  return t.length > 0 ? t + '…' : ''
+}
+
 Page({
   data: {
     allianceId: null,
@@ -406,8 +413,12 @@ Page({
         ctx.font = '24px sans-serif'
         const sorted = [...stat.registrations].sort((a, b) => (a.position === 'head' ? -1 : 1) - (b.position === 'head' ? -1 : 1))
         const nameStrs = sorted.map((r, i) => `${i + 1}.${r.nickName}(${r.position === 'head' ? '车头' : '车身'})`)
+        const nameStartX = margin + 20
+        const colW = Math.floor((canvasWidth - nameStartX - margin) / 3)
+        const colMaxW = colW - 10
+        const colXs = [nameStartX, nameStartX + colW, nameStartX + colW * 2]
         for (let i = 0; i < nameStrs.length; i += 3) {
-          ctx.fillText(nameStrs.slice(i, i + 3).join(' '), margin + 20, y)
+          nameStrs.slice(i, i + 3).forEach((name, col) => ctx.fillText(truncateText(ctx, name, colMaxW), colXs[col], y))
           y += 40
         }
       }
@@ -438,9 +449,12 @@ Page({
 
     let totalHeight = dataStartY + 20
     for (const stat of stats) {
-      totalHeight += 50
+      totalHeight += 40  // single header line
       if (stat.registrations.length > 0) {
-        totalHeight += 60 + Math.ceil(stat.registrations.length / 3) * 40
+        const subs = stat.registrations.filter(r => r.position === 'substitute')
+        const combats = stat.registrations.filter(r => r.position === 'combat')
+        if (subs.length > 0) totalHeight += 30 + Math.ceil(subs.length / 3) * 35
+        if (combats.length > 0) totalHeight += 30 + Math.ceil(combats.length / 3) * 35
       }
       totalHeight += 25
     }
@@ -485,6 +499,10 @@ Page({
         // 替补在前
         const substitutes = stat.registrations.filter(r => r.position === 'substitute')
         const combats = stat.registrations.filter(r => r.position === 'combat')
+        const nameStartX = margin + 20
+        const colW = Math.floor((canvasWidth - nameStartX - margin) / 3)
+        const colMaxW = colW - 10
+        const colXs = [nameStartX, nameStartX + colW, nameStartX + colW * 2]
 
         if (substitutes.length > 0) {
           ctx.fillStyle = '#07C160'
@@ -496,7 +514,7 @@ Page({
           ctx.font = '24px sans-serif'
           const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
           for (let i = 0; i < subNames.length; i += 3) {
-            ctx.fillText(subNames.slice(i, i + 3).join('  '), margin + 20, y)
+            subNames.slice(i, i + 3).forEach((name, col) => ctx.fillText(truncateText(ctx, name, colMaxW), colXs[col], y))
             y += 35
           }
         }
@@ -511,7 +529,7 @@ Page({
           ctx.font = '24px sans-serif'
           const combatNames = combats.map((r, i) => `${i + 1}.${r.nickName}`)
           for (let i = 0; i < combatNames.length; i += 3) {
-            ctx.fillText(combatNames.slice(i, i + 3).join('  '), margin + 20, y)
+            combatNames.slice(i, i + 3).forEach((name, col) => ctx.fillText(truncateText(ctx, name, colMaxW), colXs[col], y))
             y += 35
           }
         }

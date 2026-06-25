@@ -4,6 +4,26 @@ const util = require('../../../utils/util')
 const auth = require('../../../utils/auth')
 const db = require('../../../utils/db')
 
+function truncateText(ctx, text, maxW) {
+  if (ctx.measureText(text).width <= maxW) return text
+  let t = text
+  while (t.length > 0 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1)
+  return t.length > 0 ? t + '…' : ''
+}
+
+function generateTimeSlots(startTime) {
+  const parts = (startTime || '0:00').split(':')
+  let minutes = parseInt(parts[0], 10) * 60 + parseInt(parts[1] || '0', 10)
+  const slots = []
+  while (minutes < 24 * 60) {
+    const hh = String(Math.floor(minutes / 60)).padStart(2, '0')
+    const mm = String(minutes % 60).padStart(2, '0')
+    slots.push(`${hh}:${mm}`)
+    minutes += 30
+  }
+  return slots
+}
+
 Page({
   data: {
     // 报名类型选择
@@ -569,8 +589,12 @@ Page({
             ctx.font = '24px sans-serif'
             const sorted = [...stat.registrations].sort((a, b) => (a.position === 'head' ? -1 : 1) - (b.position === 'head' ? -1 : 1))
             const nameStrs = sorted.map((r, i) => `${i + 1}.${r.nickName}(${r.position === 'head' ? '车头' : '车身'})`)
+            const nameStartX = margin + 20
+            const colW = Math.floor((canvasWidth - nameStartX - margin) / 3)
+            const colMaxW = colW - 10
+            const colXs = [nameStartX, nameStartX + colW, nameStartX + colW * 2]
             for (let i = 0; i < nameStrs.length; i += 3) {
-              ctx.fillText(nameStrs.slice(i, i + 3).join(' '), margin + 20, y)
+              nameStrs.slice(i, i + 3).forEach((name, col) => ctx.fillText(truncateText(ctx, name, colMaxW), colXs[col], y))
               y += 40
             }
           }
@@ -641,9 +665,12 @@ Page({
 
         let totalHeight = dataStartY + 20
         for (const stat of this.data.arsenalStats) {
-          totalHeight += 50
+          totalHeight += 80  // corps title (40) + date/time line (40)
           if (stat.registrations.length > 0) {
-            totalHeight += Math.ceil(stat.registrations.length / 3) * 40 + 20
+            const subs = stat.registrations.filter(r => r.position === 'substitute')
+            const combats = stat.registrations.filter(r => r.position === 'combat')
+            if (subs.length > 0) totalHeight += 30 + Math.ceil(subs.length / 3) * 35
+            if (combats.length > 0) totalHeight += 30 + Math.ceil(combats.length / 3) * 35
           }
           totalHeight += 25
         }
@@ -692,6 +719,10 @@ Page({
           if (stat.registrations.length > 0) {
             const substitutes = stat.registrations.filter(r => r.position === 'substitute')
             const combats = stat.registrations.filter(r => r.position === 'combat')
+            const nameStartX = margin + 20
+            const colW = Math.floor((canvasWidth - nameStartX - margin) / 3)
+            const colMaxW = colW - 10
+            const colXs = [nameStartX, nameStartX + colW, nameStartX + colW * 2]
 
             if (substitutes.length > 0) {
               ctx.fillStyle = '#07C160'
@@ -703,7 +734,7 @@ Page({
               ctx.font = '24px sans-serif'
               const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
               for (let i = 0; i < subNames.length; i += 3) {
-                ctx.fillText(subNames.slice(i, i + 3).join('  '), margin + 20, y)
+                subNames.slice(i, i + 3).forEach((name, col) => ctx.fillText(truncateText(ctx, name, colMaxW), colXs[col], y))
                 y += 35
               }
             }
@@ -718,7 +749,7 @@ Page({
               ctx.font = '24px sans-serif'
               const combatNames = combats.map((r, i) => `${i + 1}.${r.nickName}`)
               for (let i = 0; i < combatNames.length; i += 3) {
-                ctx.fillText(combatNames.slice(i, i + 3).join('  '), margin + 20, y)
+                combatNames.slice(i, i + 3).forEach((name, col) => ctx.fillText(truncateText(ctx, name, colMaxW), colXs[col], y))
                 y += 35
               }
             }
@@ -787,9 +818,12 @@ Page({
 
         let totalHeight = dataStartY + 20
         for (const stat of this.data.canyonStats) {
-          totalHeight += 50
+          totalHeight += 80  // corps title (40) + date/time line (40)
           if (stat.registrations.length > 0) {
-            totalHeight += Math.ceil(stat.registrations.length / 3) * 40 + 20
+            const subs = stat.registrations.filter(r => r.position === 'substitute')
+            const combats = stat.registrations.filter(r => r.position === 'combat')
+            if (subs.length > 0) totalHeight += 30 + Math.ceil(subs.length / 3) * 35
+            if (combats.length > 0) totalHeight += 30 + Math.ceil(combats.length / 3) * 35
           }
           totalHeight += 25
         }
@@ -838,6 +872,10 @@ Page({
           if (stat.registrations.length > 0) {
             const substitutes = stat.registrations.filter(r => r.position === 'substitute')
             const combats = stat.registrations.filter(r => r.position === 'combat')
+            const nameStartX = margin + 20
+            const colW = Math.floor((canvasWidth - nameStartX - margin) / 3)
+            const colMaxW = colW - 10
+            const colXs = [nameStartX, nameStartX + colW, nameStartX + colW * 2]
 
             if (substitutes.length > 0) {
               ctx.fillStyle = '#07C160'
@@ -849,7 +887,7 @@ Page({
               ctx.font = '24px sans-serif'
               const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
               for (let i = 0; i < subNames.length; i += 3) {
-                ctx.fillText(subNames.slice(i, i + 3).join('  '), margin + 20, y)
+                subNames.slice(i, i + 3).forEach((name, col) => ctx.fillText(truncateText(ctx, name, colMaxW), colXs[col], y))
                 y += 35
               }
             }
@@ -864,7 +902,7 @@ Page({
               ctx.font = '24px sans-serif'
               const combatNames = combats.map((r, i) => `${i + 1}.${r.nickName}`)
               for (let i = 0; i < combatNames.length; i += 3) {
-                ctx.fillText(combatNames.slice(i, i + 3).join('  '), margin + 20, y)
+                combatNames.slice(i, i + 3).forEach((name, col) => ctx.fillText(truncateText(ctx, name, colMaxW), colXs[col], y))
                 y += 35
               }
             }
@@ -970,18 +1008,25 @@ Page({
           ctx.fillText(`日期: ${stat.config.date}  起始: ${stat.config.startTime}`, margin + 20, y)
           y += 40
 
-          if (stat.registrations.length > 0) {
-            ctx.fillStyle = '#666666'
-            ctx.font = '24px sans-serif'
-            const items = stat.registrations.map(r => `${r.timeSlot} ${r.nickName}`)
-            const colX = [margin + 20, margin + 345]
-            for (let i = 0; i < items.length; i += 2) {
-              ctx.fillText(`${i + 1}. ${items[i]}`, colX[0], y)
-              if (items[i + 1]) {
-                ctx.fillText(`${i + 2}. ${items[i + 1]}`, colX[1], y)
-              }
-              y += 40
-            }
+          ctx.fillStyle = '#666666'
+          ctx.font = '24px sans-serif'
+          const colX = [margin + 20, margin + 20 + Math.floor((canvasWidth - margin - 20 - margin) / 2)]
+          const colMaxW = colX[1] - colX[0] - 10
+          const truncate = (text) => {
+            if (ctx.measureText(text).width <= colMaxW) return text
+            let t = text
+            while (t.length > 0 && ctx.measureText(t + '…').width > colMaxW) t = t.slice(0, -1)
+            return t.length > 0 ? t + '…' : ''
+          }
+          const regMap = {}
+          for (const r of stat.registrations) regMap[r.timeSlot] = r.nickName
+          const allSlots = generateTimeSlots(stat.config.startTime)
+          for (let i = 0; i < allSlots.length; i += 2) {
+            const text0 = truncate(`${allSlots[i]} ${regMap[allSlots[i]] || ''}`.trimEnd())
+            const text1 = i + 1 < allSlots.length ? truncate(`${allSlots[i + 1]} ${regMap[allSlots[i + 1]] || ''}`.trimEnd()) : ''
+            ctx.fillText(text0, colX[0], y)
+            if (text1) ctx.fillText(text1, colX[1], y)
+            y += 40
           }
 
           y += 25
@@ -1062,9 +1107,8 @@ Page({
       for (const stat of this.data.positionStats) {
         height += 45 // 标题
         height += 40 // 日期起始时间
-        if (stat.registrations.length > 0) {
-          height += 40 * Math.ceil(stat.registrations.length / 2) // 报名人员（每2人换行）
-        }
+        const allSlots = generateTimeSlots(stat.config.startTime)
+        height += 40 * Math.ceil(allSlots.length / 2) // 所有时间槽，2列
         height += 25 // 间隔
       }
     }
