@@ -32,6 +32,9 @@
       <scroll-view class="zone-list" scroll-y catchtouchmove="stopPropagation">
         <view wx:if="{{filteredZones.length === 0}}" class="empty-state">
           <text class="empty-text">未找到匹配的分区</text>
+          <view wx:if="{{showApplyEntry}}" class="apply-zone-btn" bindtap="onApplyZoneTap">
+            <text>申请开通分区</text>
+          </view>
         </view>
         <view wx:for="{{filteredZones}}" wx:key="_id"
               class="zone-item {{value && value._id === item._id ? 'zone-item-active' : ''}}"

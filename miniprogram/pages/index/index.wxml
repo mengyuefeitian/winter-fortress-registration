@@ -98,7 +98,7 @@
           </view>
         </view>
         <!-- 分区选择器 -->
-        <zone-selector value="{{currentZone}}" zones="{{zones}}" loaded="{{zonesLoaded}}" bind:change="onZoneChange" />
+        <zone-selector value="{{currentZone}}" zones="{{zones}}" loaded="{{zonesLoaded}}" show-apply-entry="{{true}}" bind:change="onZoneChange" bind:applyzone="applyCreateZone" />
       </view>
     </view>
 
