@@ -73,9 +73,12 @@ async function timedClearCheck() {
     return { success: true, message: '自动清空未启用' }
   }
 
-  // config.day: 1=周一 ... 7=周日；Date.getDay(): 0=周日, 1=周一 ... 6=周六
-  const now = new Date()
-  const jsDay = now.getDay()
+  // 云函数运行时区默认为 UTC，需手动换算为北京时间（UTC+8）再比较，
+  // 否则"周一0点"这类配置会整体偏移8小时
+  const beijingNow = new Date(Date.now() + 8 * 60 * 60 * 1000)
+
+  // config.day: 1=周一 ... 7=周日；getUTCDay(): 0=周日, 1=周一 ... 6=周六
+  const jsDay = beijingNow.getUTCDay()
   const dayOfWeek = jsDay === 0 ? 7 : jsDay // 转为 1-7
 
   if (dayOfWeek !== config.day) {
@@ -83,7 +86,7 @@ async function timedClearCheck() {
     return { success: true, message: '今日不执行自动清空' }
   }
 
-  const currentHour = now.getHours()
+  const currentHour = beijingNow.getUTCHours()
   if (currentHour !== config.hour) {
     console.log(`当前小时${currentHour}，配置为${config.hour}时，跳过`)
     return { success: true, message: '当前时间不执行自动清空' }
@@ -251,11 +254,14 @@ function parseDate(dateStr) {
   return null
 }
 
-// 获取今天的日期对象和字符串
+// 获取今天的日期对象和字符串（按北京时间计算，避免云函数 UTC 运行时区导致跨天误判）
 function getTodayInfo() {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0) // 只比较日期部分
-  const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const beijingNow = new Date(Date.now() + 8 * 60 * 60 * 1000)
+  const year = beijingNow.getUTCFullYear()
+  const month = beijingNow.getUTCMonth()
+  const day = beijingNow.getUTCDate()
+  const today = new Date(year, month, day) // 与 parseDate() 保持一致，用本地时区构造零点
+  const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
   return { dateObj: today, dateStr: dateStr }
 }
 
