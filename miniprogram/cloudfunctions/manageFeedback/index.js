@@ -148,6 +148,10 @@ async function getFeedbackForAdmin(data) {
     replies = [{ content: item.reply, repliedAt: item.repliedAt || null }]
   }
 
+  // 反馈图片是其他用户上传的，客户端直接调用 getTempFileURL 会受存储安全规则限制而失败，
+  // 需在云函数（管理员权限）里解析成可访问的临时链接
+  const imageUrls = await resolveImageUrls(item.imageUrls)
+
   return {
     success: true,
     data: {
@@ -155,10 +159,22 @@ async function getFeedbackForAdmin(data) {
       nickName: item.nickName || '匿名',
       type: item.type,
       content: item.content,
-      imageUrls: item.imageUrls || [],
+      imageUrls: imageUrls,
       createTime: item.createTime,
       replies: replies
     }
+  }
+}
+
+// 将云存储 fileID 数组解析为可访问的临时链接
+async function resolveImageUrls(fileIds) {
+  if (!fileIds || fileIds.length === 0) return []
+  try {
+    const res = await cloud.getTempFileURL({ fileList: fileIds })
+    return res.fileList.map(f => f.tempFileURL || f.fileID)
+  } catch (err) {
+    console.error('解析反馈图片地址失败:', err)
+    return fileIds
   }
 }
 

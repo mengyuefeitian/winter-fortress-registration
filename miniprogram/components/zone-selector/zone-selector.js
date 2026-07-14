@@ -14,6 +14,11 @@ Component({
     loaded: {
       type: Boolean,
       value: false
+    },
+    // 未找到分区时是否显示"申请开通分区"快捷入口
+    showApplyEntry: {
+      type: Boolean,
+      value: false
     }
   },
 
@@ -79,6 +84,12 @@ Component({
         keyword: ''
       })
       this.triggerEvent('change', { zone: zone })
+    },
+
+    // 未找到分区时点击"申请开通分区"，交由父页面处理具体申请流程
+    onApplyZoneTap: function() {
+      this.setData({ showPicker: false })
+      this.triggerEvent('applyzone')
     }
   }
 })

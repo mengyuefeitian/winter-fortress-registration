@@ -34,6 +34,8 @@ Page({
         ...r,
         repliedAtStr: r.repliedAt ? util.formatDate(r.repliedAt, 'YYYY-MM-DD HH:mm') : ''
       }))
+
+      // imageUrls 已由云函数（管理员权限）解析成可访问的临时链接
       this.setData({
         detail: {
           ...item,

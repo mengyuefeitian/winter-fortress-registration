@@ -1434,12 +1434,21 @@ async function createBattleRegistration(data) {
 // 获取国战配置的报名列表
 async function getBattleRegistrationsByConfig(configId) {
   const db = getDb()
-  const res = await db.collection('battleRegistrations').where({
-    configId: configId,
-    status: 'active'
-  }).orderBy('createTime', 'asc').get()
-
-  return res.data
+  // 分页获取所有报名记录，避免20条限制
+  let allData = []
+  let skip = 0
+  const batchSize = 20
+  while (true) {
+    const res = await db.collection('battleRegistrations').where({
+      configId: configId,
+      status: 'active'
+    }).orderBy('createTime', 'asc').skip(skip).limit(batchSize).get()
+    allData = allData.concat(res.data)
+    if (res.data.length < batchSize) break
+    skip += batchSize
+    if (skip > 1000) break
+  }
+  return allData
 }
 
 // 获取用户的报名记录

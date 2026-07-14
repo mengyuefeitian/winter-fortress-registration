@@ -35,23 +35,72 @@ Page({
       zoneName: options.zoneName || '',
       inputNickName: lastNickName
     })
-    this.loadAlliances()
+    this.waitForRoleReady()
   },
 
-  loadAlliances: async function () {
-    try {
-      const zone = app.globalData.currentZone
-      if (zone) {
-        const alliances = await db.getAlliancesByZone(zone._id)
-        const list = alliances || []
-        this.setData({ alliances: list })
+  // 等待全局登录状态确定后再校验登录/分区，避免通过转发链接直接进入时状态未就绪
+  waitForRoleReady: function () {
+    if (app.globalData.roleReady) {
+      this.checkAccessAndLoad()
+    } else {
+      setTimeout(() => {
+        this.waitForRoleReady()
+      }, 100)
+    }
+  },
 
-        const lastId = wx.getStorageSync('lastBattleAllianceId')
-        if (lastId) {
-          const idx = list.findIndex(a => a._id === lastId)
-          if (idx >= 0) {
-            this.setData({ allianceIndex: idx })
-          }
+  // 校验登录状态与分区绑定，缺失则跳转首页登录/选择分区，避免转发链接进入后无法选择联盟
+  checkAccessAndLoad: async function () {
+    const userInfo = app.globalData.userInfo
+    if (!userInfo || !userInfo.nickName) {
+      wx.showToast({ title: '请先登录', icon: 'none' })
+      wx.navigateTo({ url: '/pages/login/login' })
+      return
+    }
+
+    const zone = await this.resolveZone()
+    if (!zone) {
+      wx.showToast({ title: '请先在首页选择分区', icon: 'none' })
+      wx.switchTab({ url: '/pages/index/index' })
+      return
+    }
+
+    this.loadAlliances(zone)
+  },
+
+  // 解析当前分区：优先全局状态，其次本地缓存的上次选择分区
+  resolveZone: async function () {
+    let zone = app.globalData.currentZone
+    if (zone) return zone
+
+    const lastZoneId = wx.getStorageSync('lastZoneId')
+    if (!lastZoneId) return null
+
+    try {
+      const wxdb = wx.cloud.database()
+      const res = await wxdb.collection('zones').doc(lastZoneId).get()
+      if (res.data && res.data.status !== 'inactive') {
+        zone = res.data
+        app.globalData.currentZone = zone
+        return zone
+      }
+    } catch (err) {
+      console.error('恢复分区失败:', err)
+    }
+    return null
+  },
+
+  loadAlliances: async function (zone) {
+    try {
+      const alliances = await db.getAlliancesByZone(zone._id)
+      const list = alliances || []
+      this.setData({ alliances: list })
+
+      const lastId = wx.getStorageSync('lastBattleAllianceId')
+      if (lastId) {
+        const idx = list.findIndex(a => a._id === lastId)
+        if (idx >= 0) {
+          this.setData({ allianceIndex: idx })
         }
       }
     } catch (err) {
