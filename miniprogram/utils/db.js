@@ -1379,6 +1379,22 @@ async function getBattleConfigById(configId) {
   return res.data
 }
 
+// 批量根据ID获取国战配置（返回 id → config 的 Map）
+async function getBattleConfigsByIds(configIds) {
+  if (!configIds || configIds.length === 0) return {}
+  const db = getDb()
+  const _ = db.command
+  const uniqueIds = [...new Set(configIds)]
+  const result = {}
+  const chunkSize = 10
+  for (let i = 0; i < uniqueIds.length; i += chunkSize) {
+    const chunk = uniqueIds.slice(i, i + chunkSize)
+    const res = await db.collection('battleConfigs').where({ _id: _.in(chunk) }).get()
+    res.data.forEach(c => { result[c._id] = c })
+  }
+  return result
+}
+
 // 删除国战配置（通过云函数，服务端校验分区归属）
 async function deleteBattleConfig(configId) {
   const res = await wx.cloud.callFunction({
@@ -1957,6 +1973,7 @@ module.exports = {
   createBattleConfig,
   getBattleConfigs,
   getBattleConfigById,
+  getBattleConfigsByIds,
   deleteBattleConfig,
   createBattleRegistration,
   getBattleRegistrationsByConfig,

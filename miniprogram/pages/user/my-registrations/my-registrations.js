@@ -15,6 +15,7 @@ Page({
     positionRegistrations: [],
     arsenalRegistrations: [],
     canyonRegistrations: [],
+    battleRegistrations: [],
     versionText: version.getVersionText(),
     // 分区过滤
     currentZone: null,
@@ -50,7 +51,8 @@ Page({
             weeklyRegistrations: myCached.weeklyRegistrations,
             positionRegistrations: myCached.positionRegistrations,
             arsenalRegistrations: myCached.arsenalRegistrations,
-            canyonRegistrations: myCached.canyonRegistrations
+            canyonRegistrations: myCached.canyonRegistrations,
+            battleRegistrations: myCached.battleRegistrations || []
           })
         }
       }
@@ -124,18 +126,20 @@ Page({
           weeklyRegistrations: [],
           positionRegistrations: [],
           arsenalRegistrations: [],
-          canyonRegistrations: []
+          canyonRegistrations: [],
+          battleRegistrations: []
         })
         return
       }
 
-      // 并行拉取堡垒、官职、兵工厂、峡谷报名记录，减少串行等待
-      const [registrations, positionRegistrations, arsenalRegistrations, canyonRegistrations] =
+      // 并行拉取堡垒、官职、兵工厂、峡谷、国战报名记录，减少串行等待
+      const [registrations, positionRegistrations, arsenalRegistrations, canyonRegistrations, battleRegistrations] =
         await Promise.all([
           db.getRegistrationsByUser(userId),
           db.getPositionRegistrationsByUser(userId),
           db.getArsenalRegistrationsByUser(userId),
-          db.getCanyonRegistrationsByUser(userId)
+          db.getCanyonRegistrationsByUser(userId),
+          db.getBattleRegistrationsByUser(userId)
         ])
 
       // 批量获取堡垒报名关联的分区、联盟、时间段（避免 N+1 逐条查询）
@@ -239,12 +243,27 @@ Page({
         }
       })
 
+      // 批量获取国战配置（仅拉取用户已报名的 configId，不拉全量）
+      const battleConfigIds = battleRegistrations.map(r => r.configId).filter(Boolean)
+      const battleConfigMap = await db.getBattleConfigsByIds(battleConfigIds)
+
+      const processedBattle = battleRegistrations.map(reg => {
+        const config = battleConfigMap[reg.configId]
+        return {
+          ...reg,
+          date: config ? config.date : '',
+          zoneName: config ? config.zoneName : (reg.zoneName || ''),
+          formattedTime: util.formatDate(reg.createTime, 'YYYY-MM-DD HH:mm')
+        }
+      })
+
       this.setData({
         registrations: filteredRegistrations,
         weeklyRegistrations: weeklyRegistrations,
         positionRegistrations: processedPositionRegistrations,
         arsenalRegistrations: processedArsenal,
-        canyonRegistrations: processedCanyon
+        canyonRegistrations: processedCanyon,
+        battleRegistrations: processedBattle
       })
 
       if (userId) {
@@ -254,6 +273,7 @@ Page({
           positionRegistrations: processedPositionRegistrations,
           arsenalRegistrations: processedArsenal,
           canyonRegistrations: processedCanyon,
+          battleRegistrations: processedBattle,
           timestamp: Date.now()
         }
         cache.set('myregs_' + userId, cachePayload)
@@ -389,6 +409,32 @@ Page({
     }
   },
 
+  // 取消国战报名
+  cancelBattleRegistration: async function (e) {
+    const registrationId = e.currentTarget.dataset.id
+
+    const confirm = await util.showConfirm('确认取消', '确定要取消这条国战报名记录吗？')
+
+    if (!confirm) return
+
+    try {
+      util.showLoading('正在取消...')
+
+      await db.deleteBattleRegistration(registrationId)
+
+      await this.loadMyRegistrations()
+
+      util.hideLoading()
+      util.showSuccess('取消成功')
+      const cancelMyUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+      if (cancelMyUserId) cache.invalidate('myregs_' + cancelMyUserId)
+
+    } catch (err) {
+      util.hideLoading()
+      util.showError('取消失败')
+    }
+  },
+
   // 去报名
   goToRegistration: function () {
     wx.navigateTo({
@@ -411,6 +457,12 @@ Page({
   goToCanyon: function () {
     wx.navigateTo({
       url: '/pages/user/canyon-registration/canyon-registration'
+    })
+  },
+
+  goToBattle: function () {
+    wx.navigateTo({
+      url: '/pages/user/battle-list/battle-list'
     })
   },
 
@@ -463,7 +515,8 @@ Page({
             weeklyRegistrations: [],
             positionRegistrations: [],
             arsenalRegistrations: [],
-            canyonRegistrations: []
+            canyonRegistrations: [],
+            battleRegistrations: []
           })
 
           util.showSuccess('已退出登录')
