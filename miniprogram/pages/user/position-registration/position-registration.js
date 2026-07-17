@@ -2,6 +2,7 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
+const shareEntry = require('../../../utils/shareEntry')
 
 function normalizeTimeToHHMM(t) {
   if (!t) return t
@@ -51,7 +52,7 @@ Page({
       const configId = options ? options.configId : null
       if (configId) {
         this.setData({ configId })
-        this.loadConfigData(configId)
+        this.checkAndLoad(configId)
       } else {
         // 如果没有传入 configId，尝试获取今天的配置
         this.loadTodayConfig()
@@ -61,6 +62,73 @@ Page({
         this.waitForRoleReady(options)
       }, 100)
     }
+  },
+
+  // 校验分享进入的登录与分区归属，通过后再加载配置
+  checkAndLoad: async function (configId) {
+    const pass = await this.checkSharedEntry(configId)
+    if (!pass) return
+    this.loadConfigData(configId)
+  },
+
+  // 分享进入：首次校验登录与分区归属
+  checkSharedEntry: async function (configId) {
+    if (this._entryChecked) return true
+    this._entryChecked = true
+
+    const userInfo = app.globalData.userInfo
+    if (!userInfo || !userInfo.nickName) {
+      shareEntry.showReminderAndExit(this, '未登录，请先登录')
+      return false
+    }
+
+    // 解析分享配置所属分区
+    let configZoneId = null
+    let configZoneName = ''
+    try {
+      const cfg = await db.getPositionConfigById(configId)
+      if (cfg) {
+        configZoneId = cfg.zoneId
+        configZoneName = cfg.zoneName
+      }
+    } catch (e) {
+      console.error('获取官职配置失败', e)
+    }
+
+    const zone = await this.resolveZone()
+    if (!zone) {
+      shareEntry.showReminderAndExit(this, '请先在首页选择分区后再报名')
+      return false
+    }
+
+    if (configZoneId && zone._id !== configZoneId) {
+      const name = configZoneName || ''
+      shareEntry.showReminderAndExit(this, '不属于' + name + '分区，请切换到' + name + '分区后再重新进入报名')
+      return false
+    }
+    return true
+  },
+
+  // 解析当前分区：优先全局状态，其次本地缓存的上次选择分区
+  resolveZone: async function () {
+    let zone = app.globalData.currentZone
+    if (zone) return zone
+
+    const lastZoneId = wx.getStorageSync('lastZoneId')
+    if (!lastZoneId) return null
+
+    try {
+      const wxdb = wx.cloud.database()
+      const res = await wxdb.collection('zones').doc(lastZoneId).get()
+      if (res.data && res.data.status !== 'inactive') {
+        zone = res.data
+        app.globalData.currentZone = zone
+        return zone
+      }
+    } catch (err) {
+      console.error('恢复分区失败:', err)
+    }
+    return null
   },
 
   // 加载今天的配置（如果没有传入 configId）

@@ -124,4 +124,7 @@
       <button class="btn btn-primary" bindtap="updateMySeat">保存</button>
     </view>
   </view>
+
+  <!-- 分享进入校验悬浮提醒 -->
+  <float-reminder id="entryReminder" />
 </view>

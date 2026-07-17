@@ -15,11 +15,6 @@
     <text class="info-tip-text">分区管理员在国战报名页面可看到【创建国战】选项，选择国战日期后进行创建，用户即可点击日期填写国战报名信息。区管可在[统计表]中分配车身到对应的车头，[分配表]中可以看到最终结果，可保存截图分享。</text>
   </view>
 
-  <!-- 分区选择器（超管显示） -->
-  <view class="zone-bar" wx:if="{{isSuperAdmin}}">
-    <zone-selector zones="{{zones}}" value="{{currentZone}}" loaded="{{zones.length > 0}}" bind:change="onZoneChange" />
-  </view>
-
   <!-- 创建区 -->
   <view class="create-bar" wx:if="{{canCreate}}">
     <view class="date-picker">

@@ -14,6 +14,7 @@
       <view class="col col-barracks-troop">兵种实力(万)</view>
       <view class="col col-diamonds">钻石(万)</view>
       <view class="col col-voice">开麦</view>
+      <view class="col col-war">战争</view>
     </view>
     <view class="table-row" wx:for="{{headRegistrations}}" wx:key="_id">
       <view class="col col-name-alliance">
@@ -27,6 +28,10 @@
       </view>
       <view class="col col-diamonds">{{item.diamonds || '-'}}</view>
       <view class="col col-voice">{{item.voice || '-'}}</view>
+      <view class="col col-war">
+        <view wx:for="{{item.warTags}}" wx:for-item="war" wx:key="type" class="war-tag war-{{war.type}}">{{war.label}}</view>
+        <text wx:if="{{item.warTags.length === 0}}" class="war-none">-</text>
+      </view>
     </view>
     <view class="empty-row" wx:if="{{headRegistrations.length === 0}}">
       <text class="empty-text">暂无车头报名</text>
@@ -43,6 +48,7 @@
       <view class="col col-barracks-troop">兵种实力(万)</view>
       <view class="col col-diamonds">钻石(万)</view>
       <view class="col col-voice">开麦</view>
+      <view class="col col-war">战争</view>
       <view class="col col-assignment">分配</view>
     </view>
     <view class="table-row" wx:for="{{bodyRegistrations}}" wx:key="_id">
@@ -62,6 +68,10 @@
       </view>
       <view class="col col-diamonds">{{item.diamonds || '-'}}</view>
       <view class="col col-voice">{{item.voice || '-'}}</view>
+      <view class="col col-war">
+        <view wx:for="{{item.warTags}}" wx:for-item="war" wx:key="type" class="war-tag war-{{war.type}}">{{war.label}}</view>
+        <text wx:if="{{item.warTags.length === 0}}" class="war-none">-</text>
+      </view>
       <view class="col col-assignment">
         <picker wx:if="{{canDeleteRegistration}}" mode="selector" range="{{headNickNames}}" value="{{item.pickerIdx}}" bindchange="onPickerChange" data-id="{{item._id}}" data-index="{{index}}">
           <view class="assignment-cell">

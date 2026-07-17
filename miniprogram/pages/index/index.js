@@ -4,6 +4,8 @@ const util = require('../../utils/util')
 const auth = require('../../utils/auth')
 const db = require('../../utils/db')
 const version = require('../../utils/version')
+const { sendApplyEmail } = require('../../utils/notifyEmail')
+const { requestSubscribe } = require('../../utils/notifyConfig')
 
 Page({
   data: {
@@ -568,7 +570,64 @@ Page({
       util.showInfo('请先选择您的分区后再申请')
       return
     }
-    await this.checkAndShowApplyDialog('zoneManager')
+
+    const userId = app.globalData.openid
+    if (!userId) return
+
+    try {
+      const applications = await db.getUserApplications(userId)
+      const sameTypeApps = applications.filter(a => a.applyType === 'zoneManager')
+
+      if (sameTypeApps.length > 0) {
+        const latestApp = sameTypeApps[0]
+
+        if (latestApp.status === 'pending') {
+          wx.showModal({
+            title: '申请区管',
+            content: '您已提交区管申请，正在等待审核。',
+            showCancel: false,
+            confirmText: '我知道了'
+          })
+          return
+        }
+
+        if (latestApp.status === 'rejected') {
+          wx.showModal({
+            title: '申请区管',
+            content: '您之前的区管申请已被拒绝。是否重新申请？',
+            confirmText: '重新申请',
+            success: (res) => {
+              if (res.confirm) {
+                wx.navigateTo({ url: '/pages/user/apply-zone-manager/apply-zone-manager' })
+              }
+            }
+          })
+          return
+        }
+
+        if (latestApp.status === 'approved') {
+          const currentUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+          const currentZone = this.data.currentZone || app.globalData.currentZone
+          const isCurrentZoneAdmin = await this.checkIsZoneManagerInZone(currentUserId, currentZone)
+
+          if (isCurrentZoneAdmin) {
+            wx.showModal({
+              title: '申请区管',
+              content: '您已是该分区的区管。',
+              showCancel: false,
+              confirmText: '我知道了'
+            })
+            return
+          }
+        }
+      }
+
+      // 没有任何记录或允许重新申请，跳转到申请页面
+      wx.navigateTo({ url: '/pages/user/apply-zone-manager/apply-zone-manager' })
+    } catch (err) {
+      console.error('查询申请记录失败:', err)
+      wx.navigateTo({ url: '/pages/user/apply-zone-manager/apply-zone-manager' })
+    }
   },
 
   // 检查用户是否是指定分区的区管（支持多区管）
@@ -844,6 +903,10 @@ Page({
   applyCreateZone: async function () {
     if (!this.ensureLogin()) return
 
+    // 请求订阅消息授权（必须在用户点击事件回调中调用）
+    // 用户同意后，审核通过时可收到微信通知
+    await requestSubscribe()
+
     // 检查是否已有待审核的分区开通申请
     try {
       const userId = app.globalData.openid
@@ -938,7 +1001,7 @@ Page({
       title: '申请开通分区\n请填写分区名称和期望的分区编号',
       content: '',
       editable: true,
-      placeholderText: '如：第一区 3558',
+      placeholderText: '如:3558',
       success: async (res) => {
         if (res.confirm && res.content) {
           const content = res.content.trim()
@@ -962,6 +1025,14 @@ Page({
                 status: 'pending',
                 createTime: wxdb.serverDate()
               }
+            })
+
+            // 异步发送邮件通知超管（不阻塞）
+            sendApplyEmail({
+              applyType: 'zoneCreation',
+              nickName: app.globalData.userInfo ? app.globalData.userInfo.nickName : '',
+              phone: phone,
+              zoneName: content
             })
 
             util.hideLoading()

@@ -66,16 +66,17 @@
   min-height: 80rpx;
 }
 
-.col-checkbox { width: 60rpx; }
-.col-furnace  { width: 65rpx; }
-.col-diamonds { width: 85rpx; }
-.col-voice    { width: 60rpx; }
-.col-assignment { width: 120rpx; }
+.col-checkbox { width: 55rpx; }
+.col-furnace  { width: 60rpx; }
+.col-diamonds { width: 80rpx; }
+.col-voice    { width: 55rpx; }
+.col-war      { width: 80rpx; flex-direction: column; align-items: center; justify-content: center; }
+.col-assignment { width: 110rpx; }
 
 /* 宽度设计目标：含 checkbox 的车身表总宽 ≤ 710rpx（750 - 2×20 padding）
-   60+165+65+115+85+60+120 = 670rpx ✓ */
+   55+150+60+105+80+55+80+110 = 695rpx ✓ */
 .col-name-alliance {
-  width: 165rpx;
+  width: 150rpx;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
@@ -83,11 +84,35 @@
 }
 
 .col-barracks-troop {
-  width: 115rpx;
+  width: 105rpx;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
   text-align: left;
+}
+
+/* 战争列标签：远征（橙）/ 王城（蓝）两行展示 */
+.war-tag {
+  font-size: 20rpx;
+  color: #fff;
+  border-radius: 6rpx;
+  padding: 2rpx 8rpx;
+  margin: 2rpx 0;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.war-tag.war-expedition {
+  background: #FF7A45;
+}
+
+.war-tag.war-royal {
+  background: #597EF7;
+}
+
+.war-none {
+  font-size: 22rpx;
+  color: #ccc;
 }
 
 .cell-nickname {

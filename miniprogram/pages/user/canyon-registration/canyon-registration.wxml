@@ -140,4 +140,7 @@
   <view class="text-center mt-32">
     <button class="btn-share" open-type="share">分享给好友</button>
   </view>
+
+  <!-- 分享进入校验悬浮提醒 -->
+  <float-reminder id="entryReminder" />
 </view>

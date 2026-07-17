@@ -1,0 +1,10 @@
+{
+  "name": "sendApplyEmail",
+  "version": "1.0.0",
+  "description": "申请提交后发送邮件通知超管审核",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3",
+    "nodemailer": "^6.9.0"
+  }
+}

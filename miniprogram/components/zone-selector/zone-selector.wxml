@@ -1,8 +1,8 @@
 <view class="zone-selector">
   <!-- 显示当前选中分区 -->
-  <view wx:if="{{value}}" class="zone-display" bindtap="openPicker">
+  <view wx:if="{{value}}" class="zone-display {{disabled ? 'zone-display-disabled' : ''}}" bindtap="openPicker">
     <text class="zone-name">{{value.zoneName}}</text>
-    <text class="zone-arrow">▼</text>
+    <text wx:if="{{!disabled}}" class="zone-arrow">▼</text>
   </view>
   <!-- 未选中但已加载 -->
   <view wx:elif="{{loaded && zones.length > 0}}" class="zone-display zone-display-placeholder" bindtap="openPicker">

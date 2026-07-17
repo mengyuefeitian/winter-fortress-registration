@@ -54,5 +54,6 @@
     <text class="tip-text">2. 如联盟名称为默认名称，可自定义修改</text>
     <text class="tip-text">3. 提交后等待区管审核</text>
     <text class="tip-text">4. 审核通过后自动成为该联盟盟管</text>
+    <text class="tip-text">5. 审核结果将通过微信服务通知推送，请保持订阅通知开启，以便及时收到审核结果提醒</text>
   </view>
 </view>

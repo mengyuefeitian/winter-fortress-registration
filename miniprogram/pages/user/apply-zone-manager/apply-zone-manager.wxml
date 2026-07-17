@@ -1,0 +1,39 @@
+<!--pages/user/apply-zone-manager/apply-zone-manager.wxml-->
+<view class="page">
+  <!-- 分区信息 -->
+  <view class="card">
+    <view class="zone-info-row">
+      <text class="form-label">当前分区：</text>
+      <text class="zone-name-text">{{selectedZone ? selectedZone.zoneName : '未选择'}}</text>
+    </view>
+    <view wx:if="{{!selectedZone}}" class="empty-tip">
+      <text>请先在首页选择您的分区</text>
+    </view>
+  </view>
+
+  <!-- 申请表单 -->
+  <view wx:if="{{selectedZone}}" class="card">
+    <view class="form-item">
+      <text class="form-label">绑定手机号</text>
+      <input class="form-input" type="number" placeholder="请输入手机号" value="{{phone}}" bindinput="onPhoneInput" maxlength="11" />
+    </view>
+    <button class="btn btn-primary btn-full" bindtap="submitApplication" disabled="{{submitting}}">
+      {{submitting ? '提交中...' : '提交申请'}}
+    </button>
+  </view>
+
+  <!-- 申请说明 -->
+  <view wx:if="{{selectedZone}}" class="card">
+    <view class="section-header">
+      <text class="section-title">区管权限</text>
+    </view>
+    <text class="tip-text">管理当前分区的官职和国战活动，每个联盟的联盟管理员，以及盟管可管理的活动均可管理。</text>
+
+    <view class="section-header" style="margin-top: 24rpx;">
+      <text class="section-title">申请说明</text>
+    </view>
+    <text class="tip-text">1. 提交后等待区管/超管审核</text>
+    <text class="tip-text">2. 审核通过后自动成为该分区区管</text>
+    <text class="tip-text">3. 审核结果将通过微信服务通知推送，请保持订阅通知开启，以便及时收到审核结果提醒</text>
+  </view>
+</view>

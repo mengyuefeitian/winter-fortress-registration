@@ -2,6 +2,16 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
+
+// 根据报名记录生成参战标签列表（用于「战争」列展示）
+// 勾选参加远征战争 -> 远征；勾选参加王城战争 -> 王城；二者都选则两行
+function buildWarTags(r) {
+  const tags = []
+  if (r.joinExpedition) tags.push({ label: '远征', type: 'expedition' })
+  if (r.joinRoyalCity) tags.push({ label: '王城', type: 'royal' })
+  return tags
+}
+
 Page({
   data: {
     configId: '',
@@ -33,6 +43,7 @@ Page({
         ...r,
         selected: false,
         editAssignment: r.assignment || '',
+        warTags: buildWarTags(r)
       }))
 
       const headRegistrations = processed.filter(r => r.position === '车头')
@@ -223,19 +234,21 @@ Page({
 
       // 列定义 — ratios 之和必须 = 1.0
       const headColDefs = [
-        { key: '昵称/联盟',  ratio: 0.30 },
-        { key: '熔炉',       ratio: 0.13 },
-        { key: '兵种实力(万)', ratio: 0.22 },
-        { key: '钻石(万)',   ratio: 0.18 },
-        { key: '开麦',       ratio: 0.17 },
+        { key: '昵称/联盟',  ratio: 0.28 },
+        { key: '熔炉',       ratio: 0.11 },
+        { key: '兵种实力(万)', ratio: 0.20 },
+        { key: '钻石(万)',   ratio: 0.15 },
+        { key: '开麦',       ratio: 0.14 },
+        { key: '战争',       ratio: 0.12 },
       ]
       const bodyColDefs = [
-        { key: '昵称/联盟',  ratio: 0.26 },
-        { key: '熔炉',       ratio: 0.11 },
-        { key: '兵种实力(万)', ratio: 0.19 },
-        { key: '钻石(万)',   ratio: 0.15 },
-        { key: '开麦',       ratio: 0.11 },
-        { key: '分配',       ratio: 0.18 },
+        { key: '昵称/联盟',  ratio: 0.24 },
+        { key: '熔炉',       ratio: 0.10 },
+        { key: '兵种实力(万)', ratio: 0.17 },
+        { key: '钻石(万)',   ratio: 0.13 },
+        { key: '开麦',       ratio: 0.10 },
+        { key: '战争',       ratio: 0.11 },
+        { key: '分配',       ratio: 0.15 },
       ]
 
       // 计算每列 x 坐标和宽度
@@ -298,6 +311,23 @@ Page({
             ctx.fillStyle = '#4A90D9'
             ctx.font = '20px sans-serif'
             ctx.fillText(row.troopCount || '-', col.x + 8, line2Y)
+          } else if (col.key === '战争') {
+            // 远征（橙）/ 王城（蓝），两行展示
+            if (row.joinExpedition) {
+              ctx.fillStyle = '#FF7A45'
+              ctx.font = '20px sans-serif'
+              ctx.fillText('远征', col.x + 8, line1Y)
+            }
+            if (row.joinRoyalCity) {
+              ctx.fillStyle = '#597EF7'
+              ctx.font = '20px sans-serif'
+              ctx.fillText('王城', col.x + 8, row.joinExpedition ? line2Y : line1Y)
+            }
+            if (!row.joinExpedition && !row.joinRoyalCity) {
+              ctx.fillStyle = '#999999'
+              ctx.font = '20px sans-serif'
+              ctx.fillText('-', col.x + 8, line1Y)
+            }
           } else {
             ctx.fillStyle = '#333333'
             ctx.font = '22px sans-serif'

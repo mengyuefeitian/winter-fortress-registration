@@ -1,0 +1,4 @@
+<!--components/float-reminder/float-reminder.wxml-->
+<view class="float-tip {{show ? 'show' : ''}}" wx:if="{{show}}">
+  <text class="float-tip-text">{{text}}</text>
+</view>

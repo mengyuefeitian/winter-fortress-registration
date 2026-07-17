@@ -19,6 +19,11 @@ Component({
     showApplyEntry: {
       type: Boolean,
       value: false
+    },
+    // 是否禁用（置灰）。禁用时仅展示当前分区、不可切换（普通用户/区管用）
+    disabled: {
+      type: Boolean,
+      value: false
     }
   },
 
@@ -50,6 +55,8 @@ Component({
 
   methods: {
     openPicker: function() {
+      // 禁用状态下不响应点击，保持"置灰、用默认值"
+      if (this.data.disabled) return
       this.setData({
         showPicker: true,
         keyword: '',
