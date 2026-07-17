@@ -1413,7 +1413,7 @@ async function deleteBattleConfig(configId) {
 // 创建国战报名记录
 async function createBattleRegistration(data) {
   const db = getDb()
-  const { configId, zoneId, userId, nickName, allianceId, allianceName, furnaceLevel, barracksLevel, troopCount, diamonds, voice, position } = data
+  const { configId, zoneId, userId, nickName, allianceId, allianceName, furnaceLevel, barracksLevel, troopCount, diamonds, voice, position, joinExpedition, joinRoyalCity } = data
 
   // 检查同一 configId + nickName 是否已报名（一人多账号按昵称去重）
   const existing = await db.collection('battleRegistrations').where({
@@ -1440,6 +1440,8 @@ async function createBattleRegistration(data) {
       diamonds: diamonds,
       voice: voice,
       position: position,
+      joinExpedition: !!joinExpedition,
+      joinRoyalCity: !!joinRoyalCity,
       assignment: position === '车头' ? nickName : '机动',
       status: 'active',
       createTime: db.serverDate()

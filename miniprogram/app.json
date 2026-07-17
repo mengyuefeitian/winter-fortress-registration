@@ -17,6 +17,7 @@
     "pages/superAdmin/feedback-manage/feedback-manage",
     "pages/superAdmin/feedback-reply/feedback-reply",
     "pages/user/apply-alliance-manager/apply-alliance-manager",
+    "pages/user/apply-zone-manager/apply-zone-manager",
     "pages/user/my-registrations/my-registrations",
     "pages/admin/home/home",
     "pages/admin/zone-manage/zone-manage",

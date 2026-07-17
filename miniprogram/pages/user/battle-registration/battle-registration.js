@@ -2,6 +2,7 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
+const shareEntry = require('../../../utils/shareEntry')
 
 Page({
   data: {
@@ -23,6 +24,8 @@ Page({
     voiceIndex: 0,
     positionOptions: db.BATTLE_POSITION_OPTIONS,
     positionIndex: 0,
+    joinExpedition: false,   // 参加远征战争
+    joinRoyalCity: false,    // 参加王城战争
     loading: false
   },
 
@@ -51,20 +54,41 @@ Page({
 
   // 校验登录状态与分区绑定，缺失则跳转首页登录/选择分区，避免转发链接进入后无法选择联盟
   checkAccessAndLoad: async function () {
-    const userInfo = app.globalData.userInfo
-    if (!userInfo || !userInfo.nickName) {
-      wx.showToast({ title: '请先登录', icon: 'none' })
-      wx.navigateTo({ url: '/pages/login/login' })
-      return
+    if (!this._entryChecked) {
+      this._entryChecked = true
+      const userInfo = app.globalData.userInfo
+      if (!userInfo || !userInfo.nickName) {
+        shareEntry.showReminderAndExit(this, '未登录，请先登录')
+        return
+      }
+
+      const zone = await this.resolveZone()
+      if (!zone) {
+        shareEntry.showReminderAndExit(this, '请先在首页选择分区后再报名')
+        return
+      }
+
+      // 校验分享链接指向的分区是否与当前分区一致
+      let configZoneId = null
+      let configZoneName = ''
+      try {
+        const cfg = await db.getBattleConfigById(this.data.configId)
+        if (cfg) {
+          configZoneId = cfg.zoneId
+          configZoneName = cfg.zoneName
+        }
+      } catch (e) {
+        console.error('获取国战配置失败', e)
+      }
+      if (configZoneId && zone._id !== configZoneId) {
+        shareEntry.showReminderAndExit(this, '不属于' + configZoneName + '分区，请切换到' + configZoneName + '分区后再重新进入报名')
+        return
+      }
+      this._verifiedZone = zone
     }
 
-    const zone = await this.resolveZone()
-    if (!zone) {
-      wx.showToast({ title: '请先在首页选择分区', icon: 'none' })
-      wx.switchTab({ url: '/pages/index/index' })
-      return
-    }
-
+    const zone = this._verifiedZone || await this.resolveZone()
+    if (!zone) return
     this.loadAlliances(zone)
   },
 
@@ -156,6 +180,14 @@ Page({
     this.setData({ positionIndex: parseInt(e.detail.value) })
   },
 
+  onToggleExpedition: function () {
+    this.setData({ joinExpedition: !this.data.joinExpedition })
+  },
+
+  onToggleRoyalCity: function () {
+    this.setData({ joinRoyalCity: !this.data.joinRoyalCity })
+  },
+
   validate: function () {
     const {
       allianceIndex, inputNickName, furnaceLevel,
@@ -203,7 +235,8 @@ Page({
       configId, alliances, allianceIndex, inputNickName, furnaceLevel,
       barracksShield, barracksSpear, barracksArcher,
       troopShield, troopSpear, troopArcher,
-      diamonds, voiceIndex, positionIndex
+      diamonds, voiceIndex, positionIndex,
+      joinExpedition, joinRoyalCity
     } = this.data
     const userInfo = app.globalData.userInfo
 
@@ -230,7 +263,9 @@ Page({
         troopCount,
         diamonds: diamonds.trim(),
         voice: db.VOICE_OPTIONS[voiceIndex],
-        position: db.BATTLE_POSITION_OPTIONS[positionIndex]
+        position: db.BATTLE_POSITION_OPTIONS[positionIndex],
+        joinExpedition: !!joinExpedition,
+        joinRoyalCity: !!joinRoyalCity
       }
 
       await db.createBattleRegistration(registrationData)

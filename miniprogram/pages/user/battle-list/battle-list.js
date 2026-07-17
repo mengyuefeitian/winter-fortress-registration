@@ -13,7 +13,6 @@ Page({
     canCreate: false,
     selectedDate: '',
     currentZone: null,
-    zones: [],
     showTip: false
   },
 
@@ -42,50 +41,31 @@ Page({
     this.setData({ showTip: !this.data.showTip })
   },
 
-  loadConfigs: async function () {
+  loadConfigs: async function (options) {
     try {
-      this.setData({ loading: true })
+      const silent = options && options.silent
+      if (!silent) this.setData({ loading: true })
+
       const role = app.globalData.role || 'user'
       const isSuperAdmin = role === 'superAdmin'
       const canCreate = isSuperAdmin || role === 'admin'
 
-      // 所有用户（包括区管）都应该能选择所有分区来报名国战
-      // 区管的"创建配置"权限不应限制分区选择
-      const zones = await db.getAllZones()
+      // 直接解析当前分区，不再全量扫描所有分区（避免 5~8 秒卡顿）
+      const currentZone = await this.resolveCurrentZone()
 
-      let currentZone = zones.length > 0 ? zones[0] : null
-      if (app.globalData.currentZone) {
-        const foundIndex = zones.findIndex(z => z._id === app.globalData.currentZone._id)
-        if (foundIndex >= 0) {
-          currentZone = zones[foundIndex]
-        }
-      } else {
-        // 尝试从本地存储恢复上次选择的分区
-        const lastZoneId = wx.getStorageSync('lastZoneId')
-        if (lastZoneId) {
-          const foundIndex = zones.findIndex(z => z._id === lastZoneId)
-          if (foundIndex >= 0) {
-            currentZone = zones[foundIndex]
-            app.globalData.currentZone = currentZone
-          }
-        }
-      }
-
-      let configs
+      let configs = []
       if (currentZone) {
         configs = await db.getBattleConfigs(currentZone._id)
         configs = configs.map(c => ({ ...c, zoneName: currentZone.zoneName }))
-      } else {
-        configs = []
       }
 
+      // 先渲染配置列表，保证 1 秒内出结果
       this.setData({
         configs: configs || [],
         isSuperAdmin,
         canCreate,
         selectedDate: this.getDefaultDate(),
         currentZone,
-        zones,
         loading: false
       })
     } catch (err) {
@@ -95,11 +75,24 @@ Page({
     }
   },
 
-  onZoneChange: function (e) {
-    const zone = e.detail.zone
-    if (!zone) return
-    this.setData({ currentZone: zone, selectedConfig: null })
-    this.loadConfigs()
+  // 直接解析当前分区：优先全局状态，其次本地缓存，避免全量扫描
+  resolveCurrentZone: async function () {
+    if (app.globalData.currentZone) return app.globalData.currentZone
+
+    const lastZoneId = wx.getStorageSync('lastZoneId')
+    if (lastZoneId) {
+      try {
+        const wxdb = wx.cloud.database()
+        const res = await wxdb.collection('zones').doc(lastZoneId).get()
+        if (res.data && res.data.status !== 'inactive') {
+          app.globalData.currentZone = res.data
+          return res.data
+        }
+      } catch (err) {
+        console.error('恢复分区失败:', err)
+      }
+    }
+    return null
   },
 
   onConfigSelect: function (e) {

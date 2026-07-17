@@ -2,6 +2,8 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
+const { requestSubscribe } = require('../../../utils/notifyConfig')
+const { sendApplyEmail } = require('../../../utils/notifyEmail')
 
 Page({
   data: {
@@ -109,6 +111,11 @@ Page({
     }
 
     this.setData({ submitting: true })
+
+    // 请求订阅消息授权（用户同意后，审核通过时可收到微信通知）
+    // 必须在用户点击事件回调中调用，放在验证之后、提交之前
+    var subscribed = await requestSubscribe()
+
     util.showLoading('正在提交...')
 
     try {
@@ -163,6 +170,15 @@ Page({
 
       // 创建申请
       await db.createAdminApplication(userId, phone, 'allianceManager', extraData)
+
+      // 异步发送邮件通知超管（不阻塞）
+      sendApplyEmail({
+        applyType: 'allianceManager',
+        nickName: app.globalData.userInfo ? app.globalData.userInfo.nickName : '',
+        phone: phone,
+        zoneName: this.data.selectedZone.zoneName,
+        allianceName: extraData.customAllianceName || this.data.selectedAlliance.allianceName
+      })
 
       util.hideLoading()
       util.showSuccess('申请已提交，等待审核')

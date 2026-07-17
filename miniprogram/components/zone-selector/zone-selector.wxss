@@ -17,6 +17,12 @@
   background: rgba(150, 150, 150, 0.1);
 }
 
+/* 禁用态：置灰，不可切换（仅展示当前分区） */
+.zone-display-disabled {
+  opacity: 0.55;
+  background-color: #EFEFEF;
+}
+
 .zone-name {
   font-size: 14px;
   color: #000000;

@@ -280,7 +280,9 @@ Page({
           formattedTime: application.createTime ? util.formatDate(application.createTime, 'YYYY-MM-DD HH:mm') : '',
           valid: userInfo._id !== null,
           // 显示申请时的分区信息
-          applicantZoneName: application.zoneName || ''
+          applicantZoneName: application.zoneName || '',
+          // 区管申请自带分区：自动预填，超管无需手动选择即可确认
+          selectedZone: (applicantZoneId && applicantZoneIndex >= 0) ? allZones[applicantZoneIndex] : null
         })
       }
 
@@ -350,7 +352,8 @@ Page({
   startSelectZone: function (e) {
     const index = e.currentTarget.dataset.index
     const applications = this.data.applications.map((app, i) =>
-      i === index ? { ...app, selectingZone: true, selectedZone: null } : app
+      // 保留已预填的 selectedZone（区管申请自带分区），仅在未预填时才置空
+      i === index ? { ...app, selectingZone: true } : app
     )
     this.setData({ applications })
   },
@@ -450,6 +453,12 @@ Page({
 
       util.hideLoading()
       util.showSuccess('已批准并绑定分区')
+
+      // 异步发送审核结果通知（不阻塞）
+      this.sendReviewNotify(applicationId, 'approved', {
+        zoneName: selectedZone.zoneName,
+        zoneCode: selectedZone.zoneCode || ''
+      })
 
     } catch (err) {
       util.hideLoading()
@@ -611,6 +620,13 @@ Page({
 
       util.hideLoading()
       util.showSuccess('已批准并绑定到 ' + selectedAlliance.allianceName)
+
+      // 异步发送审核结果通知（不阻塞）
+      this.sendReviewNotify(applicationId, 'approved', {
+        zoneName: selectedZone ? selectedZone.zoneName : '',
+        zoneCode: selectedZone ? (selectedZone.zoneCode || '') : '',
+        allianceName: extraData.allianceName
+      })
 
     } catch (err) {
       util.hideLoading()
@@ -777,6 +793,12 @@ Page({
       util.hideLoading()
       util.showSuccess('已创建分区并设为区管')
 
+      // 异步发送审核结果通知（不阻塞）
+      this.sendReviewNotify(applicationId, 'approved', {
+        zoneName: zoneName,
+        zoneCode: paddedCode
+      })
+
     } catch (err) {
       util.hideLoading()
       console.error('批准分区开通失败:', err)
@@ -786,7 +808,7 @@ Page({
 
   // 自动拒绝分区开通申请（分区已存在时）
   autoRejectZoneCreation: async function (applicationId, index, zoneCode, existingZoneName) {
-    const rejectReason = '您申请的分区编号' + zoneCode + '已存在（分区：' + existingZoneName + '），该分区已经开通。请直接选择该分区参加活动，无需重复申请开通。'
+    const rejectReason = '分区' + zoneCode + '已开通，开通失败'
 
     try {
       const reviewerId = app.globalData.openid
@@ -817,6 +839,13 @@ Page({
       })
 
       util.showInfo('分区已存在，已自动拒绝该申请并通知申请人')
+
+      // 异步发送审核结果通知（不阻塞）
+      this.sendReviewNotify(applicationId, 'rejected', {
+        rejectReason: rejectReason,
+        zoneCode: zoneCode,
+        auto: true
+      })
     } catch (err) {
       console.error('自动拒绝申请失败:', err)
       // 即使自动拒绝失败，也提示管理员分区已存在
@@ -864,6 +893,9 @@ Page({
       util.hideLoading()
       util.showSuccess('已拒绝')
 
+      // 异步发送审核结果通知（不阻塞）
+      this.sendReviewNotify(applicationId, 'rejected')
+
     } catch (err) {
       util.hideLoading()
       util.showError('拒绝失败')
@@ -900,5 +932,30 @@ Page({
       console.error('删除失败:', err)
       util.showError('删除失败: ' + (err.message || '未知错误'))
     }
+  },
+
+  // 发送审核结果订阅消息通知（异步，不阻塞审批流程）
+  // 审批操作（更新数据库、角色）已完成后再调用，通知发送失败不影响审批结果
+  sendReviewNotify: function (applicationId, status, extra) {
+    wx.cloud.callFunction({
+      name: 'sendReviewNotify',
+      data: {
+        applicationId: applicationId,
+        status: status,
+        zoneCode: (extra && extra.zoneCode) || '',
+        zoneName: (extra && extra.zoneName) || '',
+        allianceName: (extra && extra.allianceName) || '',
+        rejectReason: (extra && extra.rejectReason) || '',
+        auto: (extra && extra.auto) || false
+      }
+    }).then(function (res) {
+      if (res.result && res.result.success) {
+        console.log('[通知] 审核结果通知已发送:', applicationId, status)
+      } else {
+        console.log('[通知] 通知未发送（用户未授权或配额已用完）:', res.result && res.result.error)
+      }
+    }).catch(function (err) {
+      console.error('[通知] 发送审核结果通知失败:', err)
+    })
   }
 })

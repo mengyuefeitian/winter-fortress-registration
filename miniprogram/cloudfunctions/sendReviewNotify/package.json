@@ -1,0 +1,14 @@
+{
+  "name": "sendReviewNotify",
+  "version": "1.0.0",
+  "description": "发送审核结果订阅消息通知",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  },
+  "permissions": {
+    "openapi": [
+      "subscribeMessage.send"
+    ]
+  }
+}

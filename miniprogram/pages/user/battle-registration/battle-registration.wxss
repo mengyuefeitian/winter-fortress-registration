@@ -162,3 +162,35 @@ input {
   color: #999;
   white-space: nowrap;
 }
+
+/* 参战确认行：标签按实际内容宽度展示，避免 6 字被截断 */
+.form-item-confirm .label {
+  width: auto;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* 参战确认勾选框 */
+.confirm-box {
+  width: 44rpx;
+  height: 44rpx;
+  border: 2rpx solid #ccc;
+  border-radius: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  transition: all 0.15s ease;
+}
+
+.confirm-box.checked {
+  background: #4A90D9;
+  border-color: #4A90D9;
+}
+
+.confirm-check {
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: bold;
+  line-height: 1;
+}

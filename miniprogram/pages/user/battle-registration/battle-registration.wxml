@@ -86,6 +86,20 @@
       </picker>
     </view>
 
+    <view class="form-item form-item-confirm">
+      <text class="label">参加远征战争</text>
+      <view class="confirm-box {{joinExpedition ? 'checked' : ''}}" bindtap="onToggleExpedition">
+        <text wx:if="{{joinExpedition}}" class="confirm-check">✓</text>
+      </view>
+    </view>
+
+    <view class="form-item form-item-confirm">
+      <text class="label">参加王城战争</text>
+      <view class="confirm-box {{joinRoyalCity ? 'checked' : ''}}" bindtap="onToggleRoyalCity">
+        <text wx:if="{{joinRoyalCity}}" class="confirm-check">✓</text>
+      </view>
+    </view>
+
     <view class="form-item">
       <text class="label">报名位置</text>
       <picker bindchange="onPositionChange" value="{{positionIndex}}" range="{{positionOptions}}">
@@ -99,4 +113,6 @@
 
   <button class="btn-submit" bindtap="onSubmit" loading="{{loading}}">提交报名</button>
   <button class="btn-share" open-type="share">转发给朋友</button>
+
+  <float-reminder id="entryReminder" />
 </view>

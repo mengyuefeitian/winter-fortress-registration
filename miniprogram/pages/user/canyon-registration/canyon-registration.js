@@ -3,6 +3,7 @@ const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const cache = require('../../../utils/cache')
+const shareEntry = require('../../../utils/shareEntry')
 
 // 位置选项：参战/替补
 const POSITION_OPTIONS = [
@@ -46,12 +47,25 @@ Page({
   onLoad: function (options) {
     if (options && options.zoneId) {
       this._pendingZoneId = options.zoneId
+      this._sharedZoneId = options.zoneId
     }
+    this._entryChecked = false
     // onShow 由小程序框架在 onLoad 后自动调用，无需手动调用
   },
 
   onShow: function () {
-    this.checkLoginAndLoadData()
+    this.waitForRoleReady()
+  },
+
+  // 等待登录决策完成（roleReady）后再校验，避免冷启动未就绪时误判未登录
+  waitForRoleReady: function () {
+    if (app.globalData.roleReady) {
+      this.checkLoginAndLoadData()
+    } else {
+      setTimeout(() => {
+        this.waitForRoleReady()
+      }, 100)
+    }
   },
 
   // 切换提示信息显示
@@ -60,7 +74,14 @@ Page({
   },
 
   // 检查登录并加载数据
-  checkLoginAndLoadData: function () {
+  checkLoginAndLoadData: async function () {
+    // 分享进入：首次校验登录与分区归属
+    if (!this._entryChecked && this._sharedZoneId) {
+      this._entryChecked = true
+      const pass = await shareEntry.checkSharedEntry(this, this._sharedZoneId)
+      if (!pass) return
+    }
+
     const userInfo = app.globalData.userInfo
 
     if (userInfo && userInfo.nickName) {
@@ -231,7 +252,22 @@ Page({
 
       const currentUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
 
-      // 并行查询所有配置的统计数据
+      // 1) 先渲染配置外壳（不带统计），保证 1 秒内出列表
+      const shellConfigs = filteredConfigs.map(cfg => ({
+        ...cfg,
+        combatCount: 0,
+        substituteCount: 0,
+        totalCount: 0,
+        totalCapacity: POSITION_CAPACITY.combat + POSITION_CAPACITY.substitute,
+        combatFull: false,
+        substituteFull: false,
+        isFull: false,
+        isMyConfig: false,
+        myPositions: []
+      }))
+      this.setData({ configs: shellConfigs })
+
+      // 2) 后台并行拉取每个配置的统计，完成后静默更新（不阻塞列表展示）
       const processedConfigs = await Promise.all(filteredConfigs.map(async (cfg) => {
         const stats = await this.getConfigStats(cfg._id)
         const combatCount = stats.combatCount || stats.combat || 0
@@ -256,9 +292,7 @@ Page({
         }
       }))
 
-      this.setData({
-        configs: processedConfigs
-      })
+      this.setData({ configs: processedConfigs })
 
       const canyonZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
       if (canyonZoneId) {

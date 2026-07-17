@@ -137,7 +137,18 @@ Page({
         return a.date.localeCompare(b.date)
       })
 
-      // 并行 count 查询每个配置的报名人数（替代原 for 循环顺序查询）
+      // 1) 先渲染配置外壳（不带报名人数），保证 1 秒内出列表
+      const shellConfigs = validConfigs.map(config => {
+        const slots = db.generatePositionTimeSlots(config.startTime)
+        return {
+          ...config,
+          registeredCount: 0,
+          totalSlots: slots.length
+        }
+      })
+      this.setData({ configs: shellConfigs, loading: false })
+
+      // 2) 后台并行 count 查询每个配置的报名人数，完成后静默更新
       const wxdb = wx.cloud.database()
       const countResults = await Promise.all(validConfigs.map(async (config) => {
         const res = await wxdb.collection('positionRegistrations').where({
@@ -161,10 +172,7 @@ Page({
         }
       })
 
-      this.setData({
-        configs: processedConfigs,
-        loading: false
-      })
+      this.setData({ configs: processedConfigs })
 
       const cacheZoneId = selectedZone ? selectedZone._id : null
       if (cacheZoneId) {

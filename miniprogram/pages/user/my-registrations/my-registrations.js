@@ -17,10 +17,8 @@ Page({
     canyonRegistrations: [],
     battleRegistrations: [],
     versionText: version.getVersionText(),
-    // 分区过滤
-    currentZone: null,
-    zones: [],
-    zonesLoaded: false
+    // 当前分区（仅展示该分区数据；切换分区需在首页操作）
+    currentZone: null
   },
 
   onLoad: function () {
@@ -30,16 +28,16 @@ Page({
   onShow: function () {
     if (app.globalData.roleReady) {
       this.loadUserInfo()
-      this.loadZones()
 
-      // 快速路径：若有缓存先渲染
+      // 快速路径：若有缓存先渲染（按用户+分区缓存，避免切区后闪现旧分区数据）
       const myUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
+      const curZoneId = app.globalData.currentZone ? app.globalData.currentZone._id : ''
       if (myUserId) {
         // 优先内存缓存，没有则读持久化缓存（跨 app 重启仍有效，TTL 5 分钟）
-        let myCached = cache.get('myregs_' + myUserId)
+        let myCached = cache.get('myregs_' + myUserId + '_' + curZoneId)
         if (!myCached) {
           try {
-            const persisted = wx.getStorageSync('myregs_persist_' + myUserId)
+            const persisted = wx.getStorageSync('myregs_persist_' + myUserId + '_' + curZoneId)
             if (persisted && persisted.timestamp && (Date.now() - persisted.timestamp < 5 * 60 * 1000)) {
               myCached = persisted
             }
@@ -65,7 +63,6 @@ Page({
   waitForRoleReady: function () {
     if (app.globalData.roleReady) {
       this.loadUserInfo()
-      this.loadZones()
       this.loadMyRegistrations()
     } else {
       setTimeout(() => {
@@ -87,35 +84,17 @@ Page({
     })
   },
 
-  // 加载分区列表
-  loadZones: async function () {
-    try {
-      const zones = await db.getAllZones()
-      const currentZone = app.globalData.currentZone || null
-      this.setData({
-        zones: zones,
-        currentZone: currentZone,
-        zonesLoaded: true
-      })
-    } catch (err) {
-      console.error('加载分区失败:', err)
-      this.setData({ zones: [], zonesLoaded: true })
-    }
-  },
-
-  // 分区选择变化
-  onZoneChange: function (e) {
-    const zone = e.detail.zone
-    this.setData({ currentZone: zone })
-    this.loadMyRegistrations()
-  },
-
-  // 加载我的报名记录
+  // 加载我的报名记录（仅展示当前分区；切换分区需在首页操作）
   loadMyRegistrations: async function () {
     // 防止 waitForRoleReady 与 onShow 并发触发时重复加载（2 秒内去重）
     const now = Date.now()
     if (this._lastLoadTime && (now - this._lastLoadTime < 2000)) return
     this._lastLoadTime = now
+
+    const currentZone = app.globalData.currentZone
+    const currentZoneId = currentZone ? currentZone._id : null
+    // 同步当前分区到 data，供顶部"当前分区"条展示
+    this.setData({ currentZone: currentZone })
 
     try {
       const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
@@ -132,7 +111,7 @@ Page({
         return
       }
 
-      // 并行拉取堡垒、官职、兵工厂、峡谷、国战报名记录，减少串行等待
+      // 并行拉取堡垒、官职、兵工厂、峡谷、国战报名记录（均为按 userId 取本人数据，非分区扫描）
       const [registrations, positionRegistrations, arsenalRegistrations, canyonRegistrations, battleRegistrations] =
         await Promise.all([
           db.getRegistrationsByUser(userId),
@@ -142,12 +121,26 @@ Page({
           db.getBattleRegistrationsByUser(userId)
         ])
 
+      // 官职报名：config 已随记录返回，直接按 config.zoneId 过滤当前分区
+      const processedPositionRegistrations = currentZoneId
+        ? positionRegistrations
+            .filter(reg => reg.config && reg.config.zoneId === currentZoneId)
+            .map(reg => ({
+              ...reg,
+              configInfo: reg.config ? {
+                positionType: reg.config.positionType,
+                date: reg.config.date,
+                startTime: reg.config.startTime
+              } : null,
+              formattedTime: util.formatDate(reg.createTime, 'YYYY-MM-DD HH:mm')
+            }))
+        : []
+
       // 批量获取堡垒报名关联的分区、联盟、时间段（避免 N+1 逐条查询）
       const zoneIds = registrations.map(r => r.zoneId).filter(Boolean)
       const allianceIds = registrations.map(r => r.allianceId).filter(Boolean)
       const timeSlotIds = registrations.map(r => r.timeSlotId).filter(Boolean)
 
-      // 并行批量拉取三类关联数据
       const [zoneMap, allianceMap, timeSlotMap] = await Promise.all([
         db.getZonesByIds(zoneIds),
         db.getAlliancesByIds(allianceIds),
@@ -188,27 +181,13 @@ Page({
         }
       })
 
-      // 按分区过滤
-      const filteredRegistrations = this.data.currentZone
-        ? processedRegistrations.filter(r => r.zoneId === this.data.currentZone._id)
-        : processedRegistrations
-
+      // 堡垒报名仅保留当前分区
+      const filteredRegistrations = currentZoneId
+        ? processedRegistrations.filter(r => r.zoneId === currentZoneId)
+        : []
       const weeklyRegistrations = this.filterWeeklyRegistrations(filteredRegistrations)
 
-      // 处理官职报名记录（config 已由 getPositionRegistrationsByUser 批量关联）
-      const processedPositionRegistrations = positionRegistrations.map(reg => {
-        return {
-          ...reg,
-          configInfo: reg.config ? {
-            positionType: reg.config.positionType,
-            date: reg.config.date,
-            startTime: reg.config.startTime
-          } : null,
-          formattedTime: util.formatDate(reg.createTime, 'YYYY-MM-DD HH:mm')
-        }
-      })
-
-      // 批量获取兵工厂配置（仅拉取用户已报名的 configId，不拉全量）
+      // 批量获取兵工厂/峡谷配置（仅拉取用户已报名的 configId，不拉全量）
       const arsenalConfigIds = arsenalRegistrations.map(r => r.configId).filter(Boolean)
       const canyonConfigIds = canyonRegistrations.map(r => r.configId).filter(Boolean)
 
@@ -217,45 +196,69 @@ Page({
         db.getArsenalConfigsByIds(canyonConfigIds, 'canyon')
       ])
 
-      const processedArsenal = arsenalRegistrations.map(reg => {
-        const config = arsenalConfigMap[reg.configId]
-        return {
-          ...reg,
-          type: 'arsenal',
-          date: config ? config.date : '',
-          time: config ? config.timeValue : '',
-          corps: config ? config.corps : '',
-          activityType: config ? config.activityType : 'arsenal',
-          activityLabel: '兵工厂'
-        }
-      })
+      // 兵工厂报名：按 config.zoneId 过滤当前分区
+      const processedArsenal = currentZoneId
+        ? arsenalRegistrations
+            .filter(reg => {
+              const cfg = arsenalConfigMap[reg.configId]
+              return cfg && cfg.zoneId === currentZoneId
+            })
+            .map(reg => {
+              const config = arsenalConfigMap[reg.configId]
+              return {
+                ...reg,
+                type: 'arsenal',
+                date: config ? config.date : '',
+                time: config ? config.timeValue : '',
+                corps: config ? config.corps : '',
+                activityType: config ? config.activityType : 'arsenal',
+                activityLabel: '兵工厂'
+              }
+            })
+        : []
 
-      const processedCanyon = canyonRegistrations.map(reg => {
-        const config = canyonConfigMap[reg.configId]
-        return {
-          ...reg,
-          type: 'canyon',
-          date: config ? config.date : '',
-          time: config ? config.timeValue : '',
-          corps: config ? config.corps : '',
-          activityType: config ? config.activityType : 'canyon',
-          activityLabel: '峡谷会战'
-        }
-      })
+      // 峡谷会战报名：按 config.zoneId 过滤当前分区
+      const processedCanyon = currentZoneId
+        ? canyonRegistrations
+            .filter(reg => {
+              const cfg = canyonConfigMap[reg.configId]
+              return cfg && cfg.zoneId === currentZoneId
+            })
+            .map(reg => {
+              const config = canyonConfigMap[reg.configId]
+              return {
+                ...reg,
+                type: 'canyon',
+                date: config ? config.date : '',
+                time: config ? config.timeValue : '',
+                corps: config ? config.corps : '',
+                activityType: config ? config.activityType : 'canyon',
+                activityLabel: '峡谷会战'
+              }
+            })
+        : []
 
       // 批量获取国战配置（仅拉取用户已报名的 configId，不拉全量）
       const battleConfigIds = battleRegistrations.map(r => r.configId).filter(Boolean)
       const battleConfigMap = await db.getBattleConfigsByIds(battleConfigIds)
 
-      const processedBattle = battleRegistrations.map(reg => {
-        const config = battleConfigMap[reg.configId]
-        return {
-          ...reg,
-          date: config ? config.date : '',
-          zoneName: config ? config.zoneName : (reg.zoneName || ''),
-          formattedTime: util.formatDate(reg.createTime, 'YYYY-MM-DD HH:mm')
-        }
-      })
+      // 国战报名：按 config.zoneId 过滤当前分区
+      const processedBattle = currentZoneId
+        ? battleRegistrations
+            .filter(reg => {
+              const cfg = battleConfigMap[reg.configId]
+              return cfg && cfg.zoneId === currentZoneId
+            })
+            .map(reg => {
+              const config = battleConfigMap[reg.configId]
+              return {
+                ...reg,
+                date: config ? config.date : '',
+                zoneName: config ? config.zoneName : (reg.zoneName || ''),
+                formattedTime: util.formatDate(reg.createTime, 'YYYY-MM-DD HH:mm')
+              }
+            })
+        : []
 
       this.setData({
         registrations: filteredRegistrations,
@@ -276,9 +279,10 @@ Page({
           battleRegistrations: processedBattle,
           timestamp: Date.now()
         }
-        cache.set('myregs_' + userId, cachePayload)
-        // 持久化到 storage，跨 app 重启仍可快速显示上次数据
-        try { wx.setStorageSync('myregs_persist_' + userId, cachePayload) } catch (e) {}
+        const cacheKey = 'myregs_' + userId + (currentZoneId ? '_' + currentZoneId : '')
+        cache.set(cacheKey, cachePayload)
+        // 持久化到 storage，跨 app 重启仍可快速显示上次数据（按分区缓存，避免切区串数据）
+        try { wx.setStorageSync('myregs_persist_' + userId + (currentZoneId ? '_' + currentZoneId : ''), cachePayload) } catch (e) {}
       }
 
     } catch (err) {
@@ -322,7 +326,7 @@ Page({
       util.hideLoading()
       util.showSuccess('取消成功')
       const cancelMyUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
-      if (cancelMyUserId) cache.invalidate('myregs_' + cancelMyUserId)
+      if (cancelMyUserId) cache.invalidate('myregs_' + cancelMyUserId + (app.globalData.currentZone ? '_' + app.globalData.currentZone._id : ''))
 
     } catch (err) {
       util.hideLoading()
@@ -349,7 +353,7 @@ Page({
       util.hideLoading()
       util.showSuccess('取消成功')
       const cancelMyUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
-      if (cancelMyUserId) cache.invalidate('myregs_' + cancelMyUserId)
+      if (cancelMyUserId) cache.invalidate('myregs_' + cancelMyUserId + (app.globalData.currentZone ? '_' + app.globalData.currentZone._id : ''))
 
     } catch (err) {
       util.hideLoading()
@@ -375,7 +379,7 @@ Page({
       util.hideLoading()
       util.showSuccess('取消成功')
       const cancelMyUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
-      if (cancelMyUserId) cache.invalidate('myregs_' + cancelMyUserId)
+      if (cancelMyUserId) cache.invalidate('myregs_' + cancelMyUserId + (app.globalData.currentZone ? '_' + app.globalData.currentZone._id : ''))
 
     } catch (err) {
       util.hideLoading()
@@ -401,7 +405,7 @@ Page({
       util.hideLoading()
       util.showSuccess('取消成功')
       const cancelMyUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
-      if (cancelMyUserId) cache.invalidate('myregs_' + cancelMyUserId)
+      if (cancelMyUserId) cache.invalidate('myregs_' + cancelMyUserId + (app.globalData.currentZone ? '_' + app.globalData.currentZone._id : ''))
 
     } catch (err) {
       util.hideLoading()
@@ -427,7 +431,7 @@ Page({
       util.hideLoading()
       util.showSuccess('取消成功')
       const cancelMyUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
-      if (cancelMyUserId) cache.invalidate('myregs_' + cancelMyUserId)
+      if (cancelMyUserId) cache.invalidate('myregs_' + cancelMyUserId + (app.globalData.currentZone ? '_' + app.globalData.currentZone._id : ''))
 
     } catch (err) {
       util.hideLoading()

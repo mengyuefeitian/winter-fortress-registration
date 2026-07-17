@@ -11,9 +11,8 @@
           <text class="text-secondary">{{roleName}}</text>
         </view>
       </view>
-      <!-- 分区选择器 + 信封入口（上下排列） -->
+      <!-- 信封入口 -->
       <view wx:if="{{isLoggedIn}}" class="side-actions">
-        <zone-selector value="{{currentZone}}" zones="{{zones}}" loaded="{{zonesLoaded}}" bind:change="onZoneChange" />
         <view class="letter-btn" bindtap="goToInbox">
           <image class="letter-icon" src="/images/icon-letter.svg" mode="aspectFit" />
         </view>

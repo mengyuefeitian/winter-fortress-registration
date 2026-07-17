@@ -1,4 +1,6 @@
 {
   "navigationBarTitleText": "兵工厂报名",
-  "usingComponents": {}
+  "usingComponents": {
+    "float-reminder": "/components/float-reminder/float-reminder"
+  }
 }
