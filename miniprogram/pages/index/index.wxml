@@ -8,7 +8,7 @@
       <view class="card-body flex items-center">
         <image class="avatar-lg" src="/images/default-avatar.png" mode="aspectFill" />
         <view class="ml-16 flex-1">
-          <text class="text-lg font-semibold">无尽冬日活动管理</text>
+          <text class="text-lg font-semibold">无尽冬日报名助手</text>
           <text class="text-secondary text-sm mt-4">联盟报名管理系统</text>
         </view>
         <button class="btn btn-primary btn-sm" bindtap="handleLogin">登录</button>

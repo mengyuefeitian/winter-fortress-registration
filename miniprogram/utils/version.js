@@ -1,8 +1,8 @@
 // 版本配置 - 集中管理版本号
 // 上传新版本前请更新此文件
 
-const APP_VERSION = '1.3.0'
-const APP_NAME = '无尽冬日活动管理'
+const APP_VERSION = '1.6.0'
+const APP_NAME = '无尽冬日管理助手'
 
 /**
  * 获取版本号

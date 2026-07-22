@@ -174,9 +174,16 @@ exports.main = async (event, context) => {
       // 自动拒绝（如分区已存在）：前端已传入具体原因，原样展示（超长截断）
       remarkText = truncate(rejectReason)
     } else {
-      // 手动拒绝：结构化为「{项目}申请未通过」，不展示自定义理由
-      code = await resolveZoneCode(application, db)
-      remarkText = buildManualRejectText(application.applyType, code, application.allianceName)
+      // 手动拒绝
+      // 分区开通：若管理员填写了拒绝原因，则备注直接展示该原因（最多 20 字）
+      var reason = rejectReason || (application && application.rejectReason) || ''
+      if (application.applyType === 'zoneCreation' && reason) {
+        remarkText = truncate(reason, 20)
+      } else {
+        // 其他申请：结构化为「{项目}申请未通过」，不展示自定义理由
+        code = await resolveZoneCode(application, db)
+        remarkText = buildManualRejectText(application.applyType, code, application.allianceName)
+      }
     }
     remarkText = truncate(remarkText)
 

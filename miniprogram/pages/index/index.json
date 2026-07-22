@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "无尽冬日活动管理",
+  "navigationBarTitleText": "无尽冬日报名助手",
   "usingComponents": {
     "zone-selector": "/components/zone-selector/zone-selector"
   }

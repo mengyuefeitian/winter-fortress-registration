@@ -1049,7 +1049,7 @@ Page({
   // 分享
   onShareAppMessage: function () {
     return {
-      title: '无尽冬日堡垒分配管理系统',
+      title: '无尽冬日报名助手',
       path: '/pages/index/index'
     }
   }
