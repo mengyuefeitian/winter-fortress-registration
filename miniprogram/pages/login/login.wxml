@@ -1,7 +1,7 @@
 <!--pages/login/login.wxml-->
 <view class="login-container">
   <view class="login-header">
-    <view class="title">无尽冬日报名管理</view>
+    <view class="title">无尽冬日报名助手</view>
     <view class="desc">联盟活动报名系统</view>
   </view>
 

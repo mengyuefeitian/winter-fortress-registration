@@ -28,6 +28,12 @@ App({
     this.globalData.db = wx.cloud.database()
     this.globalData.dbReady = true
 
+    // 冷启动恢复上次选择的分区（小程序进程被杀后 globalData 会丢失，导致各页缓存命中不了）
+    const savedZone = wx.getStorageSync('positionZoneCache')
+    if (savedZone && savedZone._id) {
+      this.globalData.currentZone = savedZone
+    }
+
     // 检查是否首次启动
     const hasLaunched = wx.getStorageSync('hasLaunched')
     this.globalData.firstLaunch = !hasLaunched

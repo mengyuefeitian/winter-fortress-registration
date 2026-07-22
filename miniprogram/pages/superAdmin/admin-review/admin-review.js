@@ -857,10 +857,28 @@ Page({
   rejectApplication: async function (e) {
     const applicationId = e.currentTarget.dataset.id
     const index = e.currentTarget.dataset.index
+    const application = this.data.applications[index]
+    const isZoneCreation = application && application.applyType === 'zoneCreation'
 
-    const confirm = await util.showConfirm('确认拒绝', '确定要拒绝该管理员申请吗？')
-
-    if (!confirm) return
+    let rejectReason = ''
+    if (isZoneCreation) {
+      // 分区开通拒绝：收集拒绝原因（最多 20 字，受订阅消息 thing9 字段上限限制）
+      const modal = await new Promise((resolve) => {
+        wx.showModal({
+          title: '拒绝开通分区',
+          editable: true,
+          maxlength: 20,
+          placeholderText: '请填写拒绝原因（最多20字，将通知申请人）',
+          success: (res) => resolve(res)
+        })
+      })
+      if (!modal.confirm) return
+      rejectReason = (modal.content || '').trim()
+      // 允许留空：留空时通知回退为默认文案「分区xxxx开通申请未通过」
+    } else {
+      const confirm = await util.showConfirm('确认拒绝', '确定要拒绝该管理员申请吗？')
+      if (!confirm) return
+    }
 
     try {
       util.showLoading('正在拒绝...')
@@ -868,8 +886,14 @@ Page({
       // 使用 openid 作为统一的审核者标识
       const reviewerId = app.globalData.openid
 
-      // 更新申请状态
-      await db.reviewAdminApplication(applicationId, 'rejected', reviewerId)
+      // 更新申请状态（分区开通且填写了原因时，拒绝原因一并落库）
+      await db.reviewAdminApplication(
+        applicationId,
+        'rejected',
+        reviewerId,
+        null,
+        rejectReason ? { rejectReason: rejectReason } : {}
+      )
 
       // 从待审核列表移除
       const applications = this.data.applications.filter((_, i) => i !== index)
@@ -880,6 +904,7 @@ Page({
         {
           ...rejectedApp,
           status: 'rejected',
+          rejectReason: rejectReason,
           formattedReviewTime: util.formatDate(new Date(), 'YYYY-MM-DD HH:mm')
         },
         ...this.data.reviewedApplications
@@ -894,7 +919,7 @@ Page({
       util.showSuccess('已拒绝')
 
       // 异步发送审核结果通知（不阻塞）
-      this.sendReviewNotify(applicationId, 'rejected')
+      this.sendReviewNotify(applicationId, 'rejected', rejectReason ? { rejectReason: rejectReason } : {})
 
     } catch (err) {
       util.hideLoading()
