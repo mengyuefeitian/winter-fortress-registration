@@ -1216,15 +1216,20 @@ async function updatePositionRegistration(registrationId, data) {
   })
 }
 
-// 取消官职报名（用户操作）
+// 取消官职报名（用户操作）—— 走云函数做服务端归属校验：
+// 普通用户只能取消自己的；区管/超管可取消任何人
 async function cancelPositionRegistration(registrationId) {
-  const db = getDb()
-  return await db.collection('positionRegistrations').doc(registrationId).update({
+  const res = await wx.cloud.callFunction({
+    name: 'managePosition',
     data: {
-      status: 'cancelled',
-      updateTime: db.serverDate()
+      action: 'cancelRegistration',
+      data: { registrationId }
     }
   })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '取消报名失败')
+  }
+  return res.result
 }
 
 // 删除官职报名记录（通过云函数绕过 creator-only 写权限，区管/超管操作）
