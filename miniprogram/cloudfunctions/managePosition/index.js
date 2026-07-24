@@ -312,8 +312,42 @@ async function updateRegistration(data) {
   }
 }
 
-// 取消报名
+// 获取调用者用户信息（角色 + 文档 id），用于权限判定
+async function getCallerUser(openid) {
+  const res = await db.collection('users').where({ openid: openid }).get()
+  if (res.data && res.data.length > 0) {
+    return res.data[0]
+  }
+  return null
+}
+
+// 判断是否为特权角色（区管 / 超管），可取消或删除他人的报名
+function isPrivilegedRole(role) {
+  return role === 'admin' || role === 'superAdmin'
+}
+
+// 取消报名（普通用户仅可取消自己的；区管/超管可取消任何人）
 async function cancelRegistration(registrationId) {
+  const wxContext = cloud.getWXContext()
+  const callerOpenid = wxContext.OPENID
+  const caller = await getCallerUser(callerOpenid)
+  const callerRole = caller ? (caller.role || 'user') : 'user'
+
+  const regRes = await db.collection('positionRegistrations').doc(registrationId).get()
+  if (!regRes.data) {
+    throw new Error('报名记录不存在')
+  }
+  const registration = regRes.data
+
+  if (!isPrivilegedRole(callerRole)) {
+    // 普通用户：仅允许取消本人的报名
+    const callerId = caller ? caller._id : null
+    const isOwner = (callerId && registration.userId === callerId) || registration.userId === callerOpenid
+    if (!isOwner) {
+      throw new Error('无权取消他人的报名')
+    }
+  }
+
   await db.collection('positionRegistrations').doc(registrationId).update({
     data: {
       status: 'cancelled',
@@ -326,8 +360,17 @@ async function cancelRegistration(registrationId) {
   }
 }
 
-// 删除报名（区管权限）
+// 删除报名（仅区管 / 超管可删除他人）
 async function deleteRegistration(registrationId) {
+  const wxContext = cloud.getWXContext()
+  const callerOpenid = wxContext.OPENID
+  const caller = await getCallerUser(callerOpenid)
+  const callerRole = caller ? (caller.role || 'user') : 'user'
+
+  if (!isPrivilegedRole(callerRole)) {
+    throw new Error('无权删除他人的报名')
+  }
+
   await db.collection('positionRegistrations').doc(registrationId).update({
     data: {
       status: 'deleted',

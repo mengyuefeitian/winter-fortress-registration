@@ -112,7 +112,15 @@ async function cancelRegistration(registrationId) {
   if (!regRes.data) {
     throw new Error('报名记录不存在')
   }
-  if (regRes.data.userId !== callerOpenid) {
+
+  // 报名记录的 userId 可能是 users._id 或 openid，两种都尝试（与 manageArsenal 保持一致）
+  // 否则登录用户创建时存的是 userInfo._id，而此处只拿 OPENID 比对会永远不匹配，导致取消失败
+  const userRes = await db.collection('users').where({ openid: callerOpenid }).get()
+  const isOwner = userRes.data.length > 0
+    ? (regRes.data.userId === userRes.data[0]._id || regRes.data.userId === callerOpenid)
+    : (regRes.data.userId === callerOpenid)
+
+  if (!isOwner) {
     throw new Error('无权取消他人的报名')
   }
 
