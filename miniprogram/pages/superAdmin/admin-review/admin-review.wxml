@@ -1,5 +1,29 @@
 <!--pages/superAdmin/admin-review/admin-review.wxml -->
 <view class="page">
+  <!-- 计数哨兵：服务端真实待审核/已审核数量（与下方列表交叉验证） -->
+  <view wx:if="{{stats}}" style="display:flex;flex-wrap:wrap;gap:8rpx;padding:20rpx 24rpx;background:#f5f7fa;margin:0 24rpx 16rpx;border-radius:14rpx;">
+    <view style="flex:1;min-width:120rpx;text-align:center;">
+      <text style="display:block;font-size:38rpx;font-weight:700;color:#e54d42;">{{stats.pendingTotal}}</text>
+      <text style="font-size:22rpx;color:#888;">待审核(总)</text>
+    </view>
+    <view style="flex:1;min-width:120rpx;text-align:center;">
+      <text style="display:block;font-size:38rpx;font-weight:700;color:#3a7afe;">{{stats.pendingByType.zoneManager || 0}}</text>
+      <text style="font-size:22rpx;color:#888;">区管</text>
+    </view>
+    <view style="flex:1;min-width:120rpx;text-align:center;">
+      <text style="display:block;font-size:38rpx;font-weight:700;color:#3a7afe;">{{stats.pendingByType.allianceManager || 0}}</text>
+      <text style="font-size:22rpx;color:#888;">盟管</text>
+    </view>
+    <view style="flex:1;min-width:120rpx;text-align:center;">
+      <text style="display:block;font-size:38rpx;font-weight:700;color:#3a7afe;">{{stats.pendingByType.zoneCreation || 0}}</text>
+      <text style="font-size:22rpx;color:#888;">分区开通</text>
+    </view>
+    <view style="flex:1;min-width:120rpx;text-align:center;">
+      <text style="display:block;font-size:38rpx;font-weight:700;color:#8a8a8a;">{{stats.reviewedTotal}}</text>
+      <text style="font-size:22rpx;color:#888;">已审核</text>
+    </view>
+  </view>
+
   <!-- 待审核申请 -->
   <view class="section-header">
     <text class="section-title">待审核申请</text>
@@ -25,14 +49,14 @@
             </view>
           </view>
         </view>
-        <!-- 无效申请警告 -->
+        <!-- 未匹配到用户资料警告（仍可按 openid 关联后审批，不阻塞） -->
         <view wx:if="{{!item.valid}}" class="invalid-warning mt-6">
-          <text class="text-xs text-danger">⚠ 用户数据异常，无法审核</text>
+          <text class="text-xs text-danger">⚠ 未匹配到用户资料，将按 openid 关联后审批</text>
         </view>
       </view>
 
-      <!-- 区管申请按钮（仅有效申请可审核） -->
-      <view wx:if="{{item.valid && item.applyType === 'zoneManager' && !item.selectingZone}}" class="card-footer">
+      <!-- 区管申请按钮（不依赖 valid：即使未匹配到用户资料也显示，按 openid 关联审批） -->
+      <view wx:if="{{item.applyType === 'zoneManager' && !item.selectingZone}}" class="card-footer">
         <!-- 显示申请人选择的分区 -->
         <view wx:if="{{item.applicantZoneName}}" class="applicant-zone-info">
           <text class="text-xs text-secondary">申请人选择分区：</text>
@@ -45,7 +69,7 @@
       </view>
 
       <!-- 区管分区选择 -->
-      <view wx:if="{{item.valid && item.applyType === 'zoneManager' && item.selectingZone}}" class="zone-select-section">
+      <view wx:if="{{item.applyType === 'zoneManager' && item.selectingZone}}" class="zone-select-section">
         <text class="select-label">选择分区：</text>
         <zone-selector wx:if="{{availableZones.length > 0}}" value="{{item.selectedZone}}" zones="{{availableZones}}" loaded="{{true}}" bind:change="onZoneSelect" data-app-index="{{appIndex}}" />
         <view wx:else class="picker-compact text-weak">暂无可用分区</view>
@@ -56,8 +80,8 @@
         </view>
       </view>
 
-      <!-- 盟管申请按钮（仅有效申请可审核） -->
-      <view wx:if="{{item.valid && item.applyType === 'allianceManager' && !item.selectingAlliance}}" class="card-footer">
+      <!-- 盟管申请按钮（不依赖 valid：即使未匹配到用户资料也显示，按 openid 关联审批） -->
+      <view wx:if="{{item.applyType === 'allianceManager' && !item.selectingAlliance}}" class="card-footer">
         <button class="btn btn-success" bindtap="startSelectAlliance"
                 data-id="{{item._id}}" data-userid="{{item.userId}}" data-index="{{appIndex}}">批准</button>
         <button class="btn btn-danger" bindtap="rejectApplication"
@@ -65,7 +89,7 @@
       </view>
 
       <!-- 盟管联盟选择 -->
-      <view wx:if="{{item.valid && item.applyType === 'allianceManager' && item.selectingAlliance}}" class="zone-select-section">
+      <view wx:if="{{item.applyType === 'allianceManager' && item.selectingAlliance}}" class="zone-select-section">
         <text class="select-label">选择分区：</text>
         <picker bindchange="onAllianceZoneSelect" data-app-index="{{appIndex}}"
                 range="{{availableZones}}" range-key="zoneName" value="{{item.applicantZoneIndex >= 0 ? item.applicantZoneIndex : 0}}">
@@ -84,13 +108,13 @@
         </view>
         <view class="select-actions">
           <button class="btn btn-success" bindtap="confirmApproveAllianceManager"
-                  data-id="{{item._id}}" data-userid="{{item.userId}}" data-index="{{appIndex}}">确认</button>
+                  data-id="{{item._id}}" data-userid="{{item.userId}}" data-useropenid="{{item.userOpenid}}" data-index="{{appIndex}}">确认</button>
           <button class="btn btn-ghost" bindtap="cancelSelectAlliance" data-index="{{appIndex}}">取消</button>
         </view>
       </view>
 
-      <!-- 分区开通申请 -->
-      <view wx:if="{{item.valid && item.applyType === 'zoneCreation'}}" class="zone-creation-section">
+      <!-- 分区开通申请（不依赖 valid：即使申请人 users 记录查不到也应显示，昵称回退为“未知用户”） -->
+      <view wx:if="{{item.applyType === 'zoneCreation'}}" class="zone-creation-section">
         <text class="text-xs text-secondary">申请信息: {{item.zoneName}}</text>
         <!-- 批准前填写分区编号和名称 -->
         <view wx:if="{{!item.creatingZone}}" class="card-footer" style="margin-top: 8px;">

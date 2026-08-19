@@ -97,125 +97,140 @@ Page({
     }
   },
 
-  // 加载申请列表
-  loadApplications: async function () {
+  // 清空审核缓存（任一审批/删除操作后调用，保证下次进入拉取最新数据）
+  clearReviewCache: function () {
     try {
-      util.showLoading('加载申请列表...')
-
-      const wxdb = wx.cloud.database()
-      const _ = wxdb.command
-      const role = app.globalData.role || 'user'
-
-      // 构建查询条件
-      const whereCondition = { status: 'pending' }
-      if (this.data.applyType) {
-        whereCondition.applyType = this.data.applyType
+      const keys = (wx.getStorageInfoSync().keys) || []
+      for (const k of keys) {
+        if (k.indexOf('adminReviewCache_') === 0) wx.removeStorageSync(k)
       }
+    } catch (e) {}
+  },
 
-      // 获取待审核申请
-      let pendingRes
-      try {
-        pendingRes = await wxdb.collection('admins').where(whereCondition).orderBy('createTime', 'desc').get()
-      } catch (err) {
-        console.error('查询待审核申请失败:', err)
-        pendingRes = { data: [] }
+  // 加载申请列表（缓存优先：命中即秒显并后台静默刷新；解决每次进入转圈 8-10s 的云函数冷启动问题）
+  loadApplications: async function () {
+    const role = app.globalData.role || 'user'
+    const wxdb = wx.cloud.database()
+    const _ = wxdb.command
+    const applyType = this.data.applyType || ''
+    const cacheKey = 'adminReviewCache_' + (applyType || 'all')
+
+    // 1) 缓存优先：只要缓存存在即立刻渲染（不转圈），后台静默刷新覆盖。
+    //    这样冷启动只发生在首次，之后每次进入都秒显；即使云函数被回收，
+    //    用户看到的也是上次的列表，后台那次刷新不再阻塞界面。
+    let servedFromCache = false
+    try {
+      const cached = wx.getStorageSync(cacheKey)
+      if (cached && Array.isArray(cached.applications)) {
+        this.setData({
+          applications: cached.applications,
+          reviewedApplications: cached.reviewedApplications || [],
+          stats: cached.stats || null
+        })
+        servedFromCache = true
       }
+    } catch (e) {}
 
-      const pendingApps = pendingRes.data || []
+    if (!servedFromCache) util.showLoading('加载申请列表...')
 
-      // 批量查询：收集所有需要查询的 userId
-      const pendingUserIds = pendingApps.map(a => a.userId).filter(Boolean)
+    try {
+      // 2) 列表（云函数，可能冷启动）+ 分区列表（客户端直连，无冷启动）并行发起，省掉串行耗时
+      const [listOutcome, allZones] = await Promise.all([
+        wx.cloud.callFunction({
+          name: 'manageAdmin',
+          timeout: 20000,
+          data: { action: 'listApplications', applyType: applyType }
+        }).catch(err => ({ __err: err })),
+        db.getAllZones().catch(err => { console.error('查询分区失败:', err); return [] })
+      ])
 
-      // 批量查询用户信息（一次查询所有）
-      let usersMap = {}
-      if (pendingUserIds.length > 0) {
-        try {
-          const uniqueUserIds = [...new Set(pendingUserIds)]
-          const usersRes = await wxdb.collection('users').where({
-            openid: _.in(uniqueUserIds)
-          }).get()
-          usersMap = {}
-          for (const user of usersRes.data) {
-            usersMap[user.openid] = {
-              nickName: user.nickName || '未知用户',
-              avatarUrl: user.avatarUrl,
-              _id: user._id
-            }
+      if (listOutcome && listOutcome.__err) {
+        const err = listOutcome.__err
+        if (!servedFromCache) {
+          util.hideLoading()
+          const msg = (err && err.message) || ''
+          if (msg.indexOf('Unknown action') >= 0) {
+            util.showError('云函数未更新：请在开发者工具右键 manageAdmin → 上传并部署：云端安装依赖')
+          } else if (msg.indexOf('timeout') >= 0) {
+            util.showError('加载超时（可能云函数冷启动），请稍后重试；若持续超时请确认 manageAdmin 已部署')
+          } else {
+            util.showError('加载申请列表失败: ' + msg)
           }
-        } catch (err) {
-          console.error('批量获取用户信息失败:', err)
+        }
+        return
+      }
+      if (!listOutcome.result || listOutcome.result.err) {
+        if (!servedFromCache) util.hideLoading()
+        if (listOutcome.result && listOutcome.result.err) util.showError('加载失败: ' + listOutcome.result.err)
+        return
+      }
+
+      const pendingApps = listOutcome.result.pending || []
+      const reviewedAppsRaw = listOutcome.result.reviewed || []
+      const stats = listOutcome.result.stats || null
+
+      // 由云端返回数据在内存中构建 usersMap（userId=openid, userDocId=users 文档 _id）
+      const usersMap = {}
+      for (const app of pendingApps) {
+        usersMap[app.userId] = {
+          nickName: app.nickName || '未知用户',
+          avatarUrl: app.avatarUrl || null,
+          _id: app.userDocId || null
         }
       }
 
-      // 收集所有需要查询的 zone 的 userId（用于盟管申请的 zoneId 查找）
+      // 收集盟管申请的 userId（仅在需要时查 zoneManager/zoneCreation 历史）
       const allianceManagerUserIds = pendingApps
         .filter(a => a.applyType === 'allianceManager' && a.userId)
         .map(a => a.userId)
 
-      // 批量查询 zoneManager 申请记录
+      // 批量查询 zoneManager / zoneCreation 申请记录（分块，突破 20 条上限）
       let zoneManagerAppsMap = {}
-      if (allianceManagerUserIds.length > 0) {
-        try {
-          const zmRes = await wxdb.collection('admins').where({
-            userId: _.in([...new Set(allianceManagerUserIds)]),
-            applyType: 'zoneManager',
-            status: 'approved'
-          }).get()
-          for (const app of zmRes.data) {
-            if (!zoneManagerAppsMap[app.userId]) zoneManagerAppsMap[app.userId] = app
-          }
-        } catch (err) {
-          console.error('查询区管申请失败:', err)
-        }
-      }
-
-      // 批量查询 zoneCreation 申请记录
       let zoneCreationAppsMap = {}
       if (allianceManagerUserIds.length > 0) {
-        try {
-          const zcRes = await wxdb.collection('admins').where({
-            userId: _.in([...new Set(allianceManagerUserIds)]),
-            applyType: 'zoneCreation',
-            status: 'approved'
-          }).get()
-          for (const app of zcRes.data) {
-            if (!zoneCreationAppsMap[app.userId]) zoneCreationAppsMap[app.userId] = app
-          }
-        } catch (err) {
-          console.error('查询分区开通申请失败:', err)
+        const uniqueU = [...new Set(allianceManagerUserIds)]
+        for (let i = 0; i < uniqueU.length; i += 20) {
+          const chunk = uniqueU.slice(i, i + 20)
+          try {
+            const zmRes = await wxdb.collection('admins').where({
+              userId: _.in(chunk),
+              applyType: 'zoneManager',
+              status: 'approved'
+            }).get()
+            for (const app of zmRes.data) {
+              if (!zoneManagerAppsMap[app.userId]) zoneManagerAppsMap[app.userId] = app
+            }
+          } catch (err) { console.error('查询区管申请失败:', err) }
+          try {
+            const zcRes = await wxdb.collection('admins').where({
+              userId: _.in(chunk),
+              applyType: 'zoneCreation',
+              status: 'approved'
+            }).get()
+            for (const app of zcRes.data) {
+              if (!zoneCreationAppsMap[app.userId]) zoneCreationAppsMap[app.userId] = app
+            }
+          } catch (err) { console.error('查询分区开通申请失败:', err) }
         }
       }
 
-      // 批量查询 zones（只查一次）
-      let allZones = []
-      try {
-        allZones = await db.getAllZones()
-      } catch (err) {
-        console.error('查询分区失败:', err)
-      }
       const zonesMap = {}
-      for (const z of allZones) {
+      for (const z of (allZones || [])) {
         zonesMap[z._id] = z
         zonesMap[z.zoneName] = z  // also by name for zoneCreation lookup
       }
 
-      // 收集所有需要查询联盟的 zoneId
+      // 收集盟管申请需要的 zoneId，批量查联盟（并行）
       const zoneIdsForAlliances = new Set()
       for (const app of pendingApps) {
         if (app.applyType === 'allianceManager' && app.zoneId) {
           zoneIdsForAlliances.add(app.zoneId)
         }
       }
-
-      // 批量查询联盟（按 zoneId 分组）
-      let alliancesByZone = {}
-      const zoneIdArr = [...zoneIdsForAlliances]
-      const alliancePromises = zoneIdArr.map(zoneId =>
-        db.getAlliancesByZone(zoneId).then(alliances => {
-          alliancesByZone[zoneId] = alliances
-        })
-      )
-      await Promise.all(alliancePromises)
+      const alliancesByZone = {}
+      await Promise.all([...zoneIdsForAlliances].map(zoneId =>
+        db.getAlliancesByZone(zoneId).then(alliances => { alliancesByZone[zoneId] = alliances }).catch(() => {})
+      ))
 
       // 处理每条申请
       const applications = []
@@ -231,12 +246,10 @@ Page({
         if (application.zoneId) {
           applicantZoneId = application.zoneId
         } else if (application.applyType === 'allianceManager') {
-          // 从 zoneManager 申请中获取
           const zmApp = zoneManagerAppsMap[userId]
           if (zmApp && zmApp.zoneId) {
             applicantZoneId = zmApp.zoneId
           } else {
-            // 从 zoneCreation 申请中获取
             const zcApp = zoneCreationAppsMap[userId]
             if (zcApp && zcApp.zoneName) {
               const foundZone = zonesMap[zcApp.zoneName]
@@ -246,7 +259,7 @@ Page({
         }
 
         // 区管数据隔离：只显示自己管理分区的盟管申请
-        if (role === 'admin' && this.data.applyType === 'allianceManager') {
+        if (role === 'admin' && applyType === 'allianceManager') {
           const availableZoneIds = this.data.availableZones.map(z => z._id)
           if (applicantZoneId && !availableZoneIds.includes(applicantZoneId)) {
             continue // 跳过不属于自己管理的分区申请
@@ -255,7 +268,7 @@ Page({
 
         // 匹配分区索引
         if (applicantZoneId) {
-          const foundZoneIndex = allZones.findIndex(z => z._id === applicantZoneId)
+          const foundZoneIndex = (allZones || []).findIndex(z => z._id === applicantZoneId)
           applicantZoneIndex = foundZoneIndex >= 0 ? foundZoneIndex : -1
         }
 
@@ -279,72 +292,49 @@ Page({
           applicantZoneId: applicantZoneId,
           formattedTime: application.createTime ? util.formatDate(application.createTime, 'YYYY-MM-DD HH:mm') : '',
           valid: userInfo._id !== null,
-          // 显示申请时的分区信息
           applicantZoneName: application.zoneName || '',
-          // 区管申请自带分区：自动预填，超管无需手动选择即可确认
-          selectedZone: (applicantZoneId && applicantZoneIndex >= 0) ? allZones[applicantZoneIndex] : null
+          selectedZone: (applicantZoneId && applicantZoneIndex >= 0) ? (allZones || [])[applicantZoneIndex] : null
         })
       }
 
-      // 获取已审核申请（根据当前 applyType 过滤）
-      let reviewedRes
-      try {
-        const reviewedWhereCondition = {
-          status: _.in(['approved', 'rejected'])
-        }
-        if (this.data.applyType) {
-          reviewedWhereCondition.applyType = this.data.applyType
-        }
-        reviewedRes = await wxdb.collection('admins').where(reviewedWhereCondition).orderBy('reviewTime', 'desc').limit(20).get()
-      } catch (err) {
-        console.error('查询已审核申请失败:', err)
-        reviewedRes = { data: [] }
-      }
-
-      // 批量查询已审核记录的用户信息
-      const reviewedUserIds = (reviewedRes.data || []).map(a => a.userId).filter(Boolean)
-      let reviewedUsersMap = {}
-      if (reviewedUserIds.length > 0) {
-        try {
-          const uniqueUserIds = [...new Set(reviewedUserIds)]
-          const reviewedUsersRes = await wxdb.collection('users').where({
-            openid: _.in(uniqueUserIds)
-          }).get()
-          for (const user of reviewedUsersRes.data) {
-            reviewedUsersMap[user.openid] = user.nickName || '未知用户'
-          }
-        } catch (err) {
-          console.error('批量获取已审核用户信息失败:', err)
-        }
-      }
-
-      const reviewedApplications = (reviewedRes.data || []).map(application => ({
+      // 已审核申请已由云端 listApplications 一并返回（reviewedAppsRaw），昵称已补全，无需再查
+      const reviewedApplications = (reviewedAppsRaw || []).map(application => ({
         ...application,
-        nickName: reviewedUsersMap[application.userId] || '未知用户',
+        nickName: application.nickName || '未知用户',
         formattedReviewTime: application.reviewTime ? util.formatDate(application.reviewTime, 'YYYY-MM-DD HH:mm') : ''
       }))
 
       // 区管数据隔离：过滤已审核记录，只显示自己管理分区的盟管审核记录
       let filteredReviewedApplications = reviewedApplications
-      if (role === 'admin' && this.data.applyType === 'allianceManager') {
+      if (role === 'admin' && applyType === 'allianceManager') {
         const availableZoneIds = this.data.availableZones.map(z => z._id)
         filteredReviewedApplications = reviewedApplications.filter(app => {
-          // 已审核的盟管申请应该有 zoneId 字段
           return app.zoneId && availableZoneIds.includes(app.zoneId)
         })
       }
 
       this.setData({
         applications: applications,
-        reviewedApplications: filteredReviewedApplications
+        reviewedApplications: filteredReviewedApplications,
+        stats: stats
       })
+
+      // 写入缓存（供下次进入秒显）
+      try {
+        wx.setStorageSync(cacheKey, {
+          time: Date.now(),
+          applications: applications,
+          reviewedApplications: filteredReviewedApplications,
+          stats: stats
+        })
+      } catch (e) {}
 
       util.hideLoading()
 
     } catch (err) {
       console.error('加载申请列表失败:', err)
-      util.hideLoading()
-      util.showError('加载申请列表失败: ' + (err.message || '未知错误'))
+      if (!servedFromCache) util.hideLoading()
+      if (!servedFromCache) util.showError('加载申请列表失败: ' + (err.message || '未知错误'))
     }
   },
 
@@ -370,6 +360,7 @@ Page({
 
   // 确认批准区管（带分区绑定）
   confirmApproveZoneManager: async function (e) {
+    this.clearReviewCache()
     const applicationId = e.currentTarget.dataset.id
     let userId = e.currentTarget.dataset.userid
     const userOpenid = e.currentTarget.dataset.useropenid
@@ -536,13 +527,35 @@ Page({
 
   // 确认批准盟管（带联盟绑定）
   confirmApproveAllianceManager: async function (e) {
+    this.clearReviewCache()
     const applicationId = e.currentTarget.dataset.id
-    const userId = e.currentTarget.dataset.userid
+    let userId = e.currentTarget.dataset.userid
+    const userOpenid = e.currentTarget.dataset.useropenid
     const index = e.currentTarget.dataset.index
 
+    // 校验 userId 是否有效（未匹配到用户资料时，按 openid 反查真实 _id）
     if (!userId) {
-      util.showError('用户数据异常，无法批准')
-      return
+      if (userOpenid) {
+        util.showLoading('正在获取用户信息...')
+        try {
+          const userRecord = await db.getUserByOpenid(userOpenid)
+          if (userRecord && userRecord._id) {
+            userId = userRecord._id
+            util.hideLoading()
+          } else {
+            util.hideLoading()
+            util.showError('用户数据异常，无法找到用户记录')
+            return
+          }
+        } catch (err) {
+          util.hideLoading()
+          util.showError('获取用户信息失败：' + (err.message || '未知错误'))
+          return
+        }
+      } else {
+        util.showError('用户数据异常，无法批准')
+        return
+      }
     }
 
     const application = this.data.applications[index]
@@ -688,6 +701,7 @@ Page({
 
   // 确认批准分区开通
   confirmApproveZoneCreation: async function (e) {
+    this.clearReviewCache()
     const applicationId = e.currentTarget.dataset.id
     let userId = e.currentTarget.dataset.userid
     const userOpenid = e.currentTarget.dataset.useropenid
@@ -808,6 +822,7 @@ Page({
 
   // 自动拒绝分区开通申请（分区已存在时）
   autoRejectZoneCreation: async function (applicationId, index, zoneCode, existingZoneName) {
+    this.clearReviewCache()
     const rejectReason = '分区' + zoneCode + '已开通，开通失败'
 
     try {
@@ -855,6 +870,7 @@ Page({
 
   // 拒绝申请
   rejectApplication: async function (e) {
+    this.clearReviewCache()
     const applicationId = e.currentTarget.dataset.id
     const index = e.currentTarget.dataset.index
     const application = this.data.applications[index]
@@ -927,8 +943,9 @@ Page({
     }
   },
 
-  // 删除已审核记录
+  // 删除已审核记录（走云函数，服务端管理员权限，确保真正落库；前端直连会被集合权限拒绝）
   deleteReviewedApplication: async function (e) {
+    this.clearReviewCache()
     const applicationId = e.currentTarget.dataset.id
     const index = e.currentTarget.dataset.index
 
@@ -939,8 +956,15 @@ Page({
     try {
       util.showLoading('正在删除...')
 
-      const wxdb = wx.cloud.database()
-      await wxdb.collection('admins').doc(applicationId).remove()
+      const res = await wx.cloud.callFunction({
+        name: 'manageAdmin',
+        timeout: 20000,
+        data: { action: 'deleteApplication', applicationId: applicationId }
+      })
+
+      if (res.result && res.result.err) {
+        throw new Error(res.result.err)
+      }
 
       // 从已审核列表移除
       const reviewedApplications = this.data.reviewedApplications.filter((_, i) => i !== index)
