@@ -76,6 +76,12 @@
     <text class="section-title">统计数据</text>
   </view>
   <view class="function-grid">
+    <view class="function-card-compact" bindtap="goToAllianceActivity">
+      <view class="function-content">
+        <text class="function-name">联盟活跃</text>
+        <text class="function-desc">登记联盟活跃成员</text>
+      </view>
+    </view>
     <view class="function-card-compact" bindtap="goToStatistics">
       <view class="function-content">
         <text class="function-name">数据统计</text>

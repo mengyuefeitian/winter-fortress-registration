@@ -1,14 +1,8 @@
 <!--pages/admin/alliance-config/alliance-config.wxml-->
 <view class="alliance-config-container">
-  <!-- 选择分区 -->
-  <view class="section">
-    <view class="section-title">选择分区</view>
-    <zone-selector value="{{selectedZone}}" zones="{{zones}}" loaded="{{true}}" bind:change="onZoneChange" />
-  </view>
-
   <!-- 联盟列表 -->
   <view wx:if="{{selectedZone}}" class="section">
-    <view class="section-title">联盟列表 (共{{alliances.length}}个)</view>
+    <view class="section-title">联盟列表 (共{{alliances.length}}个)<text wx:if="{{selectedZone.zoneName}}" class="zone-readonly"> · {{selectedZone.zoneName}}</text></view>
     <view class="alliance-list">
       <view wx:for="{{alliances}}" wx:key="_id" wx:for-index="allianceIdx" class="alliance-card">
         <view class="alliance-header">

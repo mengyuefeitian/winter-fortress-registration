@@ -1,5 +1,5 @@
 /* pages/user/my-registrations/my-registrations.wxss */
-/* 微信设计语言风格 */
+/* 「我的」个人中心：用户信息 + 分区 + 菜单入口 */
 
 .page {
   min-height: 100vh;
@@ -52,10 +52,6 @@
 
 .mt-16 {
   margin-top: 16px;
-}
-
-.mt-24 {
-  margin-top: 24px;
 }
 
 .flex {
@@ -112,140 +108,22 @@
   color: #FFFFFF;
 }
 
-/* 分区标题 */
-.section-header {
-  margin: 16px 16px 8px;
-}
-
-.section-title {
-  font-size: 15px;
-  font-weight: 500;
-  color: #5F5F5F;
-}
-
-/* 紧凑空状态 - 横排，节省空间 */
-.empty-compact {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 0 16px;
-  padding: 10px 16px;
-  background: #fff;
-  border-radius: 8px;
-}
-
-.empty-compact-text {
+/* 退出登录 - 缩小版 */
+.btn-logout {
+  width: auto;
+  padding: 0 24px;
+  height: 36px;
+  line-height: 36px;
   font-size: 14px;
-  color: #A6A6A6;
-}
-
-.empty-compact-btn {
-  font-size: 13px;
-  color: #4A90D9;
-  background: #f0f7ff;
-  border-radius: 4px;
-  padding: 4px 12px;
-}
-
-/* 表格容器 */
-.table-container {
-  background-color: #FFFFFF;
-  margin: 0 16px;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-/* 表格行 */
-.table-row {
-  display: flex;
-  align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid #F0F0F0;
-}
-
-.table-row:last-child {
-  border-bottom: none;
-}
-
-.table-header-row {
-  background-color: #F5F5F5;
-  padding: 10px 16px;
-}
-
-/* 表格单元格 */
-.table-cell {
-  flex: 1;
-  font-size: 14px;
-  color: #000000;
-  text-align: left;
-  min-width: 0;
-}
-
-.table-header-row .table-cell {
-  font-size: 13px;
-  color: #5F5F5F;
-  font-weight: 500;
-}
-
-/* 时间单元格 - 三行展示 */
-.time-cell {
-  flex: 1.5;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  min-height: 50px;
-}
-
-.time-header {
-  flex: 1.5;
-}
-
-.time-main {
-  font-size: 14px;
-  font-weight: 500;
-  color: #333333;
-  line-height: 1.4;
-}
-
-.time-tag-inline {
-  display: inline-block;
-  background-color: #07C160;
+  background-color: #FA5151;
   color: #FFFFFF;
-  font-size: 11px;
-  padding: 2px 6px;
   border-radius: 4px;
-}
-
-.time-date-small {
-  font-size: 12px;
-  color: #A6A6A6;
-  line-height: 1.3;
-}
-
-/* 操作列 - 固定宽度 */
-.action-cell {
-  flex: 0 0 50px;
-  text-align: center;
-}
-
-/* 取消按钮 - 缩小 */
-.cancel-btn-small {
-  display: inline-block;
-  font-size: 12px;
-  color: #FA5151;
-  padding: 4px 8px;
-  border-radius: 4px;
-  background-color: #FFF5F5;
-}
-
-.cancel-btn-small:active {
-  background-color: #FFE8E8;
+  border: none;
 }
 
 /* 分区信息条 */
 .zone-info-bar {
-  margin: 0 16px;
+  margin: 16px 16px 0;
   padding: 8px 16px;
   background-color: rgba(74, 144, 217, 0.08);
   border-radius: 4px;
@@ -254,13 +132,6 @@
 .zone-info-text {
   font-size: 13px;
   color: #4A90D9;
-}
-
-/* 分区代码单元格 */
-.zone-code-cell {
-  font-size: 13px;
-  color: #999;
-  font-weight: 500;
 }
 
 /* 分区+信封 垂直排列容器 */
@@ -282,58 +153,89 @@
   height: 26px;
 }
 
-/* 退出登录 - 缩小版 */
-.btn-logout {
-  width: auto;
-  padding: 0 24px;
-  height: 36px;
-  line-height: 36px;
-  font-size: 14px;
-  background-color: #FA5151;
-  color: #FFFFFF;
-  border-radius: 4px;
-  border: none;
-}
-
-/* 意见反馈条目 */
-.feedback-entry {
+/* ------------------------------------------------------------------
+   板块标题：左侧渐变色强调条 + 深色粗体标题
+   修复「标题对比操作菜单毫无存在感」的层级问题
+   ------------------------------------------------------------------ */
+.section-header {
   display: flex;
   align-items: center;
-  padding: 12px 0;
+  margin: 24px 16px 10px;
 }
 
-.feedback-icon {
-  font-size: 24px;
-  margin-right: 12px;
+.section-accent {
+  width: 3px;
+  height: 15px;
+  border-radius: 2px;
+  margin-right: 8px;
+  flex-shrink: 0;
+  background-image: linear-gradient(180deg, #4A90D9 0%, #1a1a2e 100%);
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a2e;
+  line-height: 1.2;
+  flex: 1;
+}
+
+/* 菜单卡片 */
+.menu-card {
+  background-color: #FFFFFF;
+  border-radius: 8px;
+  margin: 0 16px;
+  overflow: hidden;
+}
+
+.menu-entry {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+}
+
+.menu-entry-hover,
+.menu-entry:active {
+  background-color: #F7F8FA;
+}
+
+.menu-icon {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 36px;
   height: 36px;
-  background: #f0f7ff;
+  margin-right: 12px;
+  font-size: 20px;
+  background-color: #f0f7ff;
   border-radius: 8px;
+  flex-shrink: 0;
 }
 
-.feedback-content {
+.menu-content {
   flex: 1;
+  min-width: 0;
 }
 
-.feedback-name {
+.menu-name {
+  display: block;
   font-size: 15px;
   font-weight: 500;
-  color: #000;
-  display: block;
+  color: #111827;
+  line-height: 1.4;
 }
 
-.feedback-desc {
+.menu-desc {
+  display: block;
   font-size: 13px;
-  color: #999;
+  color: #999999;
   margin-top: 2px;
-  display: block;
+  line-height: 1.4;
 }
 
-.feedback-arrow {
-  font-size: 24px;
-  color: #ccc;
+.menu-arrow {
+  font-size: 22px;
+  color: #CCCCCC;
   margin-left: 8px;
+  flex-shrink: 0;
 }

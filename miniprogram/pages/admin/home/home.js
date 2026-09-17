@@ -116,6 +116,11 @@ Page({
       this.setData({
         selectedZone: selectedZone
       })
+      // 同步全局分区（此前只改页面 data，其他页面读 globalData.currentZone 会拿到旧分区）
+      app.globalData.currentZone = selectedZone
+      wx.setStorageSync('lastZoneId', selectedZone._id)
+      // 联盟活跃：按新分区重新解析归属，force 绕过节流立即上报
+      app.markAllianceActive(true)
     }
   },
 
@@ -140,6 +145,18 @@ Page({
   goToStatistics: function () {
     wx.navigateTo({
       url: '/pages/admin/statistics/statistics'
+    })
+  },
+
+  // 联盟活跃：查看当前分区下各联盟本周活跃（8列总览）
+  goToAllianceActivity: function () {
+    const zone = this.data.selectedZone || app.globalData.currentZone
+    if (!zone) {
+      util.showInfo('请先在首页选择分区')
+      return
+    }
+    wx.navigateTo({
+      url: '/pages/admin/alliance-activity/alliance-activity?zoneId=' + zone._id
     })
   },
 

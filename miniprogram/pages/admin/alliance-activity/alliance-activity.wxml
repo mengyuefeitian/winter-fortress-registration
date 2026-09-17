@@ -1,0 +1,41 @@
+<view class="page">
+  <view class="section">
+    <view class="section-title">本周联盟活跃（{{rows.length}}个联盟）</view>
+
+    <view class="loading-container" wx:if="{{loading}}">
+      <text class="loading-text">加载中...</text>
+    </view>
+
+    <view wx:elif="{{rows.length > 0}}" class="table">
+      <!-- 第一列：联盟（固定不动，可点击） -->
+      <view class="left-col">
+        <view class="th th-left">联盟</view>
+        <view class="td td-left" wx:for="{{rows}}" wx:key="allianceId"
+              bindtap="onAllianceTap" data-id="{{item.allianceId}}">
+          <text class="alliance-link">{{item.allianceName}}</text>
+        </view>
+      </view>
+
+      <!-- 后 7 列：本周日期，自适应平分宽度；窄屏放不下时可左右滑动 -->
+      <scroll-view class="right-col" scroll-x scroll-left="{{scrollLeft}}">
+        <view class="right-inner">
+          <view class="th-row">
+            <view class="th {{di === dayIndex ? 'th-today' : ''}}"
+                  wx:for="{{weekDates}}" wx:key="date" wx:for-index="di">
+              <text class="th-md">{{item.md}}</text>
+              <text class="th-week">{{item.weekName}}</text>
+            </view>
+          </view>
+          <view class="td-row" wx:for="{{rows}}" wx:key="allianceId" wx:for-item="row" wx:for-index="ri">
+            <view class="td {{di === dayIndex ? 'td-today' : ''}}"
+                  wx:for="{{row.counts}}" wx:for-item="c" wx:for-index="di" wx:key="*this">{{c}}</view>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <view wx:else class="empty-text">暂无联盟活跃数据</view>
+  </view>
+
+  <view class="tip-text">提示：点击联盟名称可进入该联盟进行成员管理；单元格数字为当天活跃人数</view>
+</view>

@@ -1,0 +1,154 @@
+/* pages/auditor/alliance-activity/alliance-activity.wxss */
+
+.page {
+  padding: 20rpx;
+  background-color: #F5F7FA;
+  min-height: 100vh;
+}
+
+/* 顶部统计条：统计与按钮同一行 */
+.stat-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #FFFFFF;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+}
+
+/* 自助排查提示条：仅本账号未登记成功时出现 */
+.mark-warn {
+  background-color: #FFF7E6;
+  border: 2rpx solid #FFD591;
+  border-radius: 12rpx;
+  padding: 20rpx 24rpx;
+  margin-bottom: 20rpx;
+}
+
+.mark-warn-text {
+  font-size: 24rpx;
+  color: #D46B08;
+  line-height: 1.5;
+}
+
+.stat-text {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333333;
+}
+
+.stat-actions {
+  display: flex;
+  align-items: center;
+}
+
+.mini-btn {
+  padding: 12rpx 24rpx;
+  border-radius: 8rpx;
+  font-size: 26rpx;
+  color: #FFFFFF;
+  margin-left: 16rpx;
+}
+
+.mini-btn-add {
+  background-color: #4A90D9;
+}
+
+.mini-btn-save {
+  background-color: #52C41A;
+}
+
+.section {
+  background-color: #FFFFFF;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333333;
+  margin-bottom: 20rpx;
+}
+
+/* 2~3 列自适应 */
+.member-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210rpx, 1fr));
+  gap: 16rpx;
+}
+
+.member-cell {
+  display: flex;
+  align-items: center;
+  background-color: #FAFAFA;
+  border-radius: 8rpx;
+  padding: 16rpx 12rpx;
+  overflow: hidden;
+}
+
+.member-name {
+  flex: 1;
+  font-size: 26rpx;
+  color: #333333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.active-name {
+  color: #52C41A;
+}
+
+/* 活跃列表：叉号删除按钮 */
+.member-del {
+  width: 36rpx;
+  height: 36rpx;
+  line-height: 32rpx;
+  text-align: center;
+  border-radius: 50%;
+  background-color: #FF4D4F;
+  color: #FFFFFF;
+  font-size: 22rpx;
+  margin-right: 12rpx;
+  flex-shrink: 0;
+}
+
+/* 未活跃列表：复选框 */
+.member-check {
+  width: 32rpx;
+  height: 32rpx;
+  border: 2rpx solid #C0C4CC;
+  border-radius: 6rpx;
+  margin-right: 12rpx;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.empty-text {
+  color: #999999;
+  font-size: 26rpx;
+  text-align: center;
+  padding: 30rpx 0;
+}
+
+.tip-text {
+  color: #AAAAAA;
+  font-size: 24rpx;
+  text-align: center;
+  padding: 10rpx 0 30rpx;
+}
+
+.loading-container {
+  text-align: center;
+  padding: 60rpx;
+}
+
+.loading-text {
+  color: #999999;
+  font-size: 28rpx;
+}

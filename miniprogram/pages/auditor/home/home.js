@@ -149,6 +149,10 @@ Page({
     })
 
     this.loadAlliances(zone._id)
+
+    // 联盟活跃：切换分区后需要按新分区重新解析归属，force 绕过节流立即上报
+    app.globalData.currentZone = zone
+    app.markAllianceActive(true)
   },
 
   onAllianceChange: function (e) {
@@ -159,6 +163,13 @@ Page({
       allianceIndex: index,
       selectedAlliance: alliance
     })
+
+    // 联盟活跃：记录"最后一次选择的联盟"并立即登记今日活跃
+    // （此前这里只 setData，导致所选联盟从未同步给云函数，自动活跃登记不上）
+    if (alliance && alliance._id) {
+      wx.setStorageSync('lastAllianceId', alliance._id)
+      app.markAllianceActive(true)
+    }
   },
 
   // 普通盟管切换绑定的联盟
@@ -167,6 +178,13 @@ Page({
     this.setData({
       selectedAllianceIndex: index
     })
+
+    // 联盟活跃：记录"最后一次选择的联盟"并立即登记今日活跃
+    const alliance = this.data.myAlliances[index]
+    if (alliance && alliance._id) {
+      wx.setStorageSync('lastAllianceId', alliance._id)
+      app.markAllianceActive(true)
+    }
   },
 
   loadMyAlliances: async function () {
@@ -335,6 +353,24 @@ Page({
         url: '/pages/auditor/arsenal-config/arsenal-config?allianceId=' + alliance._id + '&zoneId=' + alliance.zoneId
       })
     }
+  },
+
+  // 联盟活跃：进入当前选中联盟的成员管理页
+  goToAllianceActivity: function () {
+    let alliance = null
+    if (this.data.isSuperAdmin) {
+      alliance = this.data.selectedAlliance
+    } else {
+      alliance = this.data.myAlliances[this.data.selectedAllianceIndex]
+    }
+    if (!alliance) {
+      util.showInfo(this.data.isSuperAdmin ? '请先选择联盟' : '您还未绑定联盟')
+      return
+    }
+    wx.navigateTo({
+      url: '/pages/auditor/alliance-activity/alliance-activity?allianceId=' + alliance._id +
+        (alliance.zoneId ? '&zoneId=' + alliance.zoneId : '')
+    })
   },
 
   goToStatistics: function () {

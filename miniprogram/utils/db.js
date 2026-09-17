@@ -1887,6 +1887,72 @@ async function createFeedback(userId, nickName, type, content, contactInfo, imag
 }
 
 /**
+ * 联盟活跃（成员名单 + 本周活跃记录）
+ * 说明：allianceMembers / allianceActivity 两个集合均为服务端权限写入，
+ * 客户端无法直接操作，统一走 manageAllianceActivity 云函数。
+ */
+async function callAllianceActivity(action, payload) {
+  const res = await wx.cloud.callFunction({
+    name: 'manageAllianceActivity',
+    data: Object.assign({ action: action }, payload || {})
+  })
+  const result = res.result || {}
+  if (!result.success) {
+    throw new Error(result.error || '操作失败')
+  }
+  return result
+}
+
+// 获取某联盟本周成员活跃情况（盟管/区管/超管）
+async function getAllianceActivityMembers(allianceId) {
+  return await callAllianceActivity('listMembers', { allianceId: allianceId })
+}
+
+// 获取分区下各联盟本周活跃人数（区管/超管）：8列总览
+async function getAllianceActivityOverview(zoneId) {
+  return await callAllianceActivity('getZoneOverview', { zoneId: zoneId })
+}
+
+// 设置某成员当天活跃状态（dayIndex 0=周一）
+async function setAllianceMemberActive(allianceId, nickName, active, dayIndex) {
+  return await callAllianceActivity('setActive', {
+    allianceId: allianceId,
+    nickName: nickName,
+    active: active,
+    dayIndex: dayIndex
+  })
+}
+
+// 手动添加成员（默认进入未活跃列表）
+async function addAllianceActivityMember(allianceId, nickName) {
+  return await callAllianceActivity('addMember', { allianceId: allianceId, nickName: nickName })
+}
+
+// 删除成员及其本周活跃信息
+async function removeAllianceActivityMember(allianceId, nickName) {
+  return await callAllianceActivity('removeMember', { allianceId: allianceId, nickName: nickName })
+}
+
+// 报名成功后加入联盟成员（记录"最后一次选择的联盟" + 游戏昵称）
+async function joinAllianceByRegistration(allianceId, zoneId, nickName) {
+  return await callAllianceActivity('joinByRegistration', {
+    allianceId: allianceId,
+    zoneId: zoneId,
+    nickName: nickName
+  })
+}
+
+// 用户打开小程序自动标记今日活跃（未加入联盟时云函数会返回 error，调用处需 catch）
+async function markSelfAllianceActive() {
+  return await callAllianceActivity('markSelfActive', {})
+}
+
+// 清理非本周的活跃记录（页面进入时惰性清理，定时触发器兜底）
+async function cleanupExpiredAllianceActivity() {
+  return await callAllianceActivity('cleanupExpired', {})
+}
+
+/**
  * 导出所有数据库操作
  */
 
@@ -2026,5 +2092,15 @@ module.exports = {
 
   // 兵营/峡谷统计
   getArsenalStats,
-  getCanyonStats
+  getCanyonStats,
+
+  // 联盟活跃
+  getAllianceActivityMembers,
+  getAllianceActivityOverview,
+  setAllianceMemberActive,
+  addAllianceActivityMember,
+  removeAllianceActivityMember,
+  joinAllianceByRegistration,
+  markSelfAllianceActive,
+  cleanupExpiredAllianceActivity
 }

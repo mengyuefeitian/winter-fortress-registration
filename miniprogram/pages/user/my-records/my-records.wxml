@@ -1,0 +1,190 @@
+<!-- pages/user/my-records/my-records.wxml -->
+<view class="page">
+
+  <!-- 未登录 -->
+  <view wx:if="{{!isLoggedIn}}" class="card login-tip">
+    <text class="login-tip-title">登录后查看报名记录</text>
+    <text class="login-tip-desc">登录后可查看并取消你在当前分区的各类报名</text>
+    <button class="btn btn-primary btn-full mt-16" bindtap="goToLogin">登录</button>
+  </view>
+
+  <block wx:else>
+
+    <!-- 当前分区（只读展示，切换分区请回首页） -->
+    <view class="zone-bar">
+      <text class="zone-bar-label">当前分区</text>
+      <text class="zone-bar-value">{{currentZone ? currentZone.zoneName : '未选择分区'}}</text>
+      <text wx:if="{{currentZone && currentZone.zoneCode}}" class="zone-bar-code">{{currentZone.zoneCode}}区</text>
+    </view>
+
+    <!-- 堡垒报名记录 -->
+    <view class="section-header">
+      <view class="section-accent"></view>
+      <text class="section-title">堡垒报名记录</text>
+      <text wx:if="{{registrations.length > 0}}" class="section-count">{{registrations.length}} 条</text>
+    </view>
+
+    <view wx:if="{{loaded && registrations.length === 0}}" class="empty-compact">
+      <text class="empty-compact-text">暂无报名记录</text>
+      <view class="empty-compact-btn" bindtap="goToRegistration">去报名</view>
+    </view>
+
+    <view wx:elif="{{registrations.length > 0}}" class="table-container">
+      <view class="table-row table-header-row">
+        <text class="table-cell time-header">时间/标签</text>
+        <text class="table-cell">昵称</text>
+        <text class="table-cell">联盟</text>
+        <text class="table-cell action-cell">操作</text>
+      </view>
+      <view wx:for="{{registrations}}" wx:key="_id" class="table-row">
+        <view class="table-cell time-cell">
+          <text wx:if="{{item.formattedDate}}" class="time-date-small">{{item.formattedDate}}</text>
+          <text class="time-main">{{item.displayName}}</text>
+          <text wx:if="{{item.timeFortress}}" class="time-tag-inline fortress-tag">{{item.timeFortress}}</text>
+          <text wx:if="{{item.timeTag}}" class="time-tag-inline">{{item.timeTag}}</text>
+        </view>
+        <text class="table-cell">{{item.nickName}}</text>
+        <text class="table-cell">
+          <text>{{item.shortAllianceName}}</text>
+          <text wx:if="{{item.zoneCode}}" class="zone-tag">[{{item.zoneCode}}区]</text>
+        </text>
+        <view class="table-cell action-cell">
+          <view class="cancel-btn-small" bindtap="cancelRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 官职报名记录 -->
+    <view class="section-header">
+      <view class="section-accent"></view>
+      <text class="section-title">官职报名记录</text>
+      <text wx:if="{{positionRegistrations.length > 0}}" class="section-count">{{positionRegistrations.length}} 条</text>
+    </view>
+
+    <view wx:if="{{loaded && positionRegistrations.length === 0}}" class="empty-compact">
+      <text class="empty-compact-text">暂无官职报名记录</text>
+      <view class="empty-compact-btn" bindtap="goToPositionList">去报名</view>
+    </view>
+
+    <view wx:elif="{{positionRegistrations.length > 0}}" class="table-container">
+      <view class="table-row table-header-row">
+        <text class="table-cell time-header">时间/日期</text>
+        <text class="table-cell">昵称</text>
+        <text class="table-cell">职位</text>
+        <text class="table-cell action-cell">操作</text>
+      </view>
+      <view wx:for="{{positionRegistrations}}" wx:key="_id" class="table-row">
+        <view class="table-cell time-cell">
+          <text class="time-main">{{item.timeSlot}}</text>
+          <text wx:if="{{item.configInfo.date}}" class="time-date-small">{{item.configInfo.date}}</text>
+        </view>
+        <text class="table-cell">{{item.nickName}}</text>
+        <text class="table-cell">{{item.configInfo.positionType}}</text>
+        <view class="table-cell action-cell">
+          <view class="cancel-btn-small" bindtap="cancelPositionRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 兵工厂报名 -->
+    <view class="section-header">
+      <view class="section-accent"></view>
+      <text class="section-title">兵工厂报名</text>
+      <text wx:if="{{arsenalRegistrations.length > 0}}" class="section-count">{{arsenalRegistrations.length}} 条</text>
+    </view>
+
+    <view wx:if="{{loaded && arsenalRegistrations.length === 0}}" class="empty-compact">
+      <text class="empty-compact-text">暂无兵工厂报名记录</text>
+      <view class="empty-compact-btn" bindtap="goToArsenal">去报名</view>
+    </view>
+
+    <view wx:elif="{{arsenalRegistrations.length > 0}}" class="table-container">
+      <view class="table-row table-header-row">
+        <text class="table-cell time-header">时间/日期</text>
+        <text class="table-cell">昵称</text>
+        <text class="table-cell">军团</text>
+        <text class="table-cell action-cell">操作</text>
+      </view>
+      <view wx:for="{{arsenalRegistrations}}" wx:key="_id" class="table-row">
+        <view class="table-cell time-cell">
+          <text class="time-main">{{item.time}}</text>
+          <text wx:if="{{item.date}}" class="time-date-small">{{item.date}}</text>
+        </view>
+        <text class="table-cell">{{item.nickName}}</text>
+        <text class="table-cell">{{item.corps}}</text>
+        <view class="table-cell action-cell">
+          <view class="cancel-btn-small" bindtap="cancelArsenalRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 峡谷会战报名 -->
+    <view class="section-header">
+      <view class="section-accent"></view>
+      <text class="section-title">峡谷会战报名</text>
+      <text wx:if="{{canyonRegistrations.length > 0}}" class="section-count">{{canyonRegistrations.length}} 条</text>
+    </view>
+
+    <view wx:if="{{loaded && canyonRegistrations.length === 0}}" class="empty-compact">
+      <text class="empty-compact-text">暂无峡谷会战报名记录</text>
+      <view class="empty-compact-btn" bindtap="goToCanyon">去报名</view>
+    </view>
+
+    <view wx:elif="{{canyonRegistrations.length > 0}}" class="table-container">
+      <view class="table-row table-header-row">
+        <text class="table-cell time-header">时间/日期</text>
+        <text class="table-cell">昵称</text>
+        <text class="table-cell">军团</text>
+        <text class="table-cell action-cell">操作</text>
+      </view>
+      <view wx:for="{{canyonRegistrations}}" wx:key="_id" class="table-row">
+        <view class="table-cell time-cell">
+          <text class="time-main">{{item.time}}</text>
+          <text wx:if="{{item.date}}" class="time-date-small">{{item.date}}</text>
+        </view>
+        <text class="table-cell">{{item.nickName}}</text>
+        <text class="table-cell">{{item.corps}}</text>
+        <view class="table-cell action-cell">
+          <view class="cancel-btn-small" bindtap="cancelCanyonRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 国战报名 -->
+    <view class="section-header">
+      <view class="section-accent"></view>
+      <text class="section-title">国战报名</text>
+      <text wx:if="{{battleRegistrations.length > 0}}" class="section-count">{{battleRegistrations.length}} 条</text>
+    </view>
+
+    <view wx:if="{{loaded && battleRegistrations.length === 0}}" class="empty-compact">
+      <text class="empty-compact-text">暂无国战报名记录</text>
+      <view class="empty-compact-btn" bindtap="goToBattle">去报名</view>
+    </view>
+
+    <view wx:elif="{{battleRegistrations.length > 0}}" class="table-container">
+      <view class="table-row table-header-row">
+        <text class="table-cell time-header">日期</text>
+        <text class="table-cell">昵称</text>
+        <text class="table-cell">位置</text>
+        <text class="table-cell action-cell">操作</text>
+      </view>
+      <view wx:for="{{battleRegistrations}}" wx:key="_id" class="table-row">
+        <view class="table-cell time-cell">
+          <text class="time-main">{{item.date}}</text>
+        </view>
+        <text class="table-cell">{{item.nickName}}</text>
+        <text class="table-cell">{{item.position}}</text>
+        <view class="table-cell action-cell">
+          <view class="cancel-btn-small" bindtap="cancelBattleRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="list-end-tip">
+      <text>仅显示当前分区的报名记录；切换分区请回首页选择</text>
+    </view>
+
+  </block>
+
+</view>
