@@ -3,7 +3,7 @@
     {
       "name": "dailyCleanupApplications",
       "type": "timer",
-      "config": "0 0 4 * * * *"
+      "config": "0 0 20 * * * *"
     }
   ]
 }

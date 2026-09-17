@@ -6,8 +6,8 @@
     <view class="form-row">
       <view class="form-col">
         <text class="form-label">分区</text>
-        <zone-selector wx:if="{{zones.length > 0}}" value="{{selectedZone}}" zones="{{zones}}" loaded="{{true}}" bind:change="onZoneChange" />
-        <view wx:else class="picker-compact disabled">无分区</view>
+        <!-- 分区只能在首页切换，此处置灰只读，禁止操作 -->
+        <view class="picker-compact disabled">{{selectedZone ? selectedZone.zoneName : '无分区'}}</view>
       </view>
       <view class="form-col">
         <text class="form-label">联盟</text>

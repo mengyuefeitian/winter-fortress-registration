@@ -1,6 +1,3 @@
 {
-  "navigationBarTitleText": "联盟配置",
-  "usingComponents": {
-    "zone-selector": "/components/zone-selector/zone-selector"
-  }
+  "navigationBarTitleText": "联盟配置"
 }

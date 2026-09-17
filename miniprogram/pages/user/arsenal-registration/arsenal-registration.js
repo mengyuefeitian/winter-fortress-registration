@@ -447,6 +447,18 @@ Page({
       util.hideLoading()
       util.showSuccess('报名成功')
 
+      // 联盟活跃：记录本次选择的联盟归属（以最后一次报名为准），失败不影响报名结果
+      if (this.data.selectedAlliance && this.data.selectedAlliance._id) {
+        db.joinAllianceByRegistration(
+          this.data.selectedAlliance._id,
+          zone._id,
+          this.data.nickName
+        ).then(() => {
+          // 归属记录成功后立即标记今日活跃（force 绕过节流）
+          app.markAllianceActive(true)
+        }).catch(err => console.warn('[联盟活跃] 归属记录失败(已忽略):', err))
+      }
+
       const arsenalClearZoneId = this.data.selectedZone ? this.data.selectedZone._id : null
       if (arsenalClearZoneId) cache.invalidate('arsenal_' + arsenalClearZoneId)
       const arsenalClearUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid

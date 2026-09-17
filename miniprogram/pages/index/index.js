@@ -384,6 +384,11 @@ Page({
       // 分区加载完成后更新角色显示
       if (currentZone) {
         await this.updateRoleInfo()
+
+        // 联盟活跃：分区就绪后才可能解析出用户所属联盟，
+        // 此处补一次自动活跃上报（老用户 users.allianceId 为空时靠这一步回溯登记）
+        // force=true：onLaunch 那次通常拿不到 currentZone，必须绕过节流，否则这一次会被挡掉
+        app.markAllianceActive(true)
       }
 
     } catch (err) {
@@ -409,6 +414,11 @@ Page({
       wx.removeStorageSync('zoneCreationNotified')
       // 分区切换后重新计算角色
       await this.updateRoleInfo()
+
+      // 联盟活跃：手动切区后必须重新解析（清掉节流，否则会被上次结果挡住）
+      wx.removeStorageSync('lastAllianceActiveMark')
+      wx.removeStorageSync('lastAllianceActiveOk')
+      app.markAllianceActive(true)
     }
   },
 
@@ -485,11 +495,11 @@ Page({
     })
   },
 
-  // 我的报名
+  // 我的报名（独立页面：查看并取消各类报名记录）
   goToMyRegistrations: function () {
     if (!this.ensureLogin()) return
-    wx.switchTab({
-      url: '/pages/user/my-registrations/my-registrations'
+    wx.navigateTo({
+      url: '/pages/user/my-records/my-records'
     })
   },
 

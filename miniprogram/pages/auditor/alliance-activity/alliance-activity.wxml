@@ -1,0 +1,49 @@
+<view class="page">
+  <!-- 顶部：统计与按钮同一行 -->
+  <view class="stat-bar">
+    <text class="stat-text">今日活跃成员：{{activeCount}}/{{total}}</text>
+    <view class="stat-actions">
+      <view class="mini-btn mini-btn-add" bindtap="onAddMember">添加</view>
+      <view class="mini-btn mini-btn-save" bindtap="onSaveScreenshot">保存截图</view>
+    </view>
+  </view>
+
+  <!-- 自助排查：本账号未被登记时提示原因（云函数未部署 / 未加入联盟 / 无游戏昵称），点击可重试 -->
+  <view wx:if="{{myMark && !myMark.ok}}" class="mark-warn" bindtap="onRetryMark">
+    <text class="mark-warn-text">你尚未登记今日活跃：{{myMark.error || '未知原因'}}（点此重试）</text>
+  </view>
+
+  <view class="loading-container" wx:if="{{loading}}">
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <block wx:if="{{!loading}}">
+    <!-- 今日活跃玩家 -->
+    <view class="section">
+      <view class="section-title">今日活跃玩家（{{activeList.length}}）</view>
+      <view class="member-grid">
+        <view wx:for="{{activeList}}" wx:key="nickName" class="member-cell"
+              bindlongpress="onLongPressMember" data-nick="{{item.nickName}}">
+          <view class="member-del" catchtap="onRemoveActive" data-nick="{{item.nickName}}">✕</view>
+          <text class="member-name active-name">{{item.nickName}}</text>
+        </view>
+      </view>
+      <view wx:if="{{activeList.length === 0}}" class="empty-text">暂无活跃玩家</view>
+    </view>
+
+    <!-- 今日未活跃玩家 -->
+    <view class="section">
+      <view class="section-title">今日未活跃玩家（{{inactiveList.length}}）</view>
+      <view class="member-grid">
+        <view wx:for="{{inactiveList}}" wx:key="nickName" class="member-cell"
+              bindlongpress="onLongPressMember" data-nick="{{item.nickName}}">
+          <view class="member-check" catchtap="onCheckActive" data-nick="{{item.nickName}}"></view>
+          <text class="member-name">{{item.nickName}}</text>
+        </view>
+      </view>
+      <view wx:if="{{inactiveList.length === 0}}" class="empty-text">暂无未活跃玩家</view>
+    </view>
+
+    <view class="tip-text">提示：长按成员可删除其本周活跃信息</view>
+  </block>
+</view>

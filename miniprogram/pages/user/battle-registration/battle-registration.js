@@ -272,6 +272,16 @@ Page({
 
       wx.setStorageSync('lastBattleAllianceId', alliance._id)
 
+      // 联盟活跃：记录本次选择的联盟归属（以最后一次报名为准），失败不影响报名结果
+      db.joinAllianceByRegistration(
+        alliance._id,
+        zone ? zone._id : '',
+        inputNickName.trim()
+      ).then(() => {
+        // 归属记录成功后立即标记今日活跃（force 绕过节流）
+        app.markAllianceActive(true)
+      }).catch(err => console.warn('[联盟活跃] 归属记录失败(已忽略):', err))
+
       util.hideLoading()
       util.showSuccess('报名成功')
       setTimeout(() => {

@@ -1,0 +1,160 @@
+/* pages/admin/alliance-activity/alliance-activity.wxss */
+
+.page {
+  padding: 20rpx;
+  background-color: #F5F7FA;
+  min-height: 100vh;
+}
+
+.section {
+  background-color: #FFFFFF;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333333;
+  margin-bottom: 20rpx;
+}
+
+/* ============ 表格：第一列固定 + 后 7 列横向滚动 ============ */
+.table {
+  display: flex;
+  align-items: flex-start;
+  overflow: hidden;
+}
+
+.left-col {
+  width: 100px;
+  flex-shrink: 0;
+}
+
+.right-col {
+  flex: 1;
+  min-width: 0; /* 允许 flex 子项收缩，否则内容会把容器撑开、无法横滑 */
+  white-space: nowrap;
+}
+
+/* 7 列自适应平分可视宽度；窄屏放不下时退到最小列宽 32px 并允许横滑 */
+.right-inner {
+  display: block;
+  width: 100%;
+  min-width: 224px; /* 7 × 32px */
+}
+
+.th-row,
+.td-row {
+  white-space: nowrap;
+  font-size: 0; /* 消除 inline-block 间隙 */
+}
+
+/* 右侧日期列：宽度自适应（14.2857% = 1/7），与 js 中实测列宽配合计算滚动量 */
+/* 表头两行展示：第一行日期(0917)、第二行周几(周四)，避免窄列文字溢出 */
+.th {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 14.2857%;
+  min-width: 32px;
+  height: 88rpx;
+  font-size: 22rpx;
+  text-align: center;
+  background-color: #F0F4F8;
+  color: #666666;
+  font-weight: 600;
+  box-sizing: border-box;
+  vertical-align: top;
+}
+
+.th-md {
+  font-size: 22rpx;
+  line-height: 26rpx;
+  font-weight: 600;
+}
+
+.th-week {
+  font-size: 20rpx;
+  line-height: 24rpx;
+  font-weight: 400;
+  color: #888888;
+}
+
+.td {
+  display: inline-block;
+  width: 14.2857%;
+  min-width: 32px;
+  height: 80rpx;
+  line-height: 80rpx;
+  font-size: 26rpx;
+  text-align: center;
+  color: #333333;
+}
+
+/* 左侧固定列：表头高度必须与右侧 .th 一致(88rpx)，否则左右行会逐行错位 */
+.th-left {
+  width: 100px;
+  height: 88rpx;
+  line-height: 88rpx;
+  font-size: 22rpx;
+  text-align: left;
+  padding-left: 12px;
+  box-sizing: border-box;
+  background-color: #F0F4F8;
+  color: #666666;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.td-left {
+  width: 100px;
+  height: 80rpx;
+  line-height: 80rpx;
+  font-size: 26rpx;
+  text-align: left;
+  padding-left: 12px;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.alliance-link {
+  color: #4A90D9;
+}
+
+/* 今天所在列高亮 */
+.th-today,
+.td-today {
+  background-color: #E6F7EE;
+}
+
+.empty-text {
+  color: #999999;
+  font-size: 26rpx;
+  text-align: center;
+  padding: 40rpx 0;
+}
+
+.tip-text {
+  color: #AAAAAA;
+  font-size: 24rpx;
+  text-align: center;
+  padding: 10rpx 0 30rpx;
+}
+
+.loading-container {
+  text-align: center;
+  padding: 60rpx;
+}
+
+.loading-text {
+  color: #999999;
+  font-size: 28rpx;
+}

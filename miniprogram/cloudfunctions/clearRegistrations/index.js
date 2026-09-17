@@ -59,18 +59,22 @@ async function verifyAdminRole(openid) {
 
 // 定时触发：读取 settings.autoClear 配置，时间匹配时执行清空
 async function timedClearCheck() {
+  // 联盟活跃：只保留本周。本项不受「自动清空」开关门控 —— 跨天后必须尽快清掉上周数据，
+  // 否则周一早晨看到的仍是上周记录。依托本函数已有的 hourly 触发器，无需额外配置触发器。
+  const allianceActivity = await cleanupExpiredAllianceActivity()
+
   let config
   try {
     const res = await db.collection('settings').doc('autoClear').get()
     config = res.data
   } catch (err) {
     console.log('未找到自动清空配置，跳过')
-    return { success: true, message: '未配置自动清空' }
+    return { success: true, message: '未配置自动清空', allianceActivity: allianceActivity }
   }
 
   if (!config || !config.enabled) {
     console.log('自动清空未启用，跳过')
-    return { success: true, message: '自动清空未启用' }
+    return { success: true, message: '自动清空未启用', allianceActivity: allianceActivity }
   }
 
   // 云函数运行时区默认为 UTC，需手动换算为北京时间（UTC+8）再比较，
@@ -83,13 +87,13 @@ async function timedClearCheck() {
 
   if (dayOfWeek !== config.day) {
     console.log(`今天是第${dayOfWeek}天，配置为第${config.day}天，跳过`)
-    return { success: true, message: '今日不执行自动清空' }
+    return { success: true, message: '今日不执行自动清空', allianceActivity: allianceActivity }
   }
 
   const currentHour = beijingNow.getUTCHours()
   if (currentHour !== config.hour) {
     console.log(`当前小时${currentHour}，配置为${config.hour}时，跳过`)
-    return { success: true, message: '当前时间不执行自动清空' }
+    return { success: true, message: '当前时间不执行自动清空', allianceActivity: allianceActivity }
   }
 
   console.log(`定时自动清空触发：周${dayOfWeek} ${config.hour}:00`)
@@ -785,7 +789,8 @@ async function clearExpiredAll() {
     canyonConfigs: 0,
     canyonRegistrations: 0,
     battleConfigs: 0,
-    battleRegistrations: 0
+    battleRegistrations: 0,
+    allianceActivity: 0
   }
 
   console.log('开始清空所有数据, 今天:', today)
@@ -969,10 +974,58 @@ async function clearExpiredAll() {
     results.battleConfigs = battleConfigResult.stats.removed
   }
 
+  // 5. 联盟活跃：只保留本周（成员名单 allianceMembers 跨周延续，不清理）
+  results.allianceActivity = await cleanupExpiredAllianceActivity()
+
   console.log('清空结果:', results)
   return {
     success: true,
     data: results,
-    message: `已清空全部数据：堡垒报名 ${results.registrations} 条，时间段 ${results.timeSlots} 个，兵工厂报名 ${results.arsenalRegistrations} 条，峡谷报名 ${results.canyonRegistrations} 条，官职报名 ${results.positionRegistrations} 条，官职配置 ${results.positionConfigs} 个，国战报名 ${results.battleRegistrations} 条，国战配置 ${results.battleConfigs} 个，孤立数据 ${results.orphanRegistrations + results.orphanPositionRegistrations} 条`
+    message: `已清空全部数据：堡垒报名 ${results.registrations} 条，时间段 ${results.timeSlots} 个，兵工厂报名 ${results.arsenalRegistrations} 条，峡谷报名 ${results.canyonRegistrations} 条，官职报名 ${results.positionRegistrations} 条，官职配置 ${results.positionConfigs} 个，国战报名 ${results.battleRegistrations} 条，国战配置 ${results.battleConfigs} 个，联盟活跃 ${results.allianceActivity} 条，孤立数据 ${results.orphanRegistrations + results.orphanPositionRegistrations} 条`
   }
+}
+
+/**
+ * 联盟活跃：清理非本周的活跃记录
+ * 注意：成员名单 allianceMembers 是持久名单（跨周延续），这里只清理 allianceActivity。
+ * 集合未创建时会抛错，已内部吞掉并返回 0，绝不影响主清理流程。
+ * @returns {Promise<number>} 已删除条数
+ */
+async function cleanupExpiredAllianceActivity() {
+  let deleted = 0
+  try {
+    const weekStart = getBeijingWeekStart()
+    for (let i = 0; i < 50; i++) {
+      const expired = await db.collection('allianceActivity')
+        .where({ weekStart: _.neq(weekStart) })
+        .limit(100)
+        .get()
+      const list = expired.data || []
+      if (list.length === 0) break
+      for (const doc of list) {
+        await db.collection('allianceActivity').doc(doc._id).remove()
+        deleted++
+      }
+      if (list.length < 100) break
+    }
+    if (deleted > 0) {
+      console.log('[联盟活跃] 已清理非本周记录', deleted, '条，本周起始:', weekStart)
+    }
+  } catch (err) {
+    console.log('[联盟活跃] 清理跳过(集合可能未创建):', err.message)
+  }
+  return deleted
+}
+
+// 本周一日期 YYYY-MM-DD（按北京时间 UTC+8 计算）
+// 与 manageAllianceActivity 云函数中的 getWeekStart() 保持一致
+function getBeijingWeekStart() {
+  const bj = new Date(Date.now() + 8 * 60 * 60 * 1000)
+  const jsDay = bj.getUTCDay()                 // 0=周日, 1=周一 ... 6=周六
+  const diff = jsDay === 0 ? 6 : jsDay - 1     // 让周一为 0
+  bj.setUTCDate(bj.getUTCDate() - diff)
+  const y = bj.getUTCFullYear()
+  const m = String(bj.getUTCMonth() + 1).padStart(2, '0')
+  const d = String(bj.getUTCDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }

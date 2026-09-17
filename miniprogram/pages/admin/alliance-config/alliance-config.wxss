@@ -21,6 +21,13 @@
   margin-bottom: 16px;
 }
 
+/* 当前分区：只读展示，禁止在此切换（切区请回首页） */
+.zone-readonly {
+  font-size: 13px;
+  font-weight: 400;
+  color: #999999;
+}
+
 .picker {
   display: flex;
   justify-content: space-between;

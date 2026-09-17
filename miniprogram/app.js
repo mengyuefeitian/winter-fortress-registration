@@ -1,4 +1,13 @@
 // app.js
+
+// 北京时间日期串 YYYY-MM-DD：用于"跨天必须重新上报活跃"的判断
+function beijingDateStr() {
+  const d = new Date(Date.now() + 8 * 3600 * 1000)
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(d.getUTCDate()).padStart(2, '0')
+  return d.getUTCFullYear() + '-' + m + '-' + day
+}
+
 App({
   globalData: {
     userInfo: null,
@@ -40,6 +49,89 @@ App({
 
     // 自动登录
     this.autoLogin()
+
+    // 联盟活跃：打开小程序自动把本人标记为今日活跃（内部有节流，失败静默）
+    this.markAllianceActive()
+  },
+
+  onShow: function () {
+    // 从后台切回前台也补一次（管理员中途取消活跃后，用户再次打开会重新置为活跃）
+    this.markAllianceActive()
+  },
+
+  /**
+   * 联盟活跃：自动标记今日活跃
+   * - fire-and-forget，不阻塞启动，失败仅打日志
+   * - 节流 5 分钟，避免频繁调用云函数
+   * - 用户未加入联盟 / 无游戏昵称时云函数返回 error，静默忽略
+   * @param {boolean} force 明确时机（分区就绪 / 切换联盟 / 报名成功）传 true，绕过节流立即上报
+   * @returns {Promise<object|null>} 云函数返回结果，节流跳过时为 null
+   */
+  markAllianceActive: async function (force) {
+    try {
+      const now = Date.now()
+      const last = wx.getStorageSync('lastAllianceActiveMark') || 0
+
+      // 节流窗口按上次结果区分：
+      //   成功 → 5 分钟（用户再打开小程序时会重新置为活跃，故不能锁一整天）
+      //   未成功（尚未加入联盟 / 刚启动时 currentZone 还没恢复）→ 仅 60 秒，等分区就绪后能尽快重试
+      const lastOk = wx.getStorageSync('lastAllianceActiveOk') === true
+      const throttle = lastOk ? 5 * 60 * 1000 : 60 * 1000
+
+      // 跨天必上报：昨天 23:58 标过（成功锁 5 分钟），今天 00:01 打开会被节流吃掉 → 新的一天标不上
+      const today = beijingDateStr()
+      const newDay = (wx.getStorageSync('lastAllianceActiveDate') || '') !== today
+
+      // force 用于明确时机：onLaunch 那次往往拿不到 currentZone，
+      // 若不放行 force，分区就绪后的上报会被 60 秒节流挡掉，导致一次都没登记上
+      if (!force && !newDay && last && now - last < throttle) return null
+
+      const zone = this.globalData.currentZone
+      // storage 里"最后一次选择的联盟"（报名页 / 盟管控制台选中联盟时写入），交由云函数按分区分隔校验
+      const preferred = wx.getStorageSync('lastAllianceId') ||
+        wx.getStorageSync('lastBattleAllianceId') || ''
+
+      // 先占位，避免同一时刻重复调用；日期记录保证跨天强制只触发一次
+      wx.setStorageSync('lastAllianceActiveMark', now)
+      wx.setStorageSync('lastAllianceActiveDate', today)
+
+      const res = await wx.cloud.callFunction({
+        name: 'manageAllianceActivity',
+        data: {
+          action: 'markSelfActive',
+          zoneId: zone ? zone._id : '',
+          preferredAllianceId: preferred
+        }
+      })
+      const r = (res && res.result) || {}
+      wx.setStorageSync('lastAllianceActiveOk', !!r.success)
+      // 结果落 storage：联盟活跃页据此提示"我为什么没被登记"，便于自助排查
+      wx.setStorageSync('lastAllianceActiveResult', {
+        ok: !!r.success,
+        error: r.error || '',
+        nickName: r.nickName || '',
+        allianceId: r.allianceId || '',
+        time: now
+      })
+      if (r.success) {
+        if (r.changed) console.log('[联盟活跃] 已标记今日活跃:', r.nickName)
+      } else {
+        // 业务性跳过（尚未加入联盟 / 无游戏昵称）：60 秒后自动重试
+        console.log('[联盟活跃] 自动标记跳过:', r.error || '未知原因')
+      }
+      return r
+    } catch (err) {
+      wx.setStorageSync('lastAllianceActiveOk', false)
+      wx.setStorageSync('lastAllianceActiveResult', {
+        ok: false,
+        error: (err && (err.errMsg || err.message)) || '云函数调用失败',
+        nickName: '',
+        allianceId: '',
+        time: Date.now()
+      })
+      console.warn('[联盟活跃] 自动标记失败(将重试):', err)
+      return null
+    }
   },
 
   // 自动登录

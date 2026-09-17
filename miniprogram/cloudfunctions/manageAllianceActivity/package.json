@@ -1,0 +1,9 @@
+{
+  "name": "manageAllianceActivity",
+  "version": "1.0.0",
+  "description": "联盟活跃：成员名单 + 本周活跃记录读写（服务端权限，绕过客户端20条上限）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

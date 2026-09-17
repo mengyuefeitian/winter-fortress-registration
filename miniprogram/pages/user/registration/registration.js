@@ -433,6 +433,17 @@ Page({
       util.hideLoading()
       util.showSuccess('报名成功')
 
+      // 联盟活跃：记录本次选择的联盟归属（以最后一次报名为准），失败不影响报名结果
+      db.joinAllianceByRegistration(
+        this.data.selectedAlliance._id,
+        zone._id,
+        this.data.nickName
+      ).then(() => {
+        // 归属记录成功后立即标记今日活跃（force 绕过节流）：
+        // 否则要等用户下次打开小程序才变活跃，团队长看不到刚报名的人
+        app.markAllianceActive(true)
+      }).catch(err => console.warn('[联盟活跃] 归属记录失败(已忽略):', err))
+
       const regAllianceId = this.data.selectedAlliance ? this.data.selectedAlliance._id : null
       if (regAllianceId) cache.invalidate('fortress_slots_' + regAllianceId)
       const regUserId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid

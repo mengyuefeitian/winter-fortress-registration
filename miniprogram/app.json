@@ -19,6 +19,7 @@
     "pages/user/apply-alliance-manager/apply-alliance-manager",
     "pages/user/apply-zone-manager/apply-zone-manager",
     "pages/user/my-registrations/my-registrations",
+    "pages/user/my-records/my-records",
     "pages/admin/home/home",
     "pages/admin/zone-manage/zone-manage",
     "pages/admin/alliance-config/alliance-config",
@@ -30,6 +31,7 @@
     "pages/auditor/config/config",
     "pages/auditor/arsenal-config/arsenal-config",
     "pages/auditor/statistics/statistics",
+    "pages/auditor/alliance-activity/alliance-activity",
     "pages/superAdmin/home/home",
     "pages/superAdmin/admin-review/admin-review",
     "pages/superAdmin/all-statistics/all-statistics",
@@ -38,6 +40,7 @@
     "pages/superAdmin/auto-clear/auto-clear",
     "pages/superAdmin/member-manage/member-manage",
     "pages/superAdmin/user-identity/user-identity",
+    "pages/admin/alliance-activity/alliance-activity",
     "pages/admin/arsenal-config/arsenal-config",
     "pages/superAdmin/arsenal-config/arsenal-config"
   ],
