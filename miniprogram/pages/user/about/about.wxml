@@ -1,0 +1,38 @@
+<!--pages/user/about/about.wxml-->
+<view class="page">
+  <!-- 品牌区：产品 logo / 产品名称 / 版本号，各占一行居中 -->
+  <view class="brand">
+    <view class="brand-logo">
+      <image class="brand-logo-ic" src="/images/logo-fortress.svg" mode="aspectFit" />
+    </view>
+    <text class="brand-name">{{appName}}</text>
+    <text class="brand-version">{{versionText}}</text>
+  </view>
+
+  <!-- 信息区 -->
+  <view class="info-card">
+    <view class="info-row" hover-class="info-row-hover" bindtap="openWebsite">
+      <text class="info-label">官网</text>
+      <view class="info-value">
+        <text class="info-link">{{website}}</text>
+        <text class="info-copy">复制</text>
+      </view>
+    </view>
+
+    <view class="info-row" hover-class="info-row-hover" bindtap="copyWechat">
+      <text class="info-label">客服微信</text>
+      <view class="info-value">
+        <text class="info-link">{{serviceWechat}}</text>
+        <text class="info-copy">复制</text>
+      </view>
+    </view>
+
+    <view class="info-row" hover-class="info-row-hover" bindtap="openBeian">
+      <text class="info-label">备案号</text>
+      <view class="info-value">
+        <text class="info-link">{{icp}}</text>
+        <text class="info-copy">复制</text>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,55 @@
+/* pages/common/webview/webview.wxss */
+.wv-empty {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 40px;
+  box-sizing: border-box;
+}
+
+.wv-empty-ic {
+  width: 64px;
+  height: 64px;
+  opacity: 0.5;
+}
+
+.wv-empty-text {
+  margin-top: 16px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: #9aa3b2;
+  text-align: center;
+  white-space: pre-line;
+}
+
+/* ---------- 兜底出口：复制链接 ---------- */
+.wv-actions {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.wv-link {
+  font-size: 12px;
+  color: #a8b0bd;
+  word-break: break-all;
+  text-align: center;
+  line-height: 1.6;
+  padding: 0 8px;
+}
+
+.wv-btn {
+  margin-top: 14px;
+  padding: 8px 22px;
+  border-radius: 18px;
+  background-color: #eef5fd;
+  color: #4A90D9;
+  font-size: 14px;
+}
+
+.wv-btn-hover {
+  background-color: #dcebfb;
+}

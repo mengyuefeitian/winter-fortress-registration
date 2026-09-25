@@ -1,0 +1,30 @@
+<!--pages/user/updates/updates.wxml-->
+<!-- 功能介绍：版本列表（二级菜单），点击某个版本看该版本的详细说明 -->
+<view class="page">
+  <view class="upd-tip">点击版本复制说明页链接，粘贴到浏览器即可查看</view>
+
+  <view class="upd-card">
+    <view
+      class="upd-item"
+      wx:for="{{releases}}"
+      wx:key="version"
+      data-index="{{index}}"
+      bindtap="openRelease"
+      hover-class="upd-item-hover"
+    >
+      <view class="upd-main">
+        <view class="upd-head">
+          <text class="upd-version">V{{item.version}}</text>
+          <text class="upd-date">{{item.date}}</text>
+        </view>
+        <text class="upd-title">{{item.title}}</text>
+        <text class="upd-summary">{{item.summary}}</text>
+      </view>
+      <text class="upd-arrow">›</text>
+    </view>
+  </view>
+
+  <view class="upd-empty" wx:if="{{releases.length === 0}}">
+    <text class="upd-empty-text">暂无可查看的版本说明</text>
+  </view>
+</view>

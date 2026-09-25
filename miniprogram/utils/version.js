@@ -1,7 +1,7 @@
 // 版本配置 - 集中管理版本号
 // 上传新版本前请更新此文件
 
-const APP_VERSION = '1.7.0'
+const APP_VERSION = '1.17.2'
 const APP_NAME = '无尽冬日管理助手'
 
 /**

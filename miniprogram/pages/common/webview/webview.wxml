@@ -1,0 +1,13 @@
+<!--pages/common/webview/webview.wxml-->
+<!-- 通用网页容器：功能介绍各版本 / 官网 / 备案查询 都走这里打开 -->
+<web-view wx:if="{{url}}" src="{{url}}" binderror="onError"></web-view>
+
+<view wx:else class="wv-empty">
+  <image class="wv-empty-ic" src="/images/icon-empty.png" mode="aspectFit" />
+  <text class="wv-empty-text">{{errorText}}</text>
+
+  <view wx:if="{{rawUrl}}" class="wv-actions">
+    <text class="wv-link">{{rawUrl}}</text>
+    <view class="wv-btn" hover-class="wv-btn-hover" bindtap="copyLink">复制链接</view>
+  </view>
+</view>
