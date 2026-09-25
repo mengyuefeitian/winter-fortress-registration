@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "报名",
-  "usingComponents": {}
+  "usingComponents": {
+    "account-nickname": "/components/account-nickname/account-nickname",
+    "alliance-picker": "/components/alliance-picker/alliance-picker"
+  }
 }

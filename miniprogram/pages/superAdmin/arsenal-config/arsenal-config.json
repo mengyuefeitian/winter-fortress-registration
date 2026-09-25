@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "活动配置",
   "usingComponents": {
-    "zone-selector": "/components/zone-selector/zone-selector"
+    "zone-selector": "/components/zone-selector/zone-selector",
+    "alliance-picker": "/components/alliance-picker/alliance-picker"
   }
 }

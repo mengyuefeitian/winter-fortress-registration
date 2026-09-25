@@ -1,4 +1,5 @@
 <!--pages/user/arsenal-registration/arsenal-registration.wxml-->
+<import src="/templates/furnace-badge.wxml" />
 <view class="registration-container">
   <!-- 页面标题 + 帮助 -->
   <view class="page-header">
@@ -36,12 +37,8 @@
     <view wx:if="{{selectedZone}}" class="form-row">
       <view class="form-col" style="width: 100%;">
         <text class="form-label">联盟</text>
-        <picker wx:if="{{alliances.length > 0}}" bindchange="onAllianceChange" value="{{allianceIndex >= 0 ? allianceIndex : 0}}" range="{{alliances}}" range-key="allianceName">
-          <view class="picker-compact">
-            <text>{{selectedAlliance ? selectedAlliance.allianceName : '请选择联盟'}}</text>
-            <image class="picker-compact-arrow" src="/images/icon-arrow-down.png"></image>
-          </view>
-        </picker>
+        <alliance-picker wx:if="{{alliances.length > 0}}" alliances="{{alliances}}" value="{{allianceIndex}}"
+                         bind:change="onAllianceChange" />
         <view wx:else class="picker-compact disabled">
           <text class="picker-placeholder">该分区暂无联盟</text>
         </view>
@@ -101,7 +98,7 @@
 
     <view class="form-item">
       <text class="form-label">昵称</text>
-      <input class="form-input" placeholder="请输入您的昵称" value="{{nickName}}" bindinput="onNickNameInput" maxlength="20" />
+      <account-nickname accounts="{{accountList}}" value="{{nickName}}" selectedId="{{accountSelectedId}}" bind:change="onAccountChange" />
     </view>
 
     <view class="form-item">
@@ -130,7 +127,10 @@
     <view class="registration-list">
       <view wx:for="{{registrations}}" wx:key="_id" class="registration-item {{item.isMine ? 'my-registration' : ''}}">
         <view class="registration-order {{item.isMine ? 'my-order' : ''}}">{{index + 1}}</view>
-        <view class="registration-name">{{item.nickName}}<text wx:if="{{item.isMine}}" class="me-tag">我</text></view>
+        <view class="registration-name">
+          <template is="furnaceBadge" data="{{has: item.furnaceHas, icon: item.furnaceIcon, ring: item.furnaceRing}}" />
+          <text>{{item.nickName}}</text><text wx:if="{{item.isMine}}" class="me-tag">我</text>
+        </view>
         <view class="registration-position {{item.position === 'combat' ? 'combat' : 'substitute'}}">
           {{item.position === 'combat' ? '参战' : '替补'}}
         </view>

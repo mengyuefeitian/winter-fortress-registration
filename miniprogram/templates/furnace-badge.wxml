@@ -1,0 +1,19 @@
+<!-- templates/furnace-badge.wxml -->
+<!--
+  熔炉「等级」徽章：火晶用 fireN.png 素材，普通等级用 CSS 圆环内嵌数字。
+  仅展示等级图标，不展示火炉图标（按需求：报名列表 / 截图里昵称前只挂等级图标）。
+
+  用法：
+    <import src="/templates/furnace-badge.wxml" />
+    <template is="furnaceBadge" data="{{has: item.furnaceHas, icon: item.furnaceIcon, ring: item.furnaceRing}}" />
+  字段来源：
+    · 报名 / 统计列表 —— utils/gameAccount.js 的 decorate() 就地写入记录对象；
+    · 联盟活跃成员列表 —— 云函数 listMembers 按 userId+昵称精确回传 furnace，
+      页面再用 ga.viewOf({furnace}) 转成同样三个字段。
+-->
+<template name="furnaceBadge">
+  <view wx:if="{{has}}" class="frank">
+    <image wx:if="{{icon}}" class="frank-l" src="{{icon}}" mode="aspectFit" />
+    <view wx:else class="frank-r">{{ring}}</view>
+  </view>
+</template>

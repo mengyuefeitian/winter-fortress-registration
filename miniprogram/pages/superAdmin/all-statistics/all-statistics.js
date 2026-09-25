@@ -3,6 +3,30 @@ const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const auth = require('../../../utils/auth')
+const ga = require('../../../utils/gameAccount')
+
+// 取报名记录的熔炉等级规格：优先 decorate() 写好的 furnaceSpec，其次原始字段兜底
+function specOf(rec) {
+  if (!rec) return null
+  return rec.furnaceSpec || ga.normalizeSpec(rec.furnace) || ga.parseText(rec.furnaceLevel) || null
+}
+
+// 收集一组统计项里所有报名记录的熔炉规格，用于 canvas 预加载素材
+function collectSpecs(stats) {
+  const out = []
+  ;(stats || []).forEach(s => (s.registrations || []).forEach(r => {
+    const sp = specOf(r)
+    if (sp) out.push(sp)
+  }))
+  return out
+}
+
+function truncateText(ctx, text, maxW) {
+  if (ctx.measureText(text).width <= maxW) return text
+  let t = text
+  while (t.length > 0 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1)
+  return t.length > 0 ? t + '…' : ''
+}
 
 Page({
   data: {
@@ -169,6 +193,11 @@ Page({
         const allianceId = this.data.selectedAlliance._id
         const stats = await db.getAllianceStatistics(allianceId)
 
+        // 报名列表补熔炉等级图标（老的报名记录走主账号兜底）
+        for (const stat of stats) {
+          await ga.decorate(stat.registrations || [])
+        }
+
         let totalRegistrations = 0
         let fullSlots = 0
         let remainingSlots = 0
@@ -211,6 +240,7 @@ Page({
         for (const config of configs) {
           const stats = await db.getArsenalStats(config._id, { includeRegistrations: true })
           const regs = (stats.registrations || []).sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
+          await ga.decorate(regs)
           arsenalStats.push({
             config: config,
             activityTypeLabel: ACTIVITY_TYPE_LABELS[config.activityType] || config.activityType,
@@ -251,6 +281,7 @@ Page({
         for (const config of configs) {
           const stats = await db.getCanyonStats(config._id, { includeRegistrations: true })
           const regs = (stats.registrations || []).sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
+          await ga.decorate(regs)
           canyonStats.push({
             config: config,
             activityTypeLabel: ACTIVITY_TYPE_LABELS[config.activityType] || config.activityType,
@@ -324,6 +355,8 @@ Page({
               }
               return parseTime(aTime) - parseTime(bTime)
             })
+            // 报名列表补熔炉等级图标（老的报名记录走主账号兜底）
+            await ga.decorate(registrations)
             positionStats.push({
               config: config,
               registrations: registrations,
@@ -467,6 +500,9 @@ Page({
           return
         }
 
+        // 预加载熔炉等级素材（火晶图 + 火炉图），加载失败会自动降级为程序化绘制
+        const badgeImgs = await ga.preloadBadges(canvas, collectSpecs(this.data.timeSlotStats))
+
         ctx.fillStyle = '#07C160'
         ctx.font = 'bold 32px sans-serif'
         ctx.fillText(this.data.selectedAlliance.allianceName + ' 堡垒报名统计', 30, 50)
@@ -525,8 +561,16 @@ Page({
             ctx.font = '24px sans-serif'
             const sorted = [...stat.registrations].sort((a, b) => (a.position === 'head' ? -1 : 1) - (b.position === 'head' ? -1 : 1))
             const nameStrs = sorted.map((r, i) => `${i + 1}.${r.nickName}(${r.position === 'head' ? '车头' : '车身'})`)
+            const nameStartX = 50
+            const colW = Math.floor((720 - nameStartX) / 3)
+            const colMaxW = colW - 10
+            const colXs = [nameStartX, nameStartX + colW, nameStartX + colW * 2]
             for (let i = 0; i < nameStrs.length; i += 3) {
-              ctx.fillText(nameStrs.slice(i, i + 3).join(' '), 50, y)
+              nameStrs.slice(i, i + 3).forEach((name, col) => {
+                // 名字前画熔炉等级图标，文字起始位置顺延
+                const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(sorted[i + col]), badgeImgs)
+                ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
+              })
               y += 35
             }
           }
@@ -557,6 +601,9 @@ Page({
 
         ctx.fillStyle = '#FFFFFF'
         ctx.fillRect(0, 0, canvasWidth, totalHeight)
+
+        // 预加载熔炉等级素材（火晶图 + 火炉图），加载失败会自动降级为程序化绘制
+        const badgeImgs = await ga.preloadBadges(canvas, collectSpecs(this.data.arsenalStats))
 
         ctx.fillStyle = '#07C160'
         ctx.font = 'bold 32px sans-serif'
@@ -601,8 +648,15 @@ Page({
               ctx.fillStyle = '#666666'
               ctx.font = '24px sans-serif'
               const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
+              const nameStartX = margin + 20
+              const colW = Math.floor((canvasWidth - nameStartX - margin) / 3)
+              const colMaxW = colW - 10
+              const colXs = [nameStartX, nameStartX + colW, nameStartX + colW * 2]
               for (let i = 0; i < subNames.length; i += 3) {
-                ctx.fillText(subNames.slice(i, i + 3).join('  '), margin + 20, y)
+                subNames.slice(i, i + 3).forEach((name, col) => {
+                  const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(substitutes[i + col]), badgeImgs)
+                  ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
+                })
                 y += 35
               }
             }
@@ -616,8 +670,15 @@ Page({
               ctx.fillStyle = '#666666'
               ctx.font = '24px sans-serif'
               const combatNames = combats.map((r, i) => `${i + 1}.${r.nickName}`)
+              const nameStartX = margin + 20
+              const colW = Math.floor((canvasWidth - nameStartX - margin) / 3)
+              const colMaxW = colW - 10
+              const colXs = [nameStartX, nameStartX + colW, nameStartX + colW * 2]
               for (let i = 0; i < combatNames.length; i += 3) {
-                ctx.fillText(combatNames.slice(i, i + 3).join('  '), margin + 20, y)
+                combatNames.slice(i, i + 3).forEach((name, col) => {
+                  const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(combats[i + col]), badgeImgs)
+                  ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
+                })
                 y += 35
               }
             }
@@ -677,6 +738,9 @@ Page({
         ctx.fillStyle = '#FFFFFF'
         ctx.fillRect(0, 0, canvasWidth, totalHeight)
 
+        // 预加载熔炉等级素材（火晶图 + 火炉图），加载失败会自动降级为程序化绘制
+        const badgeImgs = await ga.preloadBadges(canvas, collectSpecs(this.data.canyonStats))
+
         ctx.fillStyle = '#07C160'
         ctx.font = 'bold 32px sans-serif'
         ctx.fillText(this.data.selectedZone.zoneName + ' 峡谷报名统计', margin, 50)
@@ -720,8 +784,15 @@ Page({
               ctx.fillStyle = '#666666'
               ctx.font = '24px sans-serif'
               const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
+              const nameStartX = margin + 20
+              const colW = Math.floor((canvasWidth - nameStartX - margin) / 3)
+              const colMaxW = colW - 10
+              const colXs = [nameStartX, nameStartX + colW, nameStartX + colW * 2]
               for (let i = 0; i < subNames.length; i += 3) {
-                ctx.fillText(subNames.slice(i, i + 3).join('  '), margin + 20, y)
+                subNames.slice(i, i + 3).forEach((name, col) => {
+                  const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(substitutes[i + col]), badgeImgs)
+                  ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
+                })
                 y += 35
               }
             }
@@ -735,8 +806,15 @@ Page({
               ctx.fillStyle = '#666666'
               ctx.font = '24px sans-serif'
               const combatNames = combats.map((r, i) => `${i + 1}.${r.nickName}`)
+              const nameStartX = margin + 20
+              const colW = Math.floor((canvasWidth - nameStartX - margin) / 3)
+              const colMaxW = colW - 10
+              const colXs = [nameStartX, nameStartX + colW, nameStartX + colW * 2]
               for (let i = 0; i < combatNames.length; i += 3) {
-                ctx.fillText(combatNames.slice(i, i + 3).join('  '), margin + 20, y)
+                combatNames.slice(i, i + 3).forEach((name, col) => {
+                  const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(combats[i + col]), badgeImgs)
+                  ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
+                })
                 y += 35
               }
             }
@@ -780,6 +858,9 @@ Page({
           return
         }
 
+        // 预加载熔炉等级素材（火晶图 + 火炉图），加载失败会自动降级为程序化绘制
+        const badgeImgs = await ga.preloadBadges(canvas, collectSpecs(this.data.positionStats))
+
         ctx.fillStyle = '#07C160'
         ctx.font = 'bold 32px sans-serif'
         ctx.fillText(this.data.selectedZone.zoneName + ' 官职报名统计', 30, 50)
@@ -817,9 +898,11 @@ Page({
             const items = stat.registrations.map(r => `${r.timeSlot} ${r.nickName}`)
             const colX = [50, 375]
             for (let i = 0; i < items.length; i += 2) {
-              ctx.fillText(`${i + 1}. ${items[i]}`, colX[0], y)
+              const bw0 = ga.drawBadge(ctx, colX[0], y - 8, ga.BADGE_SIZE, specOf(stat.registrations[i]), badgeImgs)
+              ctx.fillText(`${i + 1}. ${items[i]}`, colX[0] + bw0, y)
               if (items[i + 1]) {
-                ctx.fillText(`${i + 2}. ${items[i + 1]}`, colX[1], y)
+                const bw1 = ga.drawBadge(ctx, colX[1], y - 8, ga.BADGE_SIZE, specOf(stat.registrations[i + 1]), badgeImgs)
+                ctx.fillText(`${i + 2}. ${items[i + 1]}`, colX[1] + bw1, y)
               }
               y += 40
             }

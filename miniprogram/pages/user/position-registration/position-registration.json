@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "官职报名",
   "usingComponents": {
-    "float-reminder": "/components/float-reminder/float-reminder"
+    "float-reminder": "/components/float-reminder/float-reminder",
+    "account-nickname": "/components/account-nickname/account-nickname"
   }
 }

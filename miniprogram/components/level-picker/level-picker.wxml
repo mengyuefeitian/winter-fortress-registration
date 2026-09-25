@@ -1,0 +1,63 @@
+<!-- components/level-picker/level-picker.wxml -->
+<view wx:if="{{show}}" class="lp-mask" catchtouchmove="noop">
+  <view class="lp-sheet" catchtap="noop">
+    <view class="lp-hd">
+      <image wx:if="{{icon}}" class="lp-hd-ic" src="{{icon}}" mode="aspectFit" />
+      <text class="lp-hd-title">{{title}}</text>
+      <view class="lp-close" bindtap="onCancel">
+        <image class="lp-close-ic" src="/images/icon-close.png" mode="aspectFit" />
+      </view>
+    </view>
+
+    <!-- 标准等级 / 火晶等级 二选一（默认停在火晶等级列） -->
+    <view class="lp-seg">
+      <view class="lp-seg-item {{levelKind === 'level' ? 'lp-seg-on' : ''}}" bindtap="onKindTap" data-kind="level">标准等级</view>
+      <view class="lp-seg-item {{levelKind === 'fire' ? 'lp-seg-on' : ''}}" bindtap="onKindTap" data-kind="fire">火晶等级</view>
+    </view>
+
+    <scroll-view scroll-y class="lp-bd">
+      <!--
+        内容区固定总高度（.lp-body），两个状态（标准等级 / 火晶等级）总高完全一致：
+          · 选「标准等级」→ 兵种阶整块收成 0 高，网格 flex:1 占满，5 行圆环在区块内垂直居中
+          · 选「火晶等级」→ 兵种阶正常占位，网格只占剩余高度，2 行大火晶同样居中
+        既不会出现「数字贴着顶部、下面留一大片空白」，切换时弹层也不会跳高跳矮。
+      -->
+      <view class="lp-body">
+        <!-- 标准等级：圆环内嵌数字 -->
+        <view wx:if="{{levelKind === 'level'}}" class="lp-grid lp-grid-6">
+          <view wx:for="{{ringList}}" wx:key="*this"
+                class="lp-ring {{levelValue === item ? 'lp-on' : ''}}"
+                bindtap="onValueTap" data-value="{{item}}">{{item}}</view>
+        </view>
+
+        <!-- 火晶等级：只展示等级图标，不再带「火N」文字；熔炉只有火晶一列，间距放大 -->
+        <view wx:else class="lp-grid lp-grid-5 {{target === 'furnace' ? 'lp-grid-5-roomy' : ''}}">
+          <view wx:for="{{fireList}}" wx:key="*this"
+                class="lp-fire-cell {{levelValue === item ? 'lp-on' : ''}}"
+                bindtap="onValueTap" data-value="{{item}}">
+            <image class="lp-fire-ic" src="/images/game-account/fire{{item}}.png" mode="aspectFit" />
+          </view>
+        </view>
+
+        <!--
+          兵种阶：仅「火晶等级 + 兵营」才有选项。
+          选「标准等级」时整块收成 0 高（不是 visibility:hidden）——
+          总高由外层 .lp-body 兜住，所以既不露空白也不跳变。
+        -->
+        <view wx:if="{{target !== 'furnace'}}" class="lp-stage {{levelKind === 'fire' ? '' : 'lp-stage-ph'}}">
+          <view class="lp-stage-lab">兵种阶级<text class="lp-stage-muted">（默认无）</text></view>
+          <view class="lp-seg3">
+            <view class="lp-seg3-item {{stage === '' ? 'lp-seg3-on' : ''}}" bindtap="onStageTap" data-stage="">无</view>
+            <view class="lp-seg3-item {{stage === 'T11' ? 'lp-seg3-on' : ''}}" bindtap="onStageTap" data-stage="T11">T11</view>
+            <view class="lp-seg3-item {{stage === 'T12' ? 'lp-seg3-on' : ''}}" bindtap="onStageTap" data-stage="T12">T12</view>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+
+    <view class="lp-ft">
+      <view class="lp-btn lp-btn-ghost" bindtap="onClear">清除</view>
+      <view class="lp-btn lp-btn-primary" bindtap="onConfirm">确定</view>
+    </view>
+  </view>
+</view>

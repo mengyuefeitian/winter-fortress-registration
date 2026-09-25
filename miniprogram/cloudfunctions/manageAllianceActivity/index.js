@@ -12,6 +12,19 @@ const _ = db.command
 
 const WEEK_NAMES = ['一', '二', '三', '四', '五', '六', '日']
 
+const MAX_FIRE = 10
+const MAX_LEVEL = 30
+
+// 熔炉等级规格规整（与 manageGameAccount 保持一致）
+function normalizeSpec(raw) {
+  if (!raw || typeof raw !== 'object') return null
+  const value = parseInt(raw.value, 10)
+  if (!value || value <= 0) return null
+  if (raw.kind === 'fire') return { kind: 'fire', value: Math.min(value, MAX_FIRE) }
+  if (raw.kind === 'level') return { kind: 'level', value: Math.min(value, MAX_LEVEL) }
+  return null
+}
+
 // ============ 时间工具：统一按北京时间(UTC+8)计算 ============
 function toBeijing(date) {
   return new Date(date.getTime() + 8 * 3600 * 1000)
@@ -185,6 +198,44 @@ async function cleanupExpired() {
   return { success: true, deleted: deleted, weekStart: weekStart }
 }
 
+// 按「userId + 游戏昵称」取熔炉等级：一人多号时每个号等级不同，不能只认主账号。
+// 同时保留一层 userId 兜底，兼容"昵称改过名 / 老数据昵称对不上账号"的情况。
+// 返回 { exact: {'uid|nick': spec}, fallback: { uid: spec } }
+async function loadFurnaceMap(members) {
+  const exact = {}
+  const fallback = {}
+  const uids = []
+  ;(members || []).forEach(m => {
+    if (m.userId && uids.indexOf(m.userId) < 0) uids.push(m.userId)
+  })
+  if (uids.length === 0) return { exact, fallback }
+
+  const CHUNK = 20
+  for (let i = 0; i < uids.length; i += CHUNK) {
+    const chunk = uids.slice(i, i + CHUNK)
+    let res
+    try {
+      res = await db.collection('gameAccounts').where({ userId: _.in(chunk) }).limit(200).get()
+    } catch (e) {
+      console.warn('[联盟活跃] 读取 gameAccounts 失败(忽略):', e.message)
+      return { exact, fallback }
+    }
+    for (const a of res.data) {
+      const spec = normalizeSpec(a.furnace)
+      if (!spec || !a.userId) continue
+      if (a.gameNickName) exact[`${a.userId}|${String(a.gameNickName).trim()}`] = spec
+      if (!fallback[a.userId] || a.isMain) fallback[a.userId] = spec
+    }
+  }
+  return { exact, fallback }
+}
+
+function specForMember(map, m) {
+  if (!map || !m) return null
+  const key = `${m.userId}|${String(m.nickName || '').trim()}`
+  return map.exact[key] || map.fallback[m.userId] || null
+}
+
 // ============ Action: 盟管/区管/超管 查看某联盟本周活跃 ============
 async function listMembers(data, openid) {
   const { allianceId } = data
@@ -202,16 +253,50 @@ async function listMembers(data, openid) {
   const members = await fetchAll('allianceMembers', { allianceId: allianceId }, 'createTime', 'asc')
   const activities = await fetchAll('allianceActivity', { allianceId: allianceId, weekStart: weekStart })
 
+  // 同一昵称可能有多条活跃记录（老数据重复行）→ 按昵称做"并集"合并，
+  // 并集比"取最后一条"更安全：任一行为活跃即算活跃
   const actMap = {}
-  for (const a of activities) actMap[a.nickName] = a
+  for (const a of activities) {
+    const nick = String(a.nickName || '').trim()
+    if (!nick) continue
+    const days = Array.isArray(a.activeDays) ? a.activeDays : emptyDays()
+    if (!actMap[nick]) {
+      actMap[nick] = { nickName: nick, activeDays: days.slice() }
+    } else {
+      for (let i = 0; i < 7; i++) {
+        if (days[i]) actMap[nick].activeDays[i] = true
+      }
+    }
+  }
 
-  const list = members.map(m => {
-    const a = actMap[m.nickName]
+  const furnaceMap = await loadFurnaceMap(members)
+
+  // 按昵称去重：老数据里同一个昵称可能被重复写进成员表（不同时期的自动登记），
+  // 不合并会出现"同一个人两行、活跃状态还不一致"。合并时取并集（任一行为活跃即算活跃）。
+  const byNick = {}
+  const order = []
+  for (const m of members) {
+    const key = String(m.nickName || '').trim()
+    if (!key) continue
+    const spec = specForMember(furnaceMap, m)
+    if (!byNick[key]) {
+      byNick[key] = { _id: m._id, nickName: key, userId: m.userId || '', furnace: spec }
+      order.push(key)
+    } else {
+      if (!byNick[key].userId && m.userId) byNick[key].userId = m.userId
+      if (!byNick[key].furnace && spec) byNick[key].furnace = spec
+    }
+  }
+
+  const list = order.map(key => {
+    const m = byNick[key]
+    const a = actMap[key]
     const activeDays = (a && Array.isArray(a.activeDays)) ? a.activeDays.slice() : emptyDays()
     return {
       _id: m._id,
       nickName: m.nickName,
-      userId: m.userId || '',
+      userId: m.userId,
+      furnace: m.furnace,
       activeDays: activeDays,
       activeToday: !!activeDays[dayIndex]
     }
@@ -269,15 +354,28 @@ async function getZoneOverview(data, openid) {
   const activities = await fetchAll('allianceActivity', { zoneId: zoneId, weekStart: weekStart })
   const members = await fetchAll('allianceMembers', { zoneId: zoneId })
 
-  // 每个联盟的成员数（成员为 0 的联盟不展示）
+  // 每个联盟的成员数（按昵称去重；成员为 0 的联盟不展示）
+  const seenNick = {}
   const memberCount = {}
   for (const m of members) {
+    const nick = String(m.nickName || '').trim()
+    if (!nick) continue
+    const key = `${m.allianceId}|${nick}`
+    if (seenNick[key]) continue
+    seenNick[key] = 1
     memberCount[m.allianceId] = (memberCount[m.allianceId] || 0) + 1
   }
 
-  // 每个联盟每天活跃人数
+  // 每个联盟每天活跃人数（同样按昵称去重，避免老数据重复行导致多算）
   const countsMap = {}
+  const seenAct = {}
   for (const a of activities) {
+    const nick = String(a.nickName || '').trim()
+    if (nick) {
+      const key = `${a.allianceId}|${nick}`
+      if (seenAct[key]) continue
+      seenAct[key] = 1
+    }
     if (!countsMap[a.allianceId]) countsMap[a.allianceId] = [0, 0, 0, 0, 0, 0, 0]
     const days = a.activeDays || []
     for (let i = 0; i < 7; i++) {
@@ -321,18 +419,21 @@ async function setActive(data, openid) {
   if (!await canManageAlliance(caller, alliance)) return { success: false, error: '权限不足' }
 
   const weekStart = getWeekStart()
+  // 同一昵称可能有多条历史记录（老数据重复行），必须全部更新，
+  // 否则列表按昵称合并后，未被更新的那条会把结果又"翻"回去
   const res = await db.collection('allianceActivity')
     .where({ allianceId: allianceId, nickName: nickName, weekStart: weekStart })
-    .limit(1)
+    .limit(100)
     .get()
 
   if (res.data.length > 0) {
-    const doc = res.data[0]
-    const activeDays = Array.isArray(doc.activeDays) ? doc.activeDays.slice() : emptyDays()
-    activeDays[dayIndex] = !!active
-    await db.collection('allianceActivity').doc(doc._id).update({
-      data: { activeDays: activeDays, updateTime: db.serverDate() }
-    })
+    for (const doc of res.data) {
+      const activeDays = Array.isArray(doc.activeDays) ? doc.activeDays.slice() : emptyDays()
+      activeDays[dayIndex] = !!active
+      await db.collection('allianceActivity').doc(doc._id).update({
+        data: { activeDays: activeDays, updateTime: db.serverDate() }
+      })
+    }
     return { success: true }
   }
 
@@ -400,13 +501,14 @@ async function removeMember(data, openid) {
   if (!alliance) return { success: false, error: '联盟不存在' }
   if (!await canManageAlliance(caller, alliance)) return { success: false, error: '权限不足' }
 
-  // 删除成员
+  // 删除成员（老数据里同一昵称可能有多条重复记录，需一并删干净，
+  // 否则列表按昵称去重后仍会"删了又出现"）
   const mRes = await db.collection('allianceMembers')
     .where({ allianceId: allianceId, nickName: nickName })
-    .limit(1)
+    .limit(100)
     .get()
-  if (mRes.data.length > 0) {
-    await db.collection('allianceMembers').doc(mRes.data[0]._id).remove()
+  for (const doc of mRes.data) {
+    await db.collection('allianceMembers').doc(doc._id).remove()
   }
 
   // 删除本周活跃记录
@@ -442,26 +544,30 @@ async function joinByRegistration(data, openid) {
     }
   })
 
-  // 加入成员名单（若已存在则不重复添加，保持未活跃）
-  const exist = await db.collection('allianceMembers')
-    .where({ allianceId: allianceId, nickName: name })
-    .limit(1)
-    .get()
-  if (exist.data.length === 0) {
+  // 加入成员名单（含该用户游戏账号列表里的所有账号；已存在则不重复添加，保持未活跃）
+  const names = await collectSelfNickNames(caller, allianceId, name)
+  const added = []
+  for (const n of names) {
+    const exist = await db.collection('allianceMembers')
+      .where({ allianceId: allianceId, nickName: n })
+      .limit(1)
+      .get()
+    if (exist.data.length > 0) continue
     await db.collection('allianceMembers').add({
       data: {
         allianceId: allianceId,
         zoneId: zoneId || '',
-        nickName: name,
+        nickName: n,
         userId: caller._id,
         source: 'auto',
         createTime: db.serverDate(),
         updateTime: db.serverDate()
       }
     })
+    added.push(n)
   }
 
-  return { success: true, nickName: name }
+  return { success: true, nickName: name, nickNames: names, added: added }
 }
 
 // ============ Action: 用户端 —— 打开小程序自动标记今日活跃 ============
@@ -531,18 +637,85 @@ async function markSelfActive(data, openid) {
     }
   }
 
-  // 成员不存在则自动添加（对应"用户下次登录仍可自动添加"）
+  // 该用户在本联盟下需要登记活跃的全部昵称：
+  // 主昵称 + 游戏账号列表里的所有账号 + 他之前在本联盟用过的昵称（老数据/改过名）
+  const names = await collectSelfNickNames(caller, allianceId, name)
+
+  let changed = false
+  const done = []
+  for (const n of names) {
+    try {
+      if (await ensureMemberAndActive(alliance, n, caller._id)) changed = true
+      done.push(n)
+    } catch (e) {
+      console.warn('[联盟活跃] 登记昵称失败(忽略):', n, e.message)
+    }
+  }
+  if (done.length === 0) return { success: false, error: '登记失败' }
+
+  return {
+    success: true,
+    changed: changed,
+    allianceId: allianceId,
+    // nickName 保持旧字段（前端诊断条在用），多账号时拼成一串便于自查
+    nickName: done.join('、'),
+    nickNames: done,
+    count: done.length
+  }
+}
+
+// 收集"该用户在本联盟下应当登记活跃"的全部游戏昵称。
+// 有了游戏账号资料库后，一个用户可以同时管理 / 报名多个账号，
+// 这些账号都应该自动进入活跃玩家名单（老数据只有单一昵称，也不会丢）。
+async function collectSelfNickNames(caller, allianceId, primaryName) {
+  const names = []
+  const push = (n) => {
+    const s = String(n || '').trim()
+    if (s && names.indexOf(s) < 0) names.push(s)
+  }
+  push(primaryName)
+
+  // 1) 游戏账号列表（多账号）
+  try {
+    const gaRes = await db.collection('gameAccounts')
+      .where({ userId: caller._id })
+      .limit(100)
+      .get()
+    gaRes.data.forEach(a => push(a.gameNickName))
+  } catch (e) {
+    console.warn('[联盟活跃] 读取 gameAccounts 失败(忽略):', e.message)
+  }
+
+  // 2) 该用户在本联盟下已有的成员记录（老数据 / 改名前的历史昵称）
+  try {
+    const mRes = await db.collection('allianceMembers')
+      .where({ allianceId: allianceId, userId: caller._id })
+      .limit(100)
+      .get()
+    mRes.data.forEach(m => push(m.nickName))
+  } catch (e) {
+    console.warn('[联盟活跃] 读取 allianceMembers 失败(忽略):', e.message)
+  }
+
+  return names
+}
+
+// 让某个昵称"成为成员 + 今天活跃"，返回是否发生了变更
+async function ensureMemberAndActive(alliance, nickName, userId) {
+  const allianceId = alliance._id
+  const zoneId = alliance.zoneId || ''
+
   const mRes = await db.collection('allianceMembers')
-    .where({ allianceId: allianceId, nickName: name })
+    .where({ allianceId: allianceId, nickName: nickName })
     .limit(1)
     .get()
   if (mRes.data.length === 0) {
     await db.collection('allianceMembers').add({
       data: {
         allianceId: allianceId,
-        zoneId: alliance.zoneId,
-        nickName: name,
-        userId: caller._id,
+        zoneId: zoneId,
+        nickName: nickName,
+        userId: userId,
         source: 'auto',
         createTime: db.serverDate(),
         updateTime: db.serverDate()
@@ -550,40 +723,39 @@ async function markSelfActive(data, openid) {
     })
   }
 
-  // 标记今日活跃
   const weekStart = getWeekStart()
   const dayIndex = getDayIndex()
   const aRes = await db.collection('allianceActivity')
-    .where({ allianceId: allianceId, nickName: name, weekStart: weekStart })
+    .where({ allianceId: allianceId, nickName: nickName, weekStart: weekStart })
     .limit(1)
     .get()
 
   if (aRes.data.length > 0) {
     const doc = aRes.data[0]
     const activeDays = Array.isArray(doc.activeDays) ? doc.activeDays.slice() : emptyDays()
-    if (activeDays[dayIndex]) return { success: true, changed: false, allianceId: allianceId, nickName: name }
+    if (activeDays[dayIndex]) return false
     activeDays[dayIndex] = true
     await db.collection('allianceActivity').doc(doc._id).update({
       data: { activeDays: activeDays, updateTime: db.serverDate() }
     })
-  } else {
-    const activeDays = emptyDays()
-    activeDays[dayIndex] = true
-    await db.collection('allianceActivity').add({
-      data: {
-        allianceId: allianceId,
-        zoneId: alliance.zoneId,
-        nickName: name,
-        userId: caller._id,
-        weekStart: weekStart,
-        activeDays: activeDays,
-        createTime: db.serverDate(),
-        updateTime: db.serverDate()
-      }
-    })
+    return true
   }
 
-  return { success: true, changed: true, allianceId: allianceId, nickName: name }
+  const activeDays = emptyDays()
+  activeDays[dayIndex] = true
+  await db.collection('allianceActivity').add({
+    data: {
+      allianceId: allianceId,
+      zoneId: zoneId,
+      nickName: nickName,
+      userId: userId,
+      weekStart: weekStart,
+      activeDays: activeDays,
+      createTime: db.serverDate(),
+      updateTime: db.serverDate()
+    }
+  })
+  return true
 }
 
 // ============ 入口 ============

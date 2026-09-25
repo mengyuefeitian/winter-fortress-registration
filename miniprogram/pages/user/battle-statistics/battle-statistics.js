@@ -2,6 +2,22 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
+const ga = require('../../../utils/gameAccount')
+
+// 截图尺寸：加宽到 980，避免车身行「钻石(万)」与「兵种实力(万)」挤在一起
+const SHOT_W = 980
+const SHOT_MARGIN = 40
+// 截图里等级徽章（熔炉 / 三兵营等级）的边长
+const SHOT_BADGE = 28
+
+// 单行文本截断（超出加省略号），防止长昵称/长分配名压到相邻列
+function truncateText(ctx, text, maxW) {
+  const str = String(text == null ? '' : text)
+  if (ctx.measureText(str).width <= maxW) return str
+  let t = str
+  while (t.length > 0 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1)
+  return t.length > 0 ? t + '…' : ''
+}
 
 // 根据报名记录生成参战标签列表（用于「战争」列展示）
 // 勾选参加远征战争 -> 远征；勾选参加王城战争 -> 王城；二者都选则两行
@@ -197,8 +213,8 @@ Page({
       util.showLoading('正在生成截图...')
 
       const screenshotData = this.buildScreenshotData()
-      const margin = 40
-      const canvasWidth = 750
+      const margin = SHOT_MARGIN
+      const canvasWidth = SHOT_W
       const innerWidth = canvasWidth - margin * 2
       const rowH = 70
       const tableHeaderH = 50
@@ -210,6 +226,19 @@ Page({
         height: screenshotData.height
       })
       const ctx = canvas.getContext('2d')
+
+      // 预加载素材：熔炉 / 兵营的等级徽章（火晶图），加载失败自动降级为程序化绘制
+      const allRecs = [...(this.data.headRegistrations || []), ...(this.data.bodyRegistrations || [])]
+      const specs = []
+      allRecs.forEach(r => {
+        const f = ga.specFromRecord(r)
+        if (f) specs.push(f)
+        ga.BAR_KEYS.forEach(k => {
+          const s = ga.barracksSpecFromRecord(r, k)
+          if (s) specs.push(s)
+        })
+      })
+      const badgeImgs = await ga.preloadBadges(canvas, specs)
 
       ctx.fillStyle = '#FFFFFF'
       ctx.fillRect(0, 0, canvasWidth, screenshotData.height)
@@ -233,22 +262,24 @@ Page({
       ctx.stroke()
 
       // 列定义 — ratios 之和必须 = 1.0
+      // 兵营等级改为「3 个等级徽章 + 斜杠」后不再占兵营 logo 的位置，
+      // 列宽重排：兵种实力列收窄，把富余宽度让给昵称/联盟与战争列。
       const headColDefs = [
         { key: '昵称/联盟',  ratio: 0.28 },
-        { key: '熔炉',       ratio: 0.11 },
-        { key: '兵种实力(万)', ratio: 0.20 },
-        { key: '钻石(万)',   ratio: 0.15 },
-        { key: '开麦',       ratio: 0.14 },
-        { key: '战争',       ratio: 0.12 },
+        { key: '熔炉',       ratio: 0.08 },
+        { key: '兵种实力(万)', ratio: 0.19 },
+        { key: '钻石(万)',   ratio: 0.14 },
+        { key: '开麦',       ratio: 0.10 },
+        { key: '战争',       ratio: 0.21 },
       ]
       const bodyColDefs = [
-        { key: '昵称/联盟',  ratio: 0.24 },
-        { key: '熔炉',       ratio: 0.10 },
-        { key: '兵种实力(万)', ratio: 0.17 },
-        { key: '钻石(万)',   ratio: 0.13 },
-        { key: '开麦',       ratio: 0.10 },
-        { key: '战争',       ratio: 0.11 },
-        { key: '分配',       ratio: 0.15 },
+        { key: '昵称/联盟',  ratio: 0.25 },
+        { key: '熔炉',       ratio: 0.07 },
+        { key: '兵种实力(万)', ratio: 0.19 },
+        { key: '钻石(万)',   ratio: 0.11 },
+        { key: '开麦',       ratio: 0.09 },
+        { key: '战争',       ratio: 0.13 },
+        { key: '分配',       ratio: 0.16 },
       ]
 
       // 计算每列 x 坐标和宽度
@@ -300,14 +331,31 @@ Page({
           if (col.key === '昵称/联盟') {
             ctx.fillStyle = '#333333'
             ctx.font = '22px sans-serif'
-            ctx.fillText(row.nickName || '-', col.x + 8, line1Y)
+            ctx.fillText(truncateText(ctx, row.nickName || '-', col.w - 16), col.x + 8, line1Y)
             ctx.fillStyle = '#6BB3F0'
             ctx.font = '20px sans-serif'
-            ctx.fillText(row.allianceName || '-', col.x + 8, line2Y)
+            ctx.fillText(truncateText(ctx, row.allianceName || '-', col.w - 16), col.x + 8, line2Y)
+          } else if (col.key === '熔炉') {
+            // 熔炉等级：有规格（新数据 furnace / 老数据 furnaceLevel 文本）就画徽章，否则退回文本
+            const spec = ga.specFromRecord(row)
+            if (spec) {
+              ga.drawBadge(ctx, col.x + 8, line1Y + 11, SHOT_BADGE, spec, badgeImgs)
+            } else {
+              ctx.fillStyle = '#333333'
+              ctx.font = '22px sans-serif'
+              ctx.fillText('未填', col.x + 8, line1Y)
+            }
           } else if (col.key === '兵种实力(万)') {
-            ctx.fillStyle = '#333333'
-            ctx.font = '22px sans-serif'
-            ctx.fillText(row.barracksLevel || '-', col.x + 8, line1Y)
+            // 兵营等级：3 个等级徽章用斜杠分隔（与下方「兵种数量 100/50/80」写法一致），
+            // 不再画盾/矛/射兵营 logo；老数据只有 barracksLevel 文本时退回文本
+            const specs = ga.BAR_KEYS.map(k => ga.barracksSpecFromRecord(row, k))
+            if (specs.some(Boolean)) {
+              ga.drawBadgeRow(ctx, col.x + 8, line1Y + 11, SHOT_BADGE, specs, badgeImgs)
+            } else {
+              ctx.fillStyle = '#333333'
+              ctx.font = '22px sans-serif'
+              ctx.fillText(truncateText(ctx, row.barracksLevel || '-', col.w - 16), col.x + 8, line1Y)
+            }
             ctx.fillStyle = '#4A90D9'
             ctx.font = '20px sans-serif'
             ctx.fillText(row.troopCount || '-', col.x + 8, line2Y)
@@ -331,12 +379,11 @@ Page({
           } else {
             ctx.fillStyle = '#333333'
             ctx.font = '22px sans-serif'
-            const val = col.key === '熔炉'    ? (row.furnaceLevel || '-')
-                      : col.key === '钻石(万)' ? (row.diamonds || '-')
+            const val = col.key === '钻石(万)' ? (row.diamonds || '-')
                       : col.key === '开麦'    ? (row.voice || '-')
                       : col.key === '分配'    ? (row.assignment || '-')
                       : '-'
-            ctx.fillText(val, col.x + 8, line1Y)
+            ctx.fillText(truncateText(ctx, val, col.w - 16), col.x + 8, line1Y)
           }
         }
         ctx.textBaseline = 'alphabetic'
@@ -370,7 +417,7 @@ Page({
 
       wx.canvasToTempFilePath({
         canvas: canvas,
-        destWidth: 750,
+        destWidth: canvasWidth,
         destHeight: screenshotData.height,
         success: (res) => {
           wx.saveImageToPhotosAlbum({

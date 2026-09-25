@@ -1,0 +1,9 @@
+{
+  "name": "manageGameAccount",
+  "version": "1.0.0",
+  "description": "游戏账号资料库：多账号 CRUD、设为主账号（同步 users.gameNickName）、报名资料回写",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

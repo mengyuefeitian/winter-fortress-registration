@@ -3,6 +3,7 @@ const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const shareEntry = require('../../../utils/shareEntry')
+const ga = require('../../../utils/gameAccount')
 
 function normalizeTimeToHHMM(t) {
   if (!t) return t
@@ -27,12 +28,15 @@ Page({
     selectedTime: '',
     inputNickName: '',
     inputRemark: '',
+    accountList: [],          // 游戏账号列表（昵称下拉切换用）
+    accountSelectedId: '',    // 报名弹窗：当前选中的账号 _id（手动填写时为 ''）
 
     // 编辑弹窗状态
     showEditModal: false,
     editingReg: null,
     editNickName: '',
-    editRemark: ''
+    editRemark: '',
+    editAccountSelectedId: ''
   },
 
   onLoad: function (options) {
@@ -186,6 +190,9 @@ Page({
         canDelete
       })
 
+      // 加载游戏账号列表（昵称下拉切换用）
+      this.loadAccounts()
+
       // 生成时间段并加载报名情况
       await this.loadRegistrations()
 
@@ -212,6 +219,9 @@ Page({
 
       // 获取该配置的所有报名记录
       const registrations = await db.getPositionRegistrationsByConfig(this.data.configId)
+
+      // 熔炉等级徽章：记录自带 furnace，老记录按 userId 兜底查主账号（decorate 就地写入）
+      await ga.decorate(registrations)
 
       // 创建报名记录的映射
       const regMap = {}
@@ -262,25 +272,48 @@ Page({
     })
   },
 
+  // 加载游戏账号列表（昵称下拉切换用）
+  loadAccounts: function () {
+    const self = this
+    ga.list().then(list => {
+      self.setData({ accountList: list || [] })
+    }).catch(() => { })
+  },
+
+  // 昵称复合选择器回调（报名弹窗）：默认主账号 / 下拉切换 / 手动填写
+  onAccountChange: function (e) {
+    this.setData({
+      inputNickName: e.detail.nickName,
+      accountSelectedId: e.detail.selectedId
+    })
+  },
+
+  // 昵称复合选择器回调（编辑弹窗）
+  onEditAccountChange: function (e) {
+    this.setData({
+      editNickName: e.detail.nickName,
+      editAccountSelectedId: e.detail.selectedId
+    })
+  },
+
   // 选择空座位
   selectSeat: function (e) {
     const time = e.currentTarget.dataset.time
 
-    // 获取用户昵称作为默认值
+    // 默认昵称：优先主账号，没有则回退微信昵称
     const userInfo = app.globalData.userInfo
-    const defaultNickName = userInfo ? userInfo.nickName : ''
+    const list = this.data.accountList || []
+    const mainIdx = list.findIndex(a => a.isMain)
+    const main = mainIdx >= 0 ? list[mainIdx] : null
+    const defaultNickName = (main && main.gameNickName) || (userInfo ? userInfo.nickName : '')
 
     this.setData({
       showModal: true,
       selectedTime: time,
       inputNickName: defaultNickName,
-      inputRemark: ''
+      inputRemark: '',
+      accountSelectedId: main ? main._id : ''
     })
-  },
-
-  // 输入昵称
-  onNickNameInput: function (e) {
-    this.setData({ inputNickName: e.detail.value })
   },
 
   // 输入备注
@@ -335,17 +368,27 @@ Page({
         return
       }
 
+      // 熔炉等级：带上主账号的等级，报名列表 / 截图会按它展示等级图标
+      const furnace = await ga.selfFurnace()
+
       // 创建报名
       await db.createPositionRegistration({
         configId: configId,
         timeSlot: selectedTime,
         userId: currentUserId,
         nickName: nickName,
-        remark: remark
+        remark: remark,
+        furnace: furnace
       })
 
       util.hideLoading()
       util.showSuccess('选择成功')
+
+      // 自动把本次使用的昵称追加到游戏账号列表（仅当不在已有账号里）
+      const existsSel = (this.data.accountList || []).some(a => a.gameNickName === nickName)
+      if (nickName && !existsSel) {
+        ga.save({ gameNickName: nickName }).then(() => { ga.clearMainCache(); this.loadAccounts() }).catch(() => { })
+      }
 
       this.closeModal()
       this.loadRegistrations()
@@ -361,17 +404,16 @@ Page({
   editMySeat: function (e) {
     const reg = e.currentTarget.dataset.reg
 
+    const list = this.data.accountList || []
+    const idx = list.findIndex(a => a.gameNickName === reg.nickName)
+
     this.setData({
       showEditModal: true,
       editingReg: reg,
       editNickName: reg.nickName,
-      editRemark: reg.remark || ''
+      editRemark: reg.remark || '',
+      editAccountSelectedId: idx >= 0 ? list[idx]._id : ''
     })
-  },
-
-  // 输入编辑昵称
-  onEditNickNameInput: function (e) {
-    this.setData({ editNickName: e.detail.value })
   },
 
   // 输入编辑备注
@@ -416,14 +458,21 @@ Page({
         return
       }
 
-      // 更新报名
+      // 更新报名（顺带刷新熔炉等级：用户可能刚在「我的」里改过主账号）
       await db.updatePositionRegistration(editingReg._id, {
         nickName: nickName,
-        remark: remark
+        remark: remark,
+        furnace: await ga.selfFurnace()
       })
 
       util.hideLoading()
       util.showSuccess('保存成功')
+
+      // 自动把本次使用的昵称追加到游戏账号列表（仅当不在已有账号里）
+      const existsEdit = (this.data.accountList || []).some(a => a.gameNickName === nickName)
+      if (nickName && !existsEdit) {
+        ga.save({ gameNickName: nickName }).then(() => { ga.clearMainCache(); this.loadAccounts() }).catch(() => { })
+      }
 
       this.closeEditModal()
       this.loadRegistrations()

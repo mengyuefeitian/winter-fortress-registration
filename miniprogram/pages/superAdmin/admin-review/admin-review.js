@@ -10,11 +10,16 @@ Page({
     pageTitle: '管理员审核',
     applications: [],
     reviewedApplications: [],
-    availableZones: []
+    availableZones: [],
+    // scope='zone'：从「区管控制台」进入，只看当前分区的盟管申请（分区不可再改）
+    zoneScope: false,
+    zoneLocked: false,
+    scopeZoneName: ''
   },
 
   onLoad: function (options) {
-    this.waitForRoleReady(options)
+    this._options = options || {}
+    this.waitForRoleReady(this._options)
   },
 
   onShow: function () {
@@ -67,15 +72,33 @@ Page({
       else if (options.applyType === 'allianceManager') pageTitle = '盟管审核'
       else if (options.applyType === 'zoneCreation') pageTitle = '分区开通审核'
 
+      // 从「区管控制台」进入时带 scope=zone：只审本分区的盟管申请
+      const zoneScope = options.scope === 'zone' && options.applyType === 'allianceManager'
+      const scopeZoneId = zoneScope ? (options.zoneId || '') : ''
+      if (zoneScope && !scopeZoneId) {
+        // 兜底：没传 zoneId 就用全局/本地当前分区
+        const fallback = (app.globalData.currentZone && app.globalData.currentZone._id) ||
+          wx.getStorageSync('lastZoneId') || ''
+        this._scopeZoneId = fallback
+      } else {
+        this._scopeZoneId = scopeZoneId
+      }
+
       this.setData({
         applyType: options.applyType,
-        pageTitle: pageTitle
+        pageTitle: pageTitle,
+        zoneScope: zoneScope,
+        zoneLocked: zoneScope && !!this._scopeZoneId
       })
       wx.setNavigationBarTitle({
         title: this.data.pageTitle
       })
     }
     await this.loadAvailableZones()
+    if (this.data.zoneScope && this._scopeZoneId) {
+      const hit = (this.data.availableZones || []).find(z => z._id === this._scopeZoneId)
+      this.setData({ scopeZoneName: hit ? hit.zoneName : '' })
+    }
     this.loadApplications()
   },
 
@@ -113,7 +136,10 @@ Page({
     const wxdb = wx.cloud.database()
     const _ = wxdb.command
     const applyType = this.data.applyType || ''
-    const cacheKey = 'adminReviewCache_' + (applyType || 'all')
+    // ⚠️ 缓存 key 必须带范围：区管控制台（scope=zone）与超管全量页看到的不是同一份列表，
+    //    共用一个 key 会互相覆盖，导致「一边显示已批准、另一边还显示待审核」。
+    const scopeSuffix = (this.data.zoneScope && this._scopeZoneId) ? '_z' + this._scopeZoneId : ''
+    const cacheKey = 'adminReviewCache_' + (applyType || 'all') + scopeSuffix
 
     // 1) 缓存优先：只要缓存存在即立刻渲染（不转圈），后台静默刷新覆盖。
     //    这样冷启动只发生在首次，之后每次进入都秒显；即使云函数被回收，
@@ -258,18 +284,28 @@ Page({
           }
         }
 
-        // 区管数据隔离：只显示自己管理分区的盟管申请
-        if (role === 'admin' && applyType === 'allianceManager') {
+        // 数据隔离：
+        //  · scope=zone（从区管控制台进入）→ 严格只显示本分区的申请（区管/超管都一样）
+        //  · 否则：区管只看自己管理的分区，超管看全部
+        const scopeZoneId = (this.data.zoneScope && this._scopeZoneId) || ''
+        if (scopeZoneId) {
+          if (applicantZoneId !== scopeZoneId) continue
+        } else if (role === 'admin' && applyType === 'allianceManager') {
           const availableZoneIds = this.data.availableZones.map(z => z._id)
           if (applicantZoneId && !availableZoneIds.includes(applicantZoneId)) {
             continue // 跳过不属于自己管理的分区申请
           }
         }
 
-        // 匹配分区索引
+        // 匹配分区索引（两个下标含义不同，别混用）：
+        //  · applicantZoneIndex      = 在 allZones（全部分区）里的下标
+        //  · applicantZonePickerIndex = 在 availableZones（本页可选分区）里的下标 ← 选择器要用这个
+        let applicantZonePickerIndex = -1
         if (applicantZoneId) {
           const foundZoneIndex = (allZones || []).findIndex(z => z._id === applicantZoneId)
           applicantZoneIndex = foundZoneIndex >= 0 ? foundZoneIndex : -1
+          const foundPickerIndex = (this.data.availableZones || []).findIndex(z => z._id === applicantZoneId)
+          applicantZonePickerIndex = foundPickerIndex >= 0 ? foundPickerIndex : -1
         }
 
         // 获取联盟列表
@@ -289,7 +325,10 @@ Page({
           alliancePickerIndex: 0,
           applicantAlliances: applicantAlliances,
           applicantZoneIndex: applicantZoneIndex,
+          applicantZonePickerIndex: applicantZonePickerIndex,
           applicantZoneId: applicantZoneId,
+          // 审批时真正落库的分区对象（来源＝该申请所属分区，避免用错下标拿到别的分区）
+          applicantZone: applicantZoneId ? (zonesMap[applicantZoneId] || null) : null,
           formattedTime: application.createTime ? util.formatDate(application.createTime, 'YYYY-MM-DD HH:mm') : '',
           valid: userInfo._id !== null,
           applicantZoneName: application.zoneName || '',
@@ -304,9 +343,14 @@ Page({
         formattedReviewTime: application.reviewTime ? util.formatDate(application.reviewTime, 'YYYY-MM-DD HH:mm') : ''
       }))
 
-      // 区管数据隔离：过滤已审核记录，只显示自己管理分区的盟管审核记录
+      // 已审核记录的数据隔离（口径与待审核一致）
       let filteredReviewedApplications = reviewedApplications
-      if (role === 'admin' && applyType === 'allianceManager') {
+      const scopeZoneId2 = (this.data.zoneScope && this._scopeZoneId) || ''
+      if (scopeZoneId2) {
+        // 只显示本分区的记录 —— 与「待审核」用同一个 zoneId 口径，
+        // 这样才能保证「任意一边批准，两边都显示已批准」
+        filteredReviewedApplications = reviewedApplications.filter(app => app.zoneId === scopeZoneId2)
+      } else if (role === 'admin' && applyType === 'allianceManager') {
         const availableZoneIds = this.data.availableZones.map(z => z._id)
         filteredReviewedApplications = reviewedApplications.filter(app => {
           return app.zoneId && availableZoneIds.includes(app.zoneId)
@@ -497,11 +541,16 @@ Page({
       util.showLoading('加载联盟...')
       const alliances = await db.getAlliancesByZone(selectedZone._id)
 
+      // 两个下标同步更新：applicantZoneIndex（是否有分区）+ applicantZonePickerIndex（选择器下标）
+      // 同时把「分区对象」存进 applicantZone / selectedZone，审批落库直接用它，不再靠下标反查。
       const applications = this.data.applications.map((app, i) =>
         i === appIndex ? {
           ...app,
           applicantZoneIndex: zoneIndex,
+          applicantZonePickerIndex: zoneIndex,
           applicantZoneId: selectedZone._id,
+          applicantZone: selectedZone,
+          selectedZone: selectedZone,
           applicantAlliances: alliances,
           alliancePickerIndex: 0
         } : app
@@ -575,11 +624,23 @@ Page({
     }
 
     // 获取选中的分区信息
+    // ⚠️ 这里必须用「申请所属分区」对象（applicantZone / selectedZone），
+    //    不能用 availableZones[applicantZoneIndex] —— 后者的下标是相对「全部分区」的，
+    //    区管的 availableZones 只有自己那几个区，下标对不上会取到别的分区甚至 undefined，
+    //    于是落库的 zoneId 是错的/空的 → 区管侧按分区过滤后就「看不到已批准」。
     if (application.applicantZoneIndex < 0) {
       util.showInfo('请选择分区')
       return
     }
-    const selectedZone = this.data.availableZones[application.applicantZoneIndex]
+    const selectedZone = application.applicantZone ||
+      application.selectedZone ||
+      this.data.availableZones[application.applicantZonePickerIndex] ||
+      null
+
+    if (!selectedZone) {
+      util.showInfo('请选择分区')
+      return
+    }
 
     try {
       util.showLoading('正在批准...')

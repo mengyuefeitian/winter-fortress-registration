@@ -1,0 +1,180 @@
+/* components/account-nickname/account-nickname.wxss */
+.an {
+  width: 100%;
+}
+
+/* 触发字段：仿 picker 外观 */
+.an-field {
+  display: flex;
+  align-items: center;
+  background-color: #f5f7fb;
+  border-radius: 12px;
+  padding: 10px 12px;
+  min-height: 42px;
+  box-sizing: border-box;
+}
+
+.an-field-hover {
+  background-color: #e9eef6;
+}
+
+.an-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  color: #1a1a2e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.an-ph {
+  color: #b6bcc7;
+}
+
+.an-arrow {
+  font-size: 12px;
+  color: #9aa3b2;
+  margin-left: 8px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* 遮罩 + 底部面板（原生实现，不引第三方库）
+   ⚠️ 两者是兄弟节点，面板必须自己 position:fixed 贴底；
+      写成 position:relative 会掉回文档流里，看起来像"展开了但没弹出来"。
+   ⚠️ 祖先链里不能有 transform/filter/contain，否则 fixed 会被裁剪
+      （官职页的弹窗已因此改成 flex 居中，见 position-registration.wxss）。 */
+.an-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 100;
+  background-color: rgba(26, 26, 46, 0.35);
+}
+
+.an-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 101;
+  width: 100%;
+  background-color: #FFFFFF;
+  border-radius: 20px 20px 0 0;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.an-sheet-hd {
+  display: flex;
+  align-items: center;
+  padding: 16px 16px 12px;
+}
+
+.an-sheet-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a2e;
+  flex: 1;
+}
+
+.an-sheet-close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.an-sheet-close-ic {
+  width: 15px;
+  height: 15px;
+}
+
+.an-sheet-bd {
+  padding: 0 16px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.an-opt {
+  display: flex;
+  align-items: center;
+  padding: 13px 12px;
+  border-radius: 12px;
+  background-color: #f5f7fb;
+  margin-bottom: 8px;
+}
+
+.an-opt-hover,
+.an-opt-on {
+  background-color: #e9eef6;
+}
+
+.an-opt-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  color: #1a1a2e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.an-main {
+  font-size: 10.5px;
+  color: #c8862a;
+  background-color: #fdf4e4;
+  border-radius: 7px;
+  padding: 2px 7px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.an-check {
+  font-size: 14px;
+  color: #4A90D9;
+  font-weight: 700;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.an-manual {
+  padding: 4px 16px 8px;
+}
+
+.an-input {
+  height: 42px;
+  border-radius: 12px;
+  background-color: #f5f7fb;
+  padding: 0 12px;
+  font-size: 14px;
+  color: #1a1a2e;
+}
+
+.an-sheet-ft {
+  display: flex;
+  padding: 14px 16px 4px;
+}
+
+.an-btn {
+  flex: 1;
+  height: 42px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.an-btn-primary {
+  background-color: #4A90D9;
+  color: #FFFFFF;
+}

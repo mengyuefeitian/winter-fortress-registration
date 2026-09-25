@@ -1,4 +1,5 @@
 <!--pages/superAdmin/all-statistics/all-statistics.wxml-->
+<import src="/templates/furnace-badge.wxml" />
 <view class="page">
   <!-- 报名类型选择 -->
   <view class="card">
@@ -20,12 +21,8 @@
     <view class="form-row" wx:if="{{selectedRegType === '堡垒报名'}}">
       <view class="form-col">
         <text class="form-label">联盟</text>
-        <picker wx:if="{{selectedZone}}" bindchange="onAllianceChange" value="{{allianceIndex}}" range="{{alliances}}" range-key="allianceName">
-          <view class="picker-compact">
-            <text>{{selectedAlliance ? selectedAlliance.allianceName : '请选择'}}</text>
-            <image class="picker-compact-arrow" src="/images/icon-arrow-down.png"></image>
-          </view>
-        </picker>
+        <alliance-picker wx:if="{{selectedZone}}" alliances="{{alliances}}" value="{{allianceIndex}}"
+                         placeholder="请选择" bind:change="onAllianceChange" />
         <view wx:else class="picker-compact disabled">
           <text class="picker-placeholder">请先选分区</text>
         </view>
@@ -78,7 +75,10 @@
         <view wx:if="{{item.registrations.length > 0}}" class="registration-list">
           <view wx:for="{{item.registrations}}" wx:for-item="reg" wx:for-index="regIdx" wx:key="_id" class="registration-item">
             <view class="reg-order">{{regIdx + 1}}</view>
-            <view class="reg-name">{{reg.nickName}}</view>
+            <view class="reg-name">
+              <template is="furnaceBadge" data="{{has: reg.furnaceHas, icon: reg.furnaceIcon, ring: reg.furnaceRing}}" />
+              <text>{{reg.nickName}}</text>
+            </view>
             <view class="reg-position {{reg.position === 'head' ? 'head' : 'body'}}">
               {{reg.position === 'head' ? '车头' : '车身'}}
             </view>
@@ -144,7 +144,10 @@
         <view wx:if="{{item.registrations.length > 0}}" class="registration-list">
           <view wx:for="{{item.registrations}}" wx:for-item="reg" wx:for-index="regIdx" wx:key="_id" class="registration-item">
             <view class="reg-order">{{regIdx + 1}}</view>
-            <view class="reg-name">{{reg.nickName}}</view>
+            <view class="reg-name">
+              <template is="furnaceBadge" data="{{has: reg.furnaceHas, icon: reg.furnaceIcon, ring: reg.furnaceRing}}" />
+              <text>{{reg.nickName}}</text>
+            </view>
             <view class="reg-time">{{reg.timeSlot}}</view>
           </view>
         </view>
@@ -210,7 +213,10 @@
         <view wx:if="{{item.registrations.length > 0}}" class="registration-list">
           <view wx:for="{{item.registrations}}" wx:for-item="reg" wx:for-index="regIdx" wx:key="_id" class="registration-item">
             <view class="reg-order">{{regIdx + 1}}</view>
-            <view class="reg-name">{{reg.nickName}}</view>
+            <view class="reg-name">
+              <template is="furnaceBadge" data="{{has: reg.furnaceHas, icon: reg.furnaceIcon, ring: reg.furnaceRing}}" />
+              <text>{{reg.nickName}}</text>
+            </view>
             <view class="reg-position {{reg.position === 'combat' ? 'combat' : 'substitute'}}">{{reg.position === 'combat' ? '参战' : '替补'}}</view>
           </view>
         </view>
@@ -276,7 +282,10 @@
         <view wx:if="{{item.registrations.length > 0}}" class="registration-list">
           <view wx:for="{{item.registrations}}" wx:for-item="reg" wx:for-index="regIdx" wx:key="_id" class="registration-item">
             <view class="reg-order">{{regIdx + 1}}</view>
-            <view class="reg-name">{{reg.nickName}}</view>
+            <view class="reg-name">
+              <template is="furnaceBadge" data="{{has: reg.furnaceHas, icon: reg.furnaceIcon, ring: reg.furnaceRing}}" />
+              <text>{{reg.nickName}}</text>
+            </view>
             <view class="reg-position {{reg.position === 'combat' ? 'combat' : 'substitute'}}">{{reg.position === 'combat' ? '参战' : '替补'}}</view>
           </view>
         </view>

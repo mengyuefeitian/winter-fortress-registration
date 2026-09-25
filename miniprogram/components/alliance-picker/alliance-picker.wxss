@@ -1,0 +1,188 @@
+/* components/alliance-picker/alliance-picker.wxss */
+.ap {
+  width: 100%;
+}
+
+/* ---------- 触发器 ---------- */
+.ap-field {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.ap-field-hover {
+  opacity: 0.85;
+}
+
+.ap-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ap-ph {
+  color: #b6bcc7;
+}
+
+/* compact：灰底小胶囊 —— 必须与旧 .picker-compact 等高（48px）
+   ⚠️ 高度陷阱：旧 .picker-compact 没写 box-sizing，是 content-box，
+      实际高 = height 32 + 上下 padding 8×2 = 48px。
+      而 .ap-field 统一写了 border-box，照抄 height:32px 会矮整整 16px，
+      和同排的日期/时间/分区框对不齐（实测截图差 1.5 倍）。 */
+.ap-field-compact {
+  justify-content: space-between;
+  height: 48px;
+  padding: 0 12px;
+  border-radius: 4px;
+  background-color: #F5F5F5;
+  font-size: 14px;
+  color: #000000;
+}
+
+/* field：浅色圆角 + 右侧箭头
+   对齐旧 .picker-row：padding 9px 12px、不设固定高（靠内容撑），含它的 8px 下间距 */
+.ap-field-field {
+  padding: 9px 12px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  background-color: #f5f7fb;
+  font-size: 14px;
+  color: #1a1a2e;
+}
+
+/* plain：无底色，右对齐文字 + ▾（国战报名页风格） */
+.ap-field-plain {
+  justify-content: flex-end;
+  font-size: 14px;
+  color: #666666;
+}
+
+.ap-arrow-ic {
+  width: 14px;
+  height: 14px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.ap-caret {
+  font-size: 11px;
+  color: #4A90D9;
+  margin-left: 6px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* ---------- 弹窗 ---------- */
+.ap-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 150;
+  background-color: rgba(26, 26, 46, 0.35);
+}
+
+.ap-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 151;
+  width: 100%;
+  background-color: #FFFFFF;
+  border-radius: 20px 20px 0 0;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.ap-hd {
+  display: flex;
+  align-items: center;
+  padding: 16px 16px 12px;
+}
+
+.ap-hd-title {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.ap-hd-count {
+  font-size: 12.5px;
+  font-weight: 400;
+  color: #9aa3b2;
+  margin-left: 4px;
+}
+
+.ap-hd-close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ap-hd-close-ic {
+  width: 15px;
+  height: 15px;
+}
+
+.ap-bd {
+  padding: 0 16px 12px;
+  max-height: 52vh;
+  box-sizing: border-box;
+}
+
+/* 两列六行：12 个联盟一屏铺满，不再在滚轮里一个个拨 */
+.ap-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.ap-cell {
+  height: 46px;
+  border-radius: 12px;
+  background-color: #f5f7fb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  box-sizing: border-box;
+}
+
+.ap-cell-hover {
+  background-color: #e9eef6;
+}
+
+.ap-cell-on {
+  background-color: rgba(74, 144, 217, 0.10);
+  box-shadow: 0 0 0 1.5px #4A90D9 inset;
+}
+
+.ap-cell-text {
+  font-size: 14px;
+  color: #1a1a2e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ap-cell-on .ap-cell-text {
+  color: #4A90D9;
+  font-weight: 600;
+}
+
+.ap-empty {
+  padding: 28px 0;
+  text-align: center;
+  font-size: 14px;
+  color: #b6bcc7;
+}

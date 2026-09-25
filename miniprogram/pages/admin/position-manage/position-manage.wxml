@@ -4,24 +4,12 @@
   <view class="card">
     <!-- 第一行：分区 + 日期 -->
     <view class="form-row">
-      <!-- 分区选择（超管可见） -->
-      <view class="form-col" wx:if="{{showZonePicker && zones.length > 0}}">
+      <!-- 分区：只读展示。分区切换统一在首页进行，超管/区管一律不允许页内切换 -->
+      <view class="form-col">
         <text class="form-label">分区</text>
-        <zone-selector value="{{currentZone}}" zones="{{zones}}" loaded="{{true}}" bind:change="onZoneChange" />
-      </view>
-
-      <!-- 超管无分区提示 -->
-      <view class="form-col" wx:if="{{showZonePicker && zones.length === 0}}">
-        <text class="form-label text-danger">无分区</text>
-        <button class="btn btn-outline btn-sm" bindtap="goToZoneManage">创建</button>
-      </view>
-
-      <!-- 当前分区显示（区管） -->
-      <view class="form-col" wx:if="{{!showZonePicker && currentZone}}">
-        <text class="form-label">分区</text>
-        <view class="picker-compact static">
-          <text>{{currentZone.zoneName}}</text>
-        </view>
+        <view wx:if="{{currentZone}}" class="zone-readonly">{{currentZone.zoneName}}</view>
+        <view wx:elif="{{zoneLoaded}}" class="zone-readonly">无分区</view>
+        <view wx:else class="zone-readonly">加载中…</view>
       </view>
 
       <!-- 日期选择 -->

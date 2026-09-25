@@ -20,6 +20,8 @@
     "pages/user/apply-zone-manager/apply-zone-manager",
     "pages/user/my-registrations/my-registrations",
     "pages/user/my-records/my-records",
+    "pages/user/about/about",
+    "pages/user/updates/updates",
     "pages/admin/home/home",
     "pages/admin/zone-manage/zone-manage",
     "pages/admin/alliance-config/alliance-config",

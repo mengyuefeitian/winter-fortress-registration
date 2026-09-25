@@ -1,5 +1,5 @@
 /* pages/user/my-registrations/my-registrations.wxss */
-/* 「我的」个人中心：用户信息 + 分区 + 菜单入口 */
+/* 「我的」个人中心：用户信息 + 分区 + 游戏账号 + 菜单入口 */
 
 .page {
   min-height: 100vh;
@@ -7,67 +7,65 @@
   padding-bottom: 20px;
 }
 
-/* 卡片样式 */
-.card {
+/* 弹窗打开时锁住页面滚动（替代 catchtouchmove —— 后者会把弹窗内部的滚动一起吃掉） */
+.page-locked {
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ------------------------------------------------------------------
+   用户卡（缩小版：头像 36px，右侧收件箱 / 退出登录 竖排图标按钮）
+   ------------------------------------------------------------------ */
+.user-card {
+  display: flex;
+  align-items: center;
   background-color: #FFFFFF;
-  border-radius: 8px;
-  margin: 16px;
-  padding: 16px;
+  border-radius: 10px;
+  margin: 12px 16px 0;
+  padding: 10px 12px;
 }
 
-.card-body {
-  display: flex;
-  align-items: center;
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  flex-shrink: 0;
 }
 
-.avatar-lg {
-  width: 48px;
-  height: 48px;
-  border-radius: 24px;
-}
-
-.ml-16 {
-  margin-left: 16px;
-}
-
-.flex-1 {
+.user-info {
   flex: 1;
+  min-width: 0;
+  margin-left: 10px;
 }
 
-.text-lg {
-  font-size: 17px;
+.user-name {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a2e;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.font-semibold {
-  font-weight: 500;
-}
-
-.text-secondary {
-  color: #5F5F5F;
-}
-
-.mt-8 {
-  margin-top: 8px;
-}
-
-.mt-16 {
-  margin-top: 16px;
-}
-
-.flex {
+.user-role {
   display: flex;
-}
-
-.items-center {
   align-items: center;
+  margin-top: 2px;
 }
 
-/* 状态点 */
+.user-role-text {
+  font-size: 12px;
+  color: #8b93a1;
+}
+
 .status-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 4px;
-  margin-right: 6px;
+  margin-right: 5px;
+  flex-shrink: 0;
 }
 
 .status-active {
@@ -78,55 +76,51 @@
   background-color: #A6A6A6;
 }
 
-/* 卡片底部 */
-.card-footer {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #F0F0F0;
+/* 所有操作一律图标，不用文字 */
+.user-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: 10px;
 }
 
-/* 按钮样式 */
-.btn {
-  height: 44px;
-  line-height: 44px;
-  font-size: 17px;
-  border-radius: 4px;
-  border: none;
+.icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background-color: #f2f5fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.btn-full {
-  width: 100%;
+.icon-btn-hover {
+  background-color: #e3ebf6;
 }
 
-.btn-primary {
-  background-color: #07C160;
+.icon-btn-ic {
+  width: 17px;
+  height: 17px;
+}
+
+.btn-login-mini {
+  flex-shrink: 0;
+  margin-left: 10px;
+  padding: 6px 16px;
+  border-radius: 8px;
+  background-color: #4A90D9;
   color: #FFFFFF;
-}
-
-.btn-danger {
-  background-color: #FA5151;
-  color: #FFFFFF;
-}
-
-/* 退出登录 - 缩小版 */
-.btn-logout {
-  width: auto;
-  padding: 0 24px;
-  height: 36px;
-  line-height: 36px;
-  font-size: 14px;
-  background-color: #FA5151;
-  color: #FFFFFF;
-  border-radius: 4px;
-  border: none;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 /* 分区信息条 */
 .zone-info-bar {
-  margin: 16px 16px 0;
-  padding: 8px 16px;
+  margin: 10px 16px 0;
+  padding: 8px 12px;
   background-color: rgba(74, 144, 217, 0.08);
-  border-radius: 4px;
+  border-radius: 8px;
 }
 
 .zone-info-text {
@@ -134,33 +128,15 @@
   color: #4A90D9;
 }
 
-/* 分区+信封 垂直排列容器 */
-.side-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  margin-left: 12px;
-}
-
-.letter-btn {
-  padding: 4px;
-}
-
-.letter-icon {
-  width: 26px;
-  height: 26px;
-}
-
 /* ------------------------------------------------------------------
    板块标题：左侧渐变色强调条 + 深色粗体标题
-   修复「标题对比操作菜单毫无存在感」的层级问题
+   ⚠️ app.wxss 里也有 .section-header（13px 大写灰字，管理页在用），
+      业务页必须像这里一样做页面级覆盖，否则标题会被菜单卡压成"没存在感"
    ------------------------------------------------------------------ */
 .section-header {
   display: flex;
   align-items: center;
-  margin: 24px 16px 10px;
+  margin: 20px 16px 10px;
 }
 
 .section-accent {
@@ -180,10 +156,280 @@
   flex: 1;
 }
 
-/* 菜单卡片 */
+.section-count {
+  font-size: 12px;
+  color: #8b93a1;
+  margin-right: 8px;
+}
+
+.section-add {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.section-add-hover {
+  opacity: 0.7;
+}
+
+.section-add-ic {
+  width: 24px;
+  height: 24px;
+}
+
+/* ------------------------------------------------------------------
+   游戏账号卡片
+   第一行 = 游戏昵称 + 熔炉等级 chip +（右对齐）主账号标记
+   第二行 = 盾 / 矛 / 射手 三个兵营 chip
+   第三行 = 地心探险 + 星 / 编辑 / 删除 三个操作图标
+   ------------------------------------------------------------------ */
+.ga-empty {
+  margin: 0 16px;
+  padding: 18px 14px;
+  background-color: #FFFFFF;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #98a0ae;
+  text-align: center;
+}
+
+.ga-list {
+  margin: 0 16px;
+}
+
+.ga-card {
+  background-color: #FFFFFF;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: 1px solid transparent;
+}
+
+.ga-card-main {
+  border-color: rgba(74, 144, 217, 0.45);
+}
+
+.ga-row1 {
+  display: flex;
+  align-items: center;
+}
+
+.ga-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a2e;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 熔炉等级 chip：火炉图标 + 等级图标（火晶徽章 / 圆环数字） */
+.ga-furnace {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: 8px;
+  background-color: #f5f7fb;
+  border-radius: 9px;
+  padding: 3px 7px 3px 5px;
+}
+
+.ga-fur-ic {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* 主账号标记：右对齐（熔炉 chip 不做 margin-left:auto，顺序才是「昵称 → 熔炉 → 主账号」） */
+.ga-main-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 2px 7px;
+  border-radius: 7px;
+  background-color: #fdf4e4;
+  color: #c8862a;
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+
+.ga-main-ic {
+  width: 11px;
+  height: 11px;
+}
+
+.ga-row2 {
+  display: flex;
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.ga-chip {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background-color: #f5f7fb;
+  border-radius: 9px;
+  padding: 5px 4px;
+}
+
+.ga-chip-muted {
+  opacity: 0.62;
+}
+
+.ga-chip-ic {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+/* 等级徽章：火晶用素材图，普通等级用 CSS 圆环内嵌数字 */
+.ga-lvlwrap {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.ga-lvl-ic {
+  width: 24px;
+  height: 24px;
+}
+
+/* 圆环必须 flex 居中；用 view 而非 span，避免被 app.wxss 的 span{display:block} 盖掉 */
+.ga-ring {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid #4A90D9;
+  background-color: #FFFFFF;
+  color: #4A90D9;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+/* 兵种阶角标：挂在徽章右下角，不占横向空间，三个 chip 才能等宽 */
+.ga-stage {
+  position: absolute;
+  right: -9px;
+  bottom: -5px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 13px;
+  color: #FFFFFF;
+  background-color: #c8862a;
+  border-radius: 4px;
+  padding: 0 3px;
+}
+
+.ga-none {
+  font-size: 13px;
+  color: #b6bcc7;
+}
+
+.ga-row3 {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.ga-dixin {
+  font-size: 12px;
+  color: #8b93a1;
+}
+
+/* 地心探险数字特殊标记：彩色胶囊，与普通文字明显区分 */
+.ga-dixin-v {
+  display: inline-block;
+  min-width: 18px;
+  padding: 2px 9px;
+  border-radius: 10px;
+  margin-left: 2px;
+  background-image: linear-gradient(135deg, #6a5acd 0%, #4A90D9 100%);
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+/* 展开 / 收起 切换 */
+.section-toggle {
+  display: flex;
+  align-items: center;
+  margin-right: 10px;
+  padding: 4px 10px;
+  border-radius: 9px;
+  background-color: #f0f4fa;
+  flex-shrink: 0;
+}
+
+.section-toggle-hover {
+  background-color: #e3ebf6;
+}
+
+.section-toggle-text {
+  font-size: 12px;
+  color: #4A90D9;
+  font-weight: 500;
+}
+
+.section-toggle-arrow {
+  font-size: 9px;
+  color: #4A90D9;
+  margin-left: 4px;
+}
+
+.ga-ops {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+
+.ga-op {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background-color: #f2f5fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ga-op-hover {
+  background-color: #e3ebf6;
+}
+
+.ga-op-on {
+  background-color: #fdf4e4;
+}
+
+.ga-op-ic {
+  width: 15px;
+  height: 15px;
+}
+
+/* ------------------------------------------------------------------
+   菜单卡
+   ------------------------------------------------------------------ */
 .menu-card {
   background-color: #FFFFFF;
-  border-radius: 8px;
+  border-radius: 10px;
   margin: 0 16px;
   overflow: hidden;
 }
@@ -197,6 +443,11 @@
 .menu-entry-hover,
 .menu-entry:active {
   background-color: #F7F8FA;
+}
+
+/* 同一张卡片里放多条入口时补分隔线（原来每条独立成卡，没有这条线） */
+.menu-entry + .menu-entry {
+  border-top: 1px solid #f3f4f7;
 }
 
 .menu-icon {
@@ -239,3 +490,195 @@
   margin-left: 8px;
   flex-shrink: 0;
 }
+
+/* 版本号 */
+.version-line {
+  text-align: center;
+  margin: 28px 16px 16px;
+}
+
+.version-text {
+  font-size: 11px;
+  color: #b6bcc7;
+}
+
+/* ------------------------------------------------------------------
+   底部弹窗（原生实现 —— 不引 TDesign，省掉「构建 npm」这一步）
+   ------------------------------------------------------------------ */
+.sheet-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 100;
+  background-color: rgba(26, 26, 46, 0.35);
+  display: flex;
+  align-items: flex-end;
+}
+
+.sheet {
+  width: 100%;
+  background-color: #FFFFFF;
+  border-radius: 20px 20px 0 0;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+}
+
+.sheet-hd {
+  display: flex;
+  align-items: center;
+  padding: 16px 16px 12px;
+}
+
+.sheet-hd-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a2e;
+  flex: 1;
+}
+
+.sheet-close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sheet-close-ic {
+  width: 15px;
+  height: 15px;
+}
+
+.sheet-bd {
+  padding: 0 16px;
+  max-height: 58vh;
+  overflow-y: auto;
+}
+
+.sheet-ft {
+  display: flex;
+  gap: 10px;
+  padding: 14px 16px 4px;
+}
+
+.sheet-btn {
+  flex: 1;
+  height: 42px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sheet-btn-hover {
+  opacity: 0.86;
+}
+
+.sheet-btn-ghost {
+  background-color: #f2f5fa;
+  color: #5a6272;
+}
+
+.sheet-btn-primary {
+  background-color: #4A90D9;
+  color: #FFFFFF;
+}
+
+/* 表单字段 */
+.field {
+  margin-bottom: 14px;
+}
+
+.field-label {
+  display: block;
+  font-size: 12.5px;
+  color: #7b8494;
+  margin-bottom: 6px;
+}
+
+.field-req {
+  color: #e0654f;
+  margin-left: 2px;
+}
+
+.input-row {
+  height: 42px;
+  border-radius: 12px;
+  background-color: #f5f7fb;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+}
+
+.input-lead {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.input-el {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  color: #1a1a2e;
+}
+
+.input-ph {
+  color: #b6bcc7;
+  font-size: 14px;
+}
+
+/* picker 行：图标 + 名称 + 等级徽章 + 箭头 */
+.picker-row {
+  display: flex;
+  align-items: center;
+  background-color: #f5f7fb;
+  border-radius: 12px;
+  padding: 9px 12px;
+  margin-bottom: 8px;
+}
+
+.picker-row-hover {
+  background-color: #e9eef6;
+}
+
+.pk-ic {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.pk-name {
+  font-size: 13.5px;
+  color: #4a5261;
+  margin-left: 9px;
+}
+
+.pk-value {
+  position: relative;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.pk-empty {
+  font-size: 13px;
+  color: #b6bcc7;
+}
+
+.pk-arrow {
+  width: 14px;
+  height: 14px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+/* 等级 / 火晶网格、分段控件、兵种阶级等样式已全部收归 components/level-picker，
+   本页只保留「账号卡 + 编辑弹窗」自己的样式 —— 避免两处各写一套又走偏。 */

@@ -1,6 +1,6 @@
 {
   "navigationBarTitleText": "数据统计",
   "usingComponents": {
-    "zone-selector": "/components/zone-selector/zone-selector"
+    "alliance-picker": "/components/alliance-picker/alliance-picker"
   }
 }

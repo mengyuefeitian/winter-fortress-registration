@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "管理员审核",
   "usingComponents": {
-    "zone-selector": "/components/zone-selector/zone-selector"
+    "zone-selector": "/components/zone-selector/zone-selector",
+    "alliance-picker": "/components/alliance-picker/alliance-picker"
   }
 }

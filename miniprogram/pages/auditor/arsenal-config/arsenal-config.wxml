@@ -74,9 +74,11 @@
           </view>
         </view>
         <view wx:if="{{item.date}}" class="slot-date">日期: {{item.date}}</view>
-        <view class="slot-actions">
-          <button class="delete-btn" bindtap="deleteConfig" data-id="{{item._id}}" data-index="{{index}}">删除</button>
-        </view>
+      </view>
+      <!-- 删除改为图标，靠 slot-card 的 align-items:stretch 自动垂直居中于第一行与第二行之间 -->
+      <view class="slot-del" hover-class="slot-del-hover" hover-stay-time="80"
+            bindtap="deleteConfig" data-id="{{item._id}}" data-index="{{index}}">
+        <image class="slot-del-ic" src="/images/icon-trash.png" mode="aspectFit" />
       </view>
     </view>
   </view>

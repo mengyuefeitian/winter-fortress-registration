@@ -3,6 +3,23 @@ const app = getApp()
 const util = require('../../../utils/util')
 const auth = require('../../../utils/auth')
 const db = require('../../../utils/db')
+const ga = require('../../../utils/gameAccount')
+
+// 取报名记录的熔炉等级规格：优先 decorate() 写好的 furnaceSpec，其次原始字段兜底
+function specOf(rec) {
+  if (!rec) return null
+  return rec.furnaceSpec || ga.normalizeSpec(rec.furnace) || ga.parseText(rec.furnaceLevel) || null
+}
+
+// 收集一组统计项里所有报名记录的熔炉规格，用于 canvas 预加载素材
+function collectSpecs(stats) {
+  const out = []
+  ;(stats || []).forEach(s => (s.registrations || []).forEach(r => {
+    const sp = specOf(r)
+    if (sp) out.push(sp)
+  }))
+  return out
+}
 
 function truncateText(ctx, text, maxW) {
   if (ctx.measureText(text).width <= maxW) return text
@@ -191,6 +208,11 @@ Page({
         const allianceId = this.data.selectedAlliance._id
         const stats = await db.getAllianceStatistics(allianceId)
 
+        // 报名列表补熔炉等级图标（老的报名记录走主账号兜底）
+        for (const stat of stats) {
+          await ga.decorate(stat.registrations || [])
+        }
+
         // 计算汇总数据
         let totalRegistrations = 0
         let fullSlots = 0
@@ -236,6 +258,7 @@ Page({
         for (const config of configs) {
           const stats = await db.getArsenalStats(config._id, { includeRegistrations: true })
           const regs = (stats.registrations || []).sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
+          await ga.decorate(regs)
           arsenalStats.push({
             config: config,
             activityTypeLabel: ACTIVITY_TYPE_LABELS[config.activityType] || config.activityType,
@@ -278,6 +301,7 @@ Page({
         for (const config of configs) {
           const stats = await db.getCanyonStats(config._id, { includeRegistrations: true })
           const regs = (stats.registrations || []).sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
+          await ga.decorate(regs)
           canyonStats.push({
             config: config,
             activityTypeLabel: ACTIVITY_TYPE_LABELS[config.activityType] || config.activityType,
@@ -338,6 +362,9 @@ Page({
             }
             regsByConfig[reg.configId].push(reg)
           }
+
+          // 报名列表补熔炉等级图标（老的报名记录走主账号兜底）
+          await ga.decorate(allRegs)
         }
 
         // 组装统计数据
@@ -385,24 +412,7 @@ Page({
   },
 
   // 分区选择变化（由组件内部处理全局状态同步）
-  onZoneChange: function (e) {
-    const zone = e.detail.zone
-    if (!zone) return
-
-    this.setData({
-      selectedZone: zone,
-      selectedAlliance: null,
-      timeSlotStats: [],
-      positionStats: []
-    })
-
-    // 堡垒报名需要加载联盟，其他类型直接加载统计
-    if (this.data.selectedRegType === '堡垒报名') {
-      this.loadAlliances(zone._id)
-    } else {
-      this.loadStatistics()
-    }
-  },
+  // 注：分区只读（切换统一在首页），原 onZoneChange 已移除；统计按当前分区加载。
 
   // 联盟选择变化
   onAllianceChange: function (e) {
@@ -515,6 +525,9 @@ Page({
         })
         const ctx = canvas.getContext('2d')
 
+        // 预加载熔炉等级素材（火晶图 + 火炉图），加载失败会自动降级为程序化绘制
+        const badgeImgs = await ga.preloadBadges(canvas, collectSpecs(this.data.timeSlotStats))
+
         // 绘制背景
         ctx.fillStyle = '#FFFFFF'
         ctx.fillRect(0, 0, canvasWidth, screenshotData.height)
@@ -594,7 +607,11 @@ Page({
             const colMaxW = colW - 10
             const colXs = [nameStartX, nameStartX + colW, nameStartX + colW * 2]
             for (let i = 0; i < nameStrs.length; i += 3) {
-              nameStrs.slice(i, i + 3).forEach((name, col) => ctx.fillText(truncateText(ctx, name, colMaxW), colXs[col], y))
+              nameStrs.slice(i, i + 3).forEach((name, col) => {
+                // 名字前画熔炉等级图标，文字起始位置顺延
+                const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(sorted[i + col]), badgeImgs)
+                ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
+              })
               y += 40
             }
           }
@@ -682,6 +699,9 @@ Page({
         })
         const ctx = canvas.getContext('2d')
 
+        // 预加载熔炉等级素材（火晶图 + 火炉图），加载失败会自动降级为程序化绘制
+        const badgeImgs = await ga.preloadBadges(canvas, collectSpecs(this.data.arsenalStats))
+
         ctx.fillStyle = '#FFFFFF'
         ctx.fillRect(0, 0, canvasWidth, totalHeight)
 
@@ -734,7 +754,10 @@ Page({
               ctx.font = '24px sans-serif'
               const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
               for (let i = 0; i < subNames.length; i += 3) {
-                subNames.slice(i, i + 3).forEach((name, col) => ctx.fillText(truncateText(ctx, name, colMaxW), colXs[col], y))
+                subNames.slice(i, i + 3).forEach((name, col) => {
+                  const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(substitutes[i + col]), badgeImgs)
+                  ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
+                })
                 y += 35
               }
             }
@@ -749,7 +772,10 @@ Page({
               ctx.font = '24px sans-serif'
               const combatNames = combats.map((r, i) => `${i + 1}.${r.nickName}`)
               for (let i = 0; i < combatNames.length; i += 3) {
-                combatNames.slice(i, i + 3).forEach((name, col) => ctx.fillText(truncateText(ctx, name, colMaxW), colXs[col], y))
+                combatNames.slice(i, i + 3).forEach((name, col) => {
+                  const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(combats[i + col]), badgeImgs)
+                  ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
+                })
                 y += 35
               }
             }
@@ -835,6 +861,9 @@ Page({
         })
         const ctx = canvas.getContext('2d')
 
+        // 预加载熔炉等级素材（火晶图 + 火炉图），加载失败会自动降级为程序化绘制
+        const badgeImgs = await ga.preloadBadges(canvas, collectSpecs(this.data.canyonStats))
+
         ctx.fillStyle = '#FFFFFF'
         ctx.fillRect(0, 0, canvasWidth, totalHeight)
 
@@ -887,7 +916,10 @@ Page({
               ctx.font = '24px sans-serif'
               const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
               for (let i = 0; i < subNames.length; i += 3) {
-                subNames.slice(i, i + 3).forEach((name, col) => ctx.fillText(truncateText(ctx, name, colMaxW), colXs[col], y))
+                subNames.slice(i, i + 3).forEach((name, col) => {
+                  const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(substitutes[i + col]), badgeImgs)
+                  ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
+                })
                 y += 35
               }
             }
@@ -902,7 +934,10 @@ Page({
               ctx.font = '24px sans-serif'
               const combatNames = combats.map((r, i) => `${i + 1}.${r.nickName}`)
               for (let i = 0; i < combatNames.length; i += 3) {
-                combatNames.slice(i, i + 3).forEach((name, col) => ctx.fillText(truncateText(ctx, name, colMaxW), colXs[col], y))
+                combatNames.slice(i, i + 3).forEach((name, col) => {
+                  const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(combats[i + col]), badgeImgs)
+                  ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
+                })
                 y += 35
               }
             }
@@ -973,6 +1008,9 @@ Page({
         })
         const ctx = canvas.getContext('2d')
 
+        // 预加载熔炉等级素材（火晶图 + 火炉图），加载失败会自动降级为程序化绘制
+        const badgeImgs = await ga.preloadBadges(canvas, collectSpecs(this.data.positionStats))
+
         ctx.fillStyle = '#FFFFFF'
         ctx.fillRect(0, 0, canvasWidth, screenshotData.height)
 
@@ -1012,20 +1050,34 @@ Page({
           ctx.font = '24px sans-serif'
           const colX = [margin + 20, margin + 20 + Math.floor((canvasWidth - margin - 20 - margin) / 2)]
           const colMaxW = colX[1] - colX[0] - 10
-          const truncate = (text) => {
-            if (ctx.measureText(text).width <= colMaxW) return text
+          const truncate = (text, maxW) => {
+            const m = maxW || colMaxW
+            if (ctx.measureText(text).width <= m) return text
             let t = text
-            while (t.length > 0 && ctx.measureText(t + '…').width > colMaxW) t = t.slice(0, -1)
+            while (t.length > 0 && ctx.measureText(t + '…').width > m) t = t.slice(0, -1)
             return t.length > 0 ? t + '…' : ''
           }
           const regMap = {}
-          for (const r of stat.registrations) regMap[r.timeSlot] = r.nickName
+          for (const r of stat.registrations) regMap[r.timeSlot] = r
+
+          // 每个格子：时间 +（熔炉等级图标）+ 昵称
+          const drawCell = (x, slot) => {
+            if (!slot) return
+            const reg = regMap[slot]
+            const prefix = `${slot} `
+            ctx.fillText(prefix, x, y)
+            let cx = x + ctx.measureText(prefix).width
+            const bw = reg ? ga.drawBadge(ctx, cx, y - 8, ga.BADGE_SIZE, specOf(reg), badgeImgs) : 0
+            cx += bw + (bw ? 2 : 0)
+            if (reg && reg.nickName) {
+              ctx.fillText(truncate(reg.nickName, Math.max(20, colMaxW - (cx - x))), cx, y)
+            }
+          }
+
           const allSlots = generateTimeSlots(stat.config.startTime)
           for (let i = 0; i < allSlots.length; i += 2) {
-            const text0 = truncate(`${allSlots[i]} ${regMap[allSlots[i]] || ''}`.trimEnd())
-            const text1 = i + 1 < allSlots.length ? truncate(`${allSlots[i + 1]} ${regMap[allSlots[i + 1]] || ''}`.trimEnd()) : ''
-            ctx.fillText(text0, colX[0], y)
-            if (text1) ctx.fillText(text1, colX[1], y)
+            drawCell(colX[0], allSlots[i])
+            if (i + 1 < allSlots.length) drawCell(colX[1], allSlots[i + 1])
             y += 40
           }
 

@@ -1,32 +1,110 @@
 <!-- pages/user/my-registrations/my-registrations.wxml -->
-<view class="page">
-  <!-- 用户信息 -->
-  <view class="card mt-16 user-card">
-    <view class="card-body flex items-center">
-      <image class="avatar-lg" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill" />
-      <view class="ml-16 flex-1">
-        <text class="text-lg font-semibold">{{userInfo.nickName || '未登录'}}</text>
-        <view class="flex items-center mt-8">
-          <view class="status-dot {{isLoggedIn ? 'status-active' : 'status-inactive'}}"></view>
-          <text class="text-secondary">{{roleName}}</text>
-        </view>
+
+<!-- 兵营 chip：图标 + 等级徽章（火晶贴图 / 普通等级圆环）+ 兵种阶角标 -->
+<template name="barracksChip">
+  <view class="ga-chip {{slot ? '' : 'ga-chip-muted'}}">
+    <image class="ga-chip-ic" src="/images/game-account/{{icon}}.png" mode="aspectFit" />
+    <block wx:if="{{slot}}">
+      <view class="ga-lvlwrap">
+        <image wx:if="{{slot.icon}}" class="ga-lvl-ic" src="{{slot.icon}}" mode="aspectFit" />
+        <view wx:else class="ga-ring">{{slot.ring}}</view>
+        <view wx:if="{{slot.stage}}" class="ga-stage">{{slot.stage}}</view>
       </view>
-      <!-- 信封入口 -->
-      <view wx:if="{{isLoggedIn}}" class="side-actions">
-        <view class="letter-btn" bindtap="goToInbox">
-          <image class="letter-icon" src="/images/icon-letter.svg" mode="aspectFit" />
-        </view>
+    </block>
+    <view wx:else class="ga-none">—</view>
+  </view>
+</template>
+
+<view class="page {{sheet ? 'page-locked' : ''}}">
+  <!-- 用户信息（缩小版：右侧收件箱 / 退出登录 竖排图标按钮） -->
+  <view class="user-card">
+    <image class="user-avatar" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill" />
+    <view class="user-info">
+      <text class="user-name">{{userInfo.nickName || '未登录'}}</text>
+      <view class="user-role">
+        <view class="status-dot {{isLoggedIn ? 'status-active' : 'status-inactive'}}"></view>
+        <text class="user-role-text">{{roleName}}</text>
       </view>
     </view>
-    <view class="card-footer">
-      <button wx:if="{{isLoggedIn}}" class="btn btn-danger btn-logout" bindtap="logout">退出登录</button>
-      <button wx:else class="btn btn-primary btn-full" bindtap="goToLogin">登录</button>
+    <view wx:if="{{isLoggedIn}}" class="user-actions">
+      <view class="icon-btn" hover-class="icon-btn-hover" hover-stay-time="80" bindtap="goToInbox">
+        <image class="icon-btn-ic" src="/images/icon-mail.png" mode="aspectFit" />
+      </view>
+      <view class="icon-btn" hover-class="icon-btn-hover" hover-stay-time="80" bindtap="logout">
+        <image class="icon-btn-ic" src="/images/icon-logout.png" mode="aspectFit" />
+      </view>
     </view>
+    <view wx:else class="btn-login-mini" bindtap="goToLogin">登录</view>
   </view>
 
   <!-- 当前分区信息 -->
   <view wx:if="{{isLoggedIn && currentZone}}" class="zone-info-bar">
     <text class="zone-info-text">当前分区：{{currentZone.zoneName}}（{{currentZone.zoneCode}}）</text>
+  </view>
+
+  <!-- ============ 游戏账号 ============ -->
+  <view class="section-header">
+    <view class="section-accent"></view>
+    <text class="section-title">游戏账号</text>
+    <text class="section-count" wx:if="{{gameAccounts.length > 0}}">{{gameAccounts.length}}</text>
+    <view wx:if="{{gameAccounts.length > 1}}" class="section-toggle" hover-class="section-toggle-hover" bindtap="onToggleAccounts">
+      <text class="section-toggle-text">{{expanded ? '收起' : '展开全部'}}</text>
+      <text class="section-toggle-arrow">{{expanded ? '▲' : '▼'}}</text>
+    </view>
+    <view wx:if="{{isLoggedIn}}" class="section-add" hover-class="section-add-hover" bindtap="onAddAccount">
+      <image class="section-add-ic" src="/images/icon-add-circle.png" mode="aspectFit" />
+    </view>
+  </view>
+
+  <view wx:if="{{!isLoggedIn}}" class="ga-empty">登录后可保存游戏账号资料</view>
+  <view wx:elif="{{accountsLoading}}" class="ga-empty">加载中…</view>
+  <view wx:elif="{{gameAccounts.length === 0}}" class="ga-empty">还没有游戏账号，点右上角 ＋ 添加</view>
+
+  <view wx:else class="ga-list">
+    <block wx:for="{{gameAccounts}}" wx:key="_id">
+    <view wx:if="{{expanded || item.isMain || !hasMain}}" class="ga-card {{item.isMain ? 'ga-card-main' : ''}}">
+      <!-- 第一行：游戏昵称 → 熔炉等级 →（右对齐）主账号标记 -->
+      <view class="ga-row1">
+        <text class="ga-name">{{item.gameNickName}}</text>
+        <view class="ga-furnace">
+          <image class="ga-fur-ic" src="/images/game-account/furnace.png" mode="aspectFit" />
+          <image wx:if="{{item.furnaceIcon}}" class="ga-lvl-ic" src="{{item.furnaceIcon}}" mode="aspectFit" />
+          <view wx:elif="{{item.furnaceRing}}" class="ga-ring">{{item.furnaceRing}}</view>
+          <view wx:else class="ga-none">—</view>
+        </view>
+        <view wx:if="{{item.isMain}}" class="ga-main-badge">
+          <image class="ga-main-ic" src="/images/icon-star.png" mode="aspectFit" />
+          <text>主账号</text>
+        </view>
+      </view>
+
+      <!-- 第二行：盾 / 矛 / 射手 三个兵营 -->
+      <view class="ga-row2">
+        <template is="barracksChip" data="{{slot: item.bShield, icon: 'barracks-shield'}}" />
+        <template is="barracksChip" data="{{slot: item.bSpear, icon: 'barracks-spear'}}" />
+        <template is="barracksChip" data="{{slot: item.bBow, icon: 'barracks-bow'}}" />
+      </view>
+
+      <!-- 第三行：地心探险 + 操作图标 -->
+      <view class="ga-row3">
+        <text class="ga-dixin">地心探险 <text class="ga-dixin-v">{{item.dixinText}}</text></text>
+        <view class="ga-ops">
+          <view class="ga-op {{item.isMain ? 'ga-op-on' : ''}}" hover-class="ga-op-hover" hover-stay-time="80"
+                bindtap="onSetMain" data-id="{{item._id}}">
+            <image class="ga-op-ic" src="{{item.isMain ? '/images/icon-star.png' : '/images/icon-star-outline.png'}}" mode="aspectFit" />
+          </view>
+          <view class="ga-op" hover-class="ga-op-hover" hover-stay-time="80"
+                bindtap="onEditAccount" data-id="{{item._id}}">
+            <image class="ga-op-ic" src="/images/icon-edit.png" mode="aspectFit" />
+          </view>
+          <view class="ga-op" hover-class="ga-op-hover" hover-stay-time="80"
+                bindtap="onRemoveAccount" data-id="{{item._id}}">
+            <image class="ga-op-ic" src="/images/icon-remove.png" mode="aspectFit" />
+          </view>
+        </view>
+      </view>
+    </view>
+    </block>
   </view>
 
   <!-- 我的报名 -->
@@ -61,10 +139,140 @@
       </view>
       <text class="menu-arrow">›</text>
     </view>
+
+    <view class="menu-entry" bindtap="goToIntro" hover-class="menu-entry-hover">
+      <view class="menu-icon">📖</view>
+      <view class="menu-content">
+        <text class="menu-name">功能介绍</text>
+        <text class="menu-desc">查看各版本功能说明</text>
+      </view>
+      <text class="menu-arrow">›</text>
+    </view>
+
+    <view class="menu-entry" bindtap="goToAbout" hover-class="menu-entry-hover">
+      <view class="menu-icon">ℹ️</view>
+      <view class="menu-content">
+        <text class="menu-name">关于</text>
+        <text class="menu-desc">版本信息 / 官网 / 客服 / 备案</text>
+      </view>
+      <text class="menu-arrow">›</text>
+    </view>
   </view>
 
   <!-- 底部版本号 -->
-  <view class="text-center mt-32 mb-16">
-    <text class="text-weak text-xs">{{versionText}}</text>
+  <view class="version-line">
+    <text class="version-text">{{versionText}}</text>
   </view>
+
+  <!-- ================= 编辑游戏账号 ================= -->
+  <view wx:if="{{sheet === 'edit'}}" class="sheet-mask" bindtap="closeSheet">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-hd">
+        <text class="sheet-hd-title">{{draft._id ? '编辑游戏账号' : '添加游戏账号'}}</text>
+        <view class="sheet-close" bindtap="closeSheet">
+          <image class="sheet-close-ic" src="/images/icon-close.png" mode="aspectFit" />
+        </view>
+      </view>
+
+      <view class="sheet-bd">
+        <view class="field">
+          <text class="field-label">游戏昵称<text class="field-req">*</text></text>
+          <view class="input-row">
+            <image class="input-lead" src="/images/icon-user.png" mode="aspectFit" />
+            <input class="input-el" type="text" maxlength="30" placeholder="请输入游戏内的昵称"
+                   placeholder-class="input-ph" value="{{draft.gameNickName}}" bindinput="onNickNameInput" />
+          </view>
+        </view>
+
+        <view class="field">
+          <text class="field-label">联盟</text>
+          <alliance-picker wx:if="{{alliances.length > 0}}" alliances="{{alliances}}" value="{{draft.allianceIndex}}"
+                           variant="field" bind:change="onAllianceChange" />
+          <view wx:else class="input-row">
+            <text class="input-ph">当前分区暂无联盟</text>
+          </view>
+        </view>
+
+        <view class="field">
+          <text class="field-label">熔炉等级</text>
+          <view class="picker-row" hover-class="picker-row-hover" bindtap="openLevelSheet" data-target="furnace">
+            <image class="pk-ic" src="/images/game-account/furnace.png" mode="aspectFit" />
+            <view class="pk-value">
+              <block wx:if="{{draftFurnace}}">
+                <image wx:if="{{draftFurnace.icon}}" class="ga-lvl-ic" src="{{draftFurnace.icon}}" mode="aspectFit" />
+                <view wx:else class="ga-ring">{{draftFurnace.ring}}</view>
+              </block>
+              <text wx:else class="pk-empty">未设置</text>
+            </view>
+            <image class="pk-arrow" src="/images/icon-chevron-right.png" mode="aspectFit" />
+          </view>
+        </view>
+
+        <view class="field">
+          <text class="field-label">地心探险</text>
+          <view class="input-row">
+            <input class="input-el" type="number" maxlength="7" placeholder="请输入层数（纯数字）"
+                   placeholder-class="input-ph" value="{{draft.dixin}}" bindinput="onDixinInput" />
+          </view>
+        </view>
+
+        <view class="field">
+          <text class="field-label">兵营等级</text>
+          <view class="picker-row" hover-class="picker-row-hover" bindtap="openLevelSheet" data-target="shield">
+            <image class="pk-ic" src="/images/game-account/barracks-shield.png" mode="aspectFit" />
+            <text class="pk-name">盾兵营</text>
+            <view class="pk-value">
+              <block wx:if="{{draftShield}}">
+                <image wx:if="{{draftShield.icon}}" class="ga-lvl-ic" src="{{draftShield.icon}}" mode="aspectFit" />
+                <view wx:else class="ga-ring">{{draftShield.ring}}</view>
+                <view wx:if="{{draftShield.stage}}" class="ga-stage">{{draftShield.stage}}</view>
+              </block>
+              <text wx:else class="pk-empty">未设置</text>
+            </view>
+            <image class="pk-arrow" src="/images/icon-chevron-right.png" mode="aspectFit" />
+          </view>
+          <view class="picker-row" hover-class="picker-row-hover" bindtap="openLevelSheet" data-target="spear">
+            <image class="pk-ic" src="/images/game-account/barracks-spear.png" mode="aspectFit" />
+            <text class="pk-name">矛兵营</text>
+            <view class="pk-value">
+              <block wx:if="{{draftSpear}}">
+                <image wx:if="{{draftSpear.icon}}" class="ga-lvl-ic" src="{{draftSpear.icon}}" mode="aspectFit" />
+                <view wx:else class="ga-ring">{{draftSpear.ring}}</view>
+                <view wx:if="{{draftSpear.stage}}" class="ga-stage">{{draftSpear.stage}}</view>
+              </block>
+              <text wx:else class="pk-empty">未设置</text>
+            </view>
+            <image class="pk-arrow" src="/images/icon-chevron-right.png" mode="aspectFit" />
+          </view>
+          <view class="picker-row" hover-class="picker-row-hover" bindtap="openLevelSheet" data-target="bow">
+            <image class="pk-ic" src="/images/game-account/barracks-bow.png" mode="aspectFit" />
+            <text class="pk-name">射手营</text>
+            <view class="pk-value">
+              <block wx:if="{{draftBow}}">
+                <image wx:if="{{draftBow.icon}}" class="ga-lvl-ic" src="{{draftBow.icon}}" mode="aspectFit" />
+                <view wx:else class="ga-ring">{{draftBow.ring}}</view>
+                <view wx:if="{{draftBow.stage}}" class="ga-stage">{{draftBow.stage}}</view>
+              </block>
+              <text wx:else class="pk-empty">未设置</text>
+            </view>
+            <image class="pk-arrow" src="/images/icon-chevron-right.png" mode="aspectFit" />
+          </view>
+        </view>
+      </view>
+
+      <view class="sheet-ft">
+        <view class="sheet-btn sheet-btn-ghost" hover-class="sheet-btn-hover" bindtap="closeSheet">取消</view>
+        <view class="sheet-btn sheet-btn-primary" hover-class="sheet-btn-hover" bindtap="onSaveAccount">保存</view>
+      </view>
+    </view>
+  </view>
+
+  <!--
+    等级选择：统一复用 components/level-picker —— 与「国战报名」完全同一套
+    （标题 / 标准等级·火晶等级文案 / 默认停在火晶 / 圆环与徽章尺寸 / 固定高度不跳变）。
+    ⚠️ 不要再在本页另写一套 sheet，否则又会出现两处不同步。
+  -->
+  <level-picker show="{{levelShow}}" target="{{levelTarget}}" title="{{levelTitle}}" icon="{{levelIcon}}"
+                value="{{levelSpec}}" bind:confirm="onLevelConfirm" bind:cancel="closeLevelSheet" />
+
 </view>

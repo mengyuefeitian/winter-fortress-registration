@@ -33,6 +33,17 @@ exports.main = async (event, context) => {
   }
 }
 
+
+// 熔炉等级：{kind:'fire'|'level', value} —— 报名记录里存一份，供报名列表 / 截图展示等级图标。
+// 与客户端 utils/gameAccount.js 的 normalizeSpec 保持同一份规范。
+function normalizeFurnace(raw) {
+  if (!raw || typeof raw !== 'object') return null
+  const value = parseInt(raw.value, 10)
+  if (!value || value <= 0) return null
+  if (raw.kind === 'fire') return { kind: 'fire', value: Math.min(value, 10) }
+  return { kind: 'level', value: Math.min(value, 30) }
+}
+
 // 创建报名记录
 async function createRegistration(data) {
   // 检查时间段是否已满
@@ -68,6 +79,7 @@ async function createRegistration(data) {
       userId: data.userId,
       nickName: data.nickName,
       position: data.position,
+      furnace: normalizeFurnace(data.furnace),
       status: 'active',
       createTime: db.serverDate()
     }

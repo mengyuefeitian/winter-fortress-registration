@@ -1,18 +1,44 @@
 /* pages/auditor/home/home.wxss */
 
-/* 表单行布局 - 两列 */
-.form-row {
-  display: flex;
-  gap: 8px;
-}
-
-.form-col {
+/* ---------- 账号卡：右侧挂「当前联盟」 ---------- */
+.acct-info {
   flex: 1;
+  min-width: 0;
 }
 
-.form-label {
-  font-size: 13px;
-  color: #5F5F5F;
-  margin-bottom: 4px;
+.acct-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   display: block;
+}
+
+.acct-role {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 当前分区标签已移除：分区切换统一在首页，此页（含超管）不再显示分区 */
+
+/* ⚠️ 不要在外层加 display:flex —— 自定义组件作为 flex item 时内部 width:100% 会失去参照、
+   缩成内容宽度。这里只给固定宽度，让组件自己撑满。 */
+.acct-alliance {
+  width: 132px;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.acct-alliance-label {
+  display: block;
+  font-size: 12px;
+  color: #9aa3b2;
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+/* 只读联盟（只有一个 / 未绑定时）复用全局 .zone-readonly，但字号收一点适配卡内 */
+.acct-alliance .zone-readonly {
+  justify-content: center;
+  font-size: 13px;
 }

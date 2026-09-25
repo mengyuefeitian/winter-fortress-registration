@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "时间段配置"
+  "navigationBarTitleText": "堡垒配置",
+  "usingComponents": {
+    "alliance-picker": "/components/alliance-picker/alliance-picker"
+  }
 }

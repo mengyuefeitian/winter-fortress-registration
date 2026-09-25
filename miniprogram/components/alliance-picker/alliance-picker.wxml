@@ -1,0 +1,35 @@
+<!-- components/alliance-picker/alliance-picker.wxml -->
+<!--
+  联盟选择器：把原来各处用的 <picker>（12 个联盟要在滚轮里上下拨）统一换成
+  「点开 → 两列六行网格 → 点一下选中」的弹窗，选完即关、并回抛 change 事件。
+-->
+<view class="ap">
+  <view class="ap-field ap-field-{{variant}}" hover-class="ap-field-hover" bindtap="openSheet">
+    <text class="ap-text {{value >= 0 ? '' : 'ap-ph'}}">{{display}}</text>
+    <image wx:if="{{variant === 'compact'}}" class="ap-arrow-ic" src="/images/icon-arrow-down.png" mode="aspectFit" />
+    <image wx:elif="{{variant === 'field'}}" class="ap-arrow-ic" src="/images/icon-chevron-right.png" mode="aspectFit" />
+    <text wx:else class="ap-caret">▾</text>
+  </view>
+
+  <view wx:if="{{open}}" class="ap-mask" bindtap="closeSheet" catchtouchmove="noop"></view>
+  <view wx:if="{{open}}" class="ap-sheet" catchtap="noop">
+    <view class="ap-hd">
+      <text class="ap-hd-title">选择联盟<text wx:if="{{alliances.length > 0}}" class="ap-hd-count">（共 {{alliances.length}} 个）</text></text>
+      <view class="ap-hd-close" bindtap="closeSheet">
+        <image class="ap-hd-close-ic" src="/images/icon-close.png" mode="aspectFit" />
+      </view>
+    </view>
+
+    <scroll-view scroll-y class="ap-bd">
+      <view wx:if="{{alliances.length > 0}}" class="ap-grid">
+        <view wx:for="{{alliances}}" wx:key="_id"
+              class="ap-cell {{value === index ? 'ap-cell-on' : ''}}"
+              hover-class="ap-cell-hover" hover-stay-time="60"
+              data-index="{{index}}" bindtap="onPick">
+          <text class="ap-cell-text">{{item.allianceName}}</text>
+        </view>
+      </view>
+      <view wx:else class="ap-empty">该分区暂无联盟</view>
+    </scroll-view>
+  </view>
+</view>
