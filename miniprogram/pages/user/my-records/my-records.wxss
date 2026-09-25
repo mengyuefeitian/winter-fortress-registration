@@ -170,6 +170,21 @@
   font-weight: 500;
 }
 
+/* 昵称单元格：熔炉等级图标 + 昵称 横向排布 */
+.name-cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.name-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* 时间单元格 - 多行展示 */
 .time-cell {
   flex: 1.5;

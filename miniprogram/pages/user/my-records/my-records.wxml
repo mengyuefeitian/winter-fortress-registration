@@ -43,7 +43,9 @@
           <text wx:if="{{item.timeFortress}}" class="time-tag-inline fortress-tag">{{item.timeFortress}}</text>
           <text wx:if="{{item.timeTag}}" class="time-tag-inline">{{item.timeTag}}</text>
         </view>
-        <text class="table-cell">{{item.nickName}}</text>
+        <view class="table-cell name-cell">
+          <text class="name-text">{{item.nickName}}</text>
+        </view>
         <text class="table-cell">
           <text>{{item.shortAllianceName}}</text>
           <text wx:if="{{item.zoneCode}}" class="zone-tag">[{{item.zoneCode}}区]</text>
@@ -78,7 +80,9 @@
           <text class="time-main">{{item.timeSlot}}</text>
           <text wx:if="{{item.configInfo.date}}" class="time-date-small">{{item.configInfo.date}}</text>
         </view>
-        <text class="table-cell">{{item.nickName}}</text>
+        <view class="table-cell name-cell">
+          <text class="name-text">{{item.nickName}}</text>
+        </view>
         <text class="table-cell">{{item.configInfo.positionType}}</text>
         <view class="table-cell action-cell">
           <view class="cancel-btn-small" bindtap="cancelPositionRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</view>
@@ -110,7 +114,9 @@
           <text class="time-main">{{item.time}}</text>
           <text wx:if="{{item.date}}" class="time-date-small">{{item.date}}</text>
         </view>
-        <text class="table-cell">{{item.nickName}}</text>
+        <view class="table-cell name-cell">
+          <text class="name-text">{{item.nickName}}</text>
+        </view>
         <text class="table-cell">{{item.corps}}</text>
         <view class="table-cell action-cell">
           <view class="cancel-btn-small" bindtap="cancelArsenalRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</view>
@@ -142,7 +148,9 @@
           <text class="time-main">{{item.time}}</text>
           <text wx:if="{{item.date}}" class="time-date-small">{{item.date}}</text>
         </view>
-        <text class="table-cell">{{item.nickName}}</text>
+        <view class="table-cell name-cell">
+          <text class="name-text">{{item.nickName}}</text>
+        </view>
         <text class="table-cell">{{item.corps}}</text>
         <view class="table-cell action-cell">
           <view class="cancel-btn-small" bindtap="cancelCanyonRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</view>
@@ -173,7 +181,9 @@
         <view class="table-cell time-cell">
           <text class="time-main">{{item.date}}</text>
         </view>
-        <text class="table-cell">{{item.nickName}}</text>
+        <view class="table-cell name-cell">
+          <text class="name-text">{{item.nickName}}</text>
+        </view>
         <text class="table-cell">{{item.position}}</text>
         <view class="table-cell action-cell">
           <view class="cancel-btn-small" bindtap="cancelBattleRegistration" data-id="{{item._id}}" data-index="{{index}}">取消</view>
