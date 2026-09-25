@@ -3,6 +3,7 @@ const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const cache = require('../../../utils/cache')
+const ga = require('../../../utils/gameAccount')
 
 Page({
   data: {
@@ -16,6 +17,8 @@ Page({
     registrations: [],
 
     nickName: '',
+    accountList: [],          // 游戏账号列表（昵称下拉切换用）
+    accountSelectedId: '',    // 当前选中的账号 _id（手动填写时为 ''）
     position: 'head',
     loading: true,
     isLoggedIn: false,
@@ -36,6 +39,56 @@ Page({
     this.setData({ showTip: !this.data.showTip })
   },
 
+  // 加载游戏账号列表（昵称下拉切换用），并默认把昵称填成主账号
+  loadAccounts: function () {
+    const self = this
+    ga.list().then(list => {
+      const accounts = list || []
+      const patch = { accountList: accounts }
+      // 默认展示主账号；没有主账号且当前昵称为空时回退到微信昵称
+      const main = accounts.filter(a => a.isMain)[0]
+      // 记下主账号：联盟预填要用它「最近一次报名用的联盟」
+      // （主账号 = 最后报名的账号，见 ga.syncFromRegistration）
+      self._mainAccount = main || null
+      if (main && !self.data.nickName) {
+        patch.nickName = main.gameNickName
+        patch.accountSelectedId = main._id
+      } else if (!self.data.nickName) {
+        const u = app.globalData.userInfo
+        if (u && u.nickName) {
+          patch.nickName = u.nickName
+          patch.accountSelectedId = ''
+        }
+      }
+      self.setData(patch)
+    }).catch(() => { })
+  },
+
+  // 联盟预填优先级：主游戏账号「最近一次报名用的联盟」→ 本地缓存的上次选择
+  resolveDefaultAllianceId: function () {
+    return (this._mainAccount && this._mainAccount.allianceId) ||
+      wx.getStorageSync('lastAllianceId') || ''
+  },
+
+  // 昵称选择器回调：回填昵称 + 选中账号
+  // ⚠️ 切换账号是「整账号切换」：该账号最近一次报名用的联盟要一起同步过来
+  onAccountChange: function (e) {
+    const patch = {
+      nickName: e.detail.nickName,
+      accountSelectedId: e.detail.selectedId
+    }
+    const account = ga.pickAccount(this.data.accountList, e.detail.selectedId, e.detail.nickName)
+    if (account) {
+      this._mainAccount = account
+      const idx = ga.allianceIndexIn(this.data.alliances, account.allianceId)
+      if (idx >= 0) {
+        patch.allianceIndex = idx
+        patch.selectedAlliance = this.data.alliances[idx]
+      }
+    }
+    this.setData(patch)
+  },
+
   onShow: function () {
     this.checkLoginAndLoadData()
   },
@@ -45,11 +98,9 @@ Page({
     const userInfo = app.globalData.userInfo
 
     if (userInfo && userInfo.nickName) {
-      // 已登录，自动填充昵称
-      this.setData({
-        isLoggedIn: true,
-        nickName: userInfo.nickName
-      })
+      // 已登录：昵称默认展示主账号（由 loadAccounts 兜底，没账号时回退到微信昵称）
+      this.setData({ isLoggedIn: true })
+      this.loadAccounts()
     } else {
       this.setData({
         isLoggedIn: false,
@@ -63,7 +114,7 @@ Page({
       const alliancesKey = 'fortress_alliances_' + zone._id
       const cachedAlliances = cache.get(alliancesKey)
       if (cachedAlliances) {
-        const lastAllianceId = wx.getStorageSync('lastAllianceId')
+        const lastAllianceId = this.resolveDefaultAllianceId()
         const alliances = cachedAlliances.alliances
         let selectedAlliance = null
         let allianceIndex = -1
@@ -175,8 +226,8 @@ Page({
       const alliances = await db.getAlliancesByZone(zoneId)
 
       if (alliances.length > 0) {
-        // 从本地存储读取上次选择的联盟
-        const lastAllianceId = wx.getStorageSync('lastAllianceId')
+        // 联盟预填：主账号最近一次报名的联盟优先，其次本地缓存
+        const lastAllianceId = this.resolveDefaultAllianceId()
         let selectedAlliance = null
         let allianceIndex = -1
 
@@ -345,6 +396,9 @@ Page({
 
       processed.sort((a, b) => (a.position === 'head' ? -1 : 1) - (b.position === 'head' ? -1 : 1))
 
+      // 熔炉等级徽章：记录自带 furnace，老记录按 userId 兜底查主账号
+      await ga.decorate(processed)
+
       this.setData({
         registrations: processed
       })
@@ -421,17 +475,28 @@ Page({
 
       const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
 
+      // 熔炉等级：带上主账号的等级，报名列表 / 截图会按它展示等级图标
+      const furnace = await ga.selfFurnace()
+
       await db.createRegistration({
         zoneId: zone._id,
         allianceId: this.data.selectedAlliance._id,
         timeSlotId: this.data.selectedTimeSlot._id,
         userId: userId,
         nickName: this.data.nickName,
-        position: this.data.position
+        position: this.data.position,
+        furnace: furnace
       })
 
       util.hideLoading()
       util.showSuccess('报名成功')
+
+      // 自动把本次使用的昵称追加到游戏账号列表（仅当不在已有账号里）
+      const finalNick = this.data.nickName
+      const exists = (this.data.accountList || []).some(a => a.gameNickName === finalNick)
+      if (finalNick && !exists) {
+        ga.save({ gameNickName: finalNick }).then(() => { ga.clearMainCache(); this.loadAccounts() }).catch(() => { })
+      }
 
       // 联盟活跃：记录本次选择的联盟归属（以最后一次报名为准），失败不影响报名结果
       db.joinAllianceByRegistration(

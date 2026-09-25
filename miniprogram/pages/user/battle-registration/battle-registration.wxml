@@ -7,43 +7,87 @@
   </view>
 
   <view class="form">
+    <!-- 游戏昵称：与堡垒/兵工厂/峡谷报名一致，可下拉切换已有账号，也可手动输入新昵称
+         （新昵称提交后会由 syncFromRegistration 自动存入游戏账号列表） -->
     <view class="form-item">
-      <text class="label">联盟</text>
-      <picker bindchange="onAllianceChange" value="{{allianceIndex}}" range="{{alliances}}" range-key="allianceName">
-        <view class="picker-value">
-          {{allianceIndex >= 0 ? alliances[allianceIndex].allianceName : '请选择联盟'}}
-        </view>
-      </picker>
+      <text class="label">游戏昵称</text>
+      <view class="form-field">
+        <account-nickname accounts="{{accountList}}" value="{{inputNickName}}"
+                          selectedId="{{accountSelectedId}}" bind:change="onAccountChange" />
+      </view>
     </view>
 
     <view class="form-item">
-      <text class="label">游戏昵称</text>
-      <view class="input-group">
-        <input type="text" placeholder="请输入游戏昵称" maxlength="15" bindinput="onNickNameInput" value="{{inputNickName}}" />
+      <text class="label">联盟</text>
+      <view class="form-field">
+        <alliance-picker alliances="{{alliances}}" value="{{allianceIndex}}" variant="plain"
+                         bind:change="onAllianceChange" />
       </view>
     </view>
 
     <view class="form-item">
       <text class="label">熔炉等级</text>
-      <view class="input-group">
-        <input type="text" placeholder="如：火4、城堡25" maxlength="10" bindinput="onFurnaceInput" value="{{furnaceLevel}}" />
+      <view class="level-content">
+        <!-- 两个占位格：让熔炉选择框与下面单个兵营块等宽（都占 1/3） -->
+        <view class="level-slot"></view>
+        <view class="level-slot"></view>
+        <view class="level-pick-row lv-row-one" hover-class="level-pick-hover" bindtap="openLevelSheet" data-target="furnace">
+          <view class="level-pick-value">
+            <block wx:if="{{furnaceView.has}}">
+              <image wx:if="{{furnaceView.icon}}" class="level-pick-ic" src="{{furnaceView.icon}}" mode="aspectFit" />
+              <view wx:else class="level-pick-ring">{{furnaceView.ring}}</view>
+            </block>
+            <text wx:else class="level-pick-empty">未选</text>
+          </view>
+          <image class="level-pick-arrow" src="/images/icon-chevron-right.png" mode="aspectFit" />
+        </view>
       </view>
     </view>
 
     <view class="form-item">
       <text class="label">兵营等级</text>
-      <view class="triple-input-row">
-        <view class="triple-cell">
-          <text class="triple-label label-shield">盾</text>
-          <input type="text" placeholder="30" maxlength="5" bindinput="onBarracksShieldInput" value="{{barracksShield}}" />
+      <view class="level-content">
+        <view class="level-pick-row lv-row-tri lv-row-shield" hover-class="lv-hover-shield" bindtap="openLevelSheet" data-target="shield">
+          <image class="level-pick-bic" src="/images/game-account/barracks-shield.png" mode="aspectFit" />
+          <view class="level-pick-value">
+            <block wx:if="{{shieldView.has}}">
+              <view class="lv-badge-wrap">
+                <image wx:if="{{shieldView.icon}}" class="level-pick-ic" src="{{shieldView.icon}}" mode="aspectFit" />
+                <view wx:else class="level-pick-ring">{{shieldView.ring}}</view>
+                <text wx:if="{{shieldView.stage}}" class="lv-stage">{{shieldView.stage}}</text>
+              </view>
+            </block>
+            <text wx:else class="level-pick-empty">—</text>
+          </view>
+          <image class="level-pick-arrow" src="/images/icon-chevron-right.png" mode="aspectFit" />
         </view>
-        <view class="triple-cell">
-          <text class="triple-label label-spear">矛</text>
-          <input type="text" placeholder="30" maxlength="5" bindinput="onBarracksSpearInput" value="{{barracksSpear}}" />
+        <view class="level-pick-row lv-row-tri lv-row-spear" hover-class="lv-hover-spear" bindtap="openLevelSheet" data-target="spear">
+          <image class="level-pick-bic" src="/images/game-account/barracks-spear.png" mode="aspectFit" />
+          <view class="level-pick-value">
+            <block wx:if="{{spearView.has}}">
+              <view class="lv-badge-wrap">
+                <image wx:if="{{spearView.icon}}" class="level-pick-ic" src="{{spearView.icon}}" mode="aspectFit" />
+                <view wx:else class="level-pick-ring">{{spearView.ring}}</view>
+                <text wx:if="{{spearView.stage}}" class="lv-stage">{{spearView.stage}}</text>
+              </view>
+            </block>
+            <text wx:else class="level-pick-empty">—</text>
+          </view>
+          <image class="level-pick-arrow" src="/images/icon-chevron-right.png" mode="aspectFit" />
         </view>
-        <view class="triple-cell">
-          <text class="triple-label label-archer">射</text>
-          <input type="text" placeholder="30" maxlength="5" bindinput="onBarracksArcherInput" value="{{barracksArcher}}" />
+        <view class="level-pick-row lv-row-tri lv-row-bow" hover-class="lv-hover-bow" bindtap="openLevelSheet" data-target="bow">
+          <image class="level-pick-bic" src="/images/game-account/barracks-bow.png" mode="aspectFit" />
+          <view class="level-pick-value">
+            <block wx:if="{{archerView.has}}">
+              <view class="lv-badge-wrap">
+                <image wx:if="{{archerView.icon}}" class="level-pick-ic" src="{{archerView.icon}}" mode="aspectFit" />
+                <view wx:else class="level-pick-ring">{{archerView.ring}}</view>
+                <text wx:if="{{archerView.stage}}" class="lv-stage">{{archerView.stage}}</text>
+              </view>
+            </block>
+            <text wx:else class="level-pick-empty">—</text>
+          </view>
+          <image class="level-pick-arrow" src="/images/icon-chevron-right.png" mode="aspectFit" />
         </view>
       </view>
     </view>
@@ -115,4 +159,7 @@
   <button class="btn-share" open-type="share">转发给朋友</button>
 
   <float-reminder id="entryReminder" />
+
+  <level-picker show="{{levelShow}}" target="{{levelTarget}}" title="{{levelTitle}}" icon="{{levelIcon}}"
+                value="{{levelValue}}" bind:confirm="onLevelConfirm" bind:cancel="closeLevelSheet" />
 </view>

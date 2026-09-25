@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "申请盟管"
+  "navigationBarTitleText": "申请盟管",
+  "usingComponents": {
+    "alliance-picker": "/components/alliance-picker/alliance-picker"
+  }
 }

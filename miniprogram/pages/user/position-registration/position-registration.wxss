@@ -66,7 +66,9 @@
   padding-top: 8px;
 }
 
-/* 上午/下午切换 */
+/* 上午/下午切换
+   高度收敛到 36px（外层 3 + 内层 5 + 行高 20 + 内层 5 + 外层 3）。
+   原来是 padding 10px + font 15px ≈ 49px，占掉半屏第一屏的可视区域。 */
 .period-tabs-container {
   margin: 0 16px;
 }
@@ -75,16 +77,18 @@
   display: flex;
   background-color: #FFFFFF;
   border-radius: 8px;
-  padding: 4px;
+  padding: 3px;
 }
 
 .period-tab {
   flex: 1;
-  padding: 10px 0;
+  padding: 5px 0;
   text-align: center;
-  font-size: 15px;
+  font-size: 14px;
+  line-height: 20px;
   color: #5F5F5F;
-  border-radius: 4px;
+  /* 外层圆角 8 − padding 3 = 5，内外才不会错位露白边 */
+  border-radius: 5px;
   transition: all 0.2s;
 }
 
@@ -148,6 +152,43 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
+}
+
+/* 熔炉等级徽章：本页昵称字号 14px（比列表页大），全局 20px 的徽章显得过小 → 页面内放大。
+   火晶是 PNG（内容只占画布约 81%，四周透明留白），普通等级是 CSS 圆环（无留白），
+   所以画布尺寸要分开给：火晶 26px ≈ 视觉 21px，圆环 22px 才与它视觉等大。 */
+.seat-name .frank-l {
+  width: 26px;
+  height: 26px;
+  margin-left: 0;
+}
+
+.seat-name .frank-r {
+  width: 22px;
+  height: 22px;
+  margin-left: 0;
+  border-width: 2px;
+  font-size: 12px;
+}
+
+/* 徽章放大后，昵称 + 备注在窄卡片里必须能收缩省略，否则会顶出卡片外
+   （flex 子项默认 min-width:auto，不加 min-width:0 不会省略）。备注最不紧要，先让位。 */
+.seat-filled-text,
+.seat-my-text,
+.seat-remark {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seat-filled-text,
+.seat-my-text {
+  flex-shrink: 1;
+}
+
+.seat-remark {
+  flex-shrink: 6;
 }
 
 /* 空座位 - 微信绿色 */
@@ -225,26 +266,41 @@
 }
 
 /* 弹窗样式 - 微信风格 */
-.modal-mask {
+/* 弹窗定位层：用 flex 居中，**刻意不用 transform**
+   —— 祖先一旦有 transform/filter/contain，就会成为 position:fixed 后代的
+   包含块并把它裁掉，官职弹窗里嵌入的 account-nickname 底部面板会被切在弹窗内。 */
+.modal-layer {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.6);
   z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.modal-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
 }
 
 .modal-container {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  position: relative;
+  z-index: 1;
   width: 280px;
+  max-width: 100%;
   background-color: #FFFFFF;
   border-radius: 8px;
-  z-index: 101;
-  overflow: hidden;
+  /* ⚠️ 刻意不加 overflow:hidden —— 容器里嵌了 account-nickname 的 fixed 底部面板，
+     某些渲染引擎会把 fixed 后代一起裁掉。圆角改由 footer 首尾按钮自己兜。 */
 }
 
 .modal-header {
@@ -304,6 +360,15 @@
   border-radius: 0;
   background-color: #FFFFFF;
   border: none;
+}
+
+/* 兜底圆角：容器即便没有裁剪（避免裁掉固定的底部弹窗），底部两角也不会方出去 */
+.modal-footer .btn:first-child {
+  border-bottom-left-radius: 8px;
+}
+
+.modal-footer .btn:last-child {
+  border-bottom-right-radius: 8px;
 }
 
 .modal-footer .btn-primary {

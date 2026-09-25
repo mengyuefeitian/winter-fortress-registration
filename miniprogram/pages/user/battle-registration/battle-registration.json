@@ -1,6 +1,9 @@
 {
   "navigationBarTitleText": "国战报名",
   "usingComponents": {
-    "float-reminder": "/components/float-reminder/float-reminder"
+    "float-reminder": "/components/float-reminder/float-reminder",
+    "level-picker": "/components/level-picker/level-picker",
+    "account-nickname": "/components/account-nickname/account-nickname",
+    "alliance-picker": "/components/alliance-picker/alliance-picker"
   }
 }

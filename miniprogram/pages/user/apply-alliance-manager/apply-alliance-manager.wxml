@@ -16,11 +16,8 @@
     <!-- 联盟选择 -->
     <view class="form-item">
       <text class="form-label">选择联盟</text>
-      <picker wx:if="{{alliances.length > 0}}" bindchange="onAllianceChange" value="{{alliancePickerIndex}}" range="{{alliances}}" range-key="allianceName">
-        <view class="picker-view">
-          <text>{{selectedAlliance ? selectedAlliance.allianceName : '请选择联盟'}}</text>
-        </view>
-      </picker>
+      <alliance-picker wx:if="{{alliances.length > 0}}" alliances="{{alliances}}" value="{{alliancePickerIndex}}"
+                       bind:change="onAllianceChange" />
       <view wx:else class="picker-view disabled">
         <text class="picker-placeholder">该分区暂无联盟</text>
       </view>
