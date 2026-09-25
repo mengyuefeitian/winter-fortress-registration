@@ -1,0 +1,234 @@
+/* components/level-picker/level-picker.wxss */
+
+.lp-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 200;
+  background-color: rgba(26, 26, 46, 0.35);
+  display: flex;
+  align-items: flex-end;
+}
+
+.lp-sheet {
+  width: 100%;
+  background-color: #FFFFFF;
+  border-radius: 20px 20px 0 0;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+}
+
+.lp-hd {
+  display: flex;
+  align-items: center;
+  padding: 16px 16px 12px;
+}
+
+.lp-hd-ic {
+  width: 26px;
+  height: 26px;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.lp-hd-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a2e;
+  flex: 1;
+}
+
+.lp-close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lp-close-ic {
+  width: 15px;
+  height: 15px;
+}
+
+.lp-seg {
+  margin: 0 16px 12px;
+  display: flex;
+  background-color: #f0f2f6;
+  border-radius: 11px;
+  padding: 3px;
+}
+
+.lp-seg-item {
+  flex: 1;
+  text-align: center;
+  font-size: 13.5px;
+  padding: 7px 0;
+  border-radius: 9px;
+  color: #7b8494;
+}
+
+.lp-seg-on {
+  background-color: #FFFFFF;
+  color: #4A90D9;
+  font-weight: 600;
+}
+
+.lp-bd {
+  padding: 0 16px;
+  max-height: 52vh;
+  box-sizing: border-box;
+}
+
+/* 内容区固定总高度 =「标准等级 5 行圆环」的高度（5×36 + 4×8 = 212）+ 上下各 14 的呼吸位。
+   两个状态（标准等级 / 火晶等级）总高都落在 240px 上，所以切换时弹层不跳高跳矮。 */
+.lp-body {
+  display: flex;
+  flex-direction: column;
+  height: 240px;
+}
+
+/* 等级网格：圆环内嵌数字。
+   flex:1 吃掉「内容区 − 兵种阶」的剩余高度，align-content:center 让内容块垂直居中 →
+   标准等级的 5 行、火晶的 2 行都居中摆放，不会贴着顶部、把空白全留在下面。 */
+.lp-grid {
+  display: grid;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+  align-content: center;
+}
+
+.lp-grid-6 {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+.lp-grid-5 {
+  grid-template-columns: repeat(5, 1fr);
+  gap: 24px 8px;
+}
+
+/* 熔炉没有兵种阶，火晶格加大行距/图标，避免中段留白过多 */
+.lp-grid-5-roomy {
+  gap: 34px 8px;
+}
+
+.lp-grid-5-roomy .lp-fire-ic {
+  width: 62px;
+  height: 62px;
+}
+
+/* 标准等级圆环：比火晶徽章小一号，5 行刚好铺满 212px */
+.lp-ring {
+  width: 36px;
+  height: 36px;
+  margin: 0 auto;
+  border-radius: 50%;
+  border: 1.5px solid #dfe4ec;
+  background-color: #FFFFFF;
+  color: #5a6272;
+  font-size: 12px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lp-ring.lp-on {
+  background-color: #4A90D9;
+  border-color: #4A90D9;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+/* 纯图标格：去掉「火N」文字后图标可以放大 */
+.lp-fire-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 0;
+  border-radius: 12px;
+  box-sizing: border-box;
+}
+
+.lp-fire-cell.lp-on {
+  background-color: rgba(74, 144, 217, 0.08);
+  box-shadow: 0 0 0 2px #4A90D9 inset;
+}
+
+.lp-fire-ic {
+  width: 56px;
+  height: 56px;
+}
+
+/* 兵种阶 */
+.lp-stage-lab {
+  font-size: 12.5px;
+  color: #7b8494;
+  margin: 14px 0 8px;
+}
+
+/* 占位：标准等级下兵种阶不可选 —— 整块收成 0 高（不是 visibility:hidden），
+   让网格顺势占满高度；总高由外层 .lp-body 的固定高度兜住，所以同样不跳变。 */
+.lp-stage-ph {
+  height: 0;
+  overflow: hidden;
+}
+
+.lp-stage-muted {
+  color: #b6bcc7;
+}
+
+.lp-seg3 {
+  display: flex;
+  gap: 8px;
+}
+
+.lp-seg3-item {
+  flex: 1;
+  text-align: center;
+  font-size: 13.5px;
+  padding: 9px 0;
+  border-radius: 11px;
+  background-color: #f0f2f6;
+  color: #7b8494;
+}
+
+.lp-seg3-on {
+  background-color: #FFFFFF;
+  color: #4A90D9;
+  font-weight: 600;
+  border: 1px solid #4A90D9;
+  box-sizing: border-box;
+}
+
+.lp-ft {
+  display: flex;
+  gap: 10px;
+  padding: 14px 16px 4px;
+}
+
+.lp-btn {
+  flex: 1;
+  height: 42px;
+  border-radius:12px;
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lp-btn-ghost {
+  background-color: #f2f5fa;
+  color: #5a6272;
+}
+
+.lp-btn-primary {
+  background-color: #4A90D9;
+  color: #FFFFFF;
+}

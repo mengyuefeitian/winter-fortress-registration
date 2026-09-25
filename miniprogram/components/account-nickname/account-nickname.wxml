@@ -1,0 +1,42 @@
+<!-- components/account-nickname/account-nickname.wxml -->
+<view class="an">
+  <!-- 触发字段：展示当前昵称 + 展开箭头 -->
+  <view class="an-field" hover-class="an-field-hover" bindtap="openSheet">
+    <text class="an-text {{value ? '' : 'an-ph'}}">{{value || placeholder}}</text>
+    <text class="an-arrow">▾</text>
+  </view>
+
+  <!-- 下拉面板 -->
+  <view wx:if="{{sheetOpen}}" class="an-mask" bindtap="closeSheet"></view>
+  <view wx:if="{{sheetOpen}}" class="an-sheet">
+    <view class="an-sheet-hd">
+      <text class="an-sheet-title">选择游戏账号</text>
+      <view class="an-sheet-close" catchtap="closeSheet">
+        <image class="an-sheet-close-ic" src="/images/icon-close.png" mode="aspectFit" />
+      </view>
+    </view>
+
+    <view class="an-sheet-bd">
+      <view wx:for="{{accounts}}" wx:key="_id"
+            class="an-opt {{selectedId === item._id ? 'an-opt-on' : ''}}"
+            bindtap="onPick" data-id="{{item._id}}" data-nick="{{item.gameNickName}}">
+        <text class="an-opt-text">{{item.gameNickName}}</text>
+        <view wx:if="{{item.isMain}}" class="an-main">主账号</view>
+        <view wx:if="{{selectedId === item._id}}" class="an-check">✓</view>
+      </view>
+
+      <view class="an-opt an-opt-manual {{manualOpen ? 'an-opt-on' : ''}}" bindtap="onManual">
+        <text class="an-opt-text">✎ 手动输入</text>
+      </view>
+    </view>
+
+    <view wx:if="{{manualOpen}}" class="an-manual">
+      <input class="an-input" value="{{localValue}}" bindinput="onManualInput"
+             maxlength="20" placeholder="输入游戏昵称" focus="{{manualOpen}}" />
+    </view>
+
+    <view class="an-sheet-ft">
+      <view class="an-btn an-btn-primary" bindtap="confirm">确定</view>
+    </view>
+  </view>
+</view>
