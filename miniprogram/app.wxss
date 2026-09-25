@@ -700,7 +700,10 @@ page {
   border-color: #d1d5db;
 }
 
-/* Compact picker variant */
+/* Compact picker variant
+   ⚠️ 这里没写 box-sizing，是 content-box：实际高度 = 32 + 上下 padding 8×2 = 48px。
+      任何「要和它等高的新控件」都必须按 48px 对齐，直接照抄 32px 会矮 16px。
+      （components/alliance-picker 的 compact 变体踩过这个坑） */
 .picker-compact {
   display: flex;
   justify-content: space-between;
@@ -711,6 +714,23 @@ page {
   height: 32px;
   font-size: 14px;
   color: #000000;
+}
+
+/* 只读分区标签：分区切换统一在首页，管理页只展示、不可点。
+   盒子尺寸刻意与 .picker-compact 一致（48px 高），保证同一行控件对齐。 */
+.zone-readonly {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 48px;
+  padding: 0 12px;
+  border-radius: 4px;
+  background-color: #F0F0F0;
+  color: #A6A6A6;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .picker-compact.disabled {
@@ -1206,4 +1226,48 @@ page {
 .user-role {
   font-size: 12px;
   color: #9ca3af;
+}
+/* ------------------------------------------------------------------
+   游戏账号 · 熔炉等级徽章（报名列表 / 统计列表里展示在账号名前）
+   配合 templates/furnace-badge.wxml 使用；字段由 utils/gameAccount.js 的 decorate() 写入。
+   ------------------------------------------------------------------ */
+.frank {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin-right: 4px;
+  flex: 0 0 auto;
+}
+
+.frank-f {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+
+/* 火晶：直接用 fireN.png 素材 */
+.frank-l {
+  width: 20px;
+  height: 20px;
+  margin-left: 1px;
+  flex: 0 0 auto;
+}
+
+/* 普通等级：CSS 圆环内嵌数字（必须 flex 居中，故用 view 而不是 span） */
+.frank-r {
+  width: 20px;
+  height: 20px;
+  margin-left: 1px;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 1.8px solid #4A90D9;
+  background-color: #FFFFFF;
+  color: #4A90D9;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

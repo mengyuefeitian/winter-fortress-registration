@@ -54,3 +54,22 @@
   border-radius: 4px;
   margin-left: 4px;
 }
+
+/* 配置列表删除：图标按钮，垂直居中于卡片右侧（原来是独占一行的文字按钮，浪费纵向空间） */
+.slot-del {
+  flex: 0 0 auto;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.slot-del-ic {
+  width: 21px;
+  height: 21px;
+}
+
+.slot-del-hover {
+  background-color: #FDEDED;
+}

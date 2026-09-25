@@ -1,3 +1,5 @@
+<import src="/templates/furnace-badge.wxml" />
+
 <view class="page">
   <!-- 顶部：统计与按钮同一行 -->
   <view class="stat-bar">
@@ -25,7 +27,10 @@
         <view wx:for="{{activeList}}" wx:key="nickName" class="member-cell"
               bindlongpress="onLongPressMember" data-nick="{{item.nickName}}">
           <view class="member-del" catchtap="onRemoveActive" data-nick="{{item.nickName}}">✕</view>
-          <text class="member-name active-name">{{item.nickName}}</text>
+          <view class="member-line">
+            <template is="furnaceBadge" data="{{has: item.furnaceHas, icon: item.furnaceIcon, ring: item.furnaceRing}}" />
+            <text class="member-name active-name">{{item.nickName}}</text>
+          </view>
         </view>
       </view>
       <view wx:if="{{activeList.length === 0}}" class="empty-text">暂无活跃玩家</view>
@@ -38,7 +43,10 @@
         <view wx:for="{{inactiveList}}" wx:key="nickName" class="member-cell"
               bindlongpress="onLongPressMember" data-nick="{{item.nickName}}">
           <view class="member-check" catchtap="onCheckActive" data-nick="{{item.nickName}}"></view>
-          <text class="member-name">{{item.nickName}}</text>
+          <view class="member-line">
+            <template is="furnaceBadge" data="{{has: item.furnaceHas, icon: item.furnaceIcon, ring: item.furnaceRing}}" />
+            <text class="member-name">{{item.nickName}}</text>
+          </view>
         </view>
       </view>
       <view wx:if="{{inactiveList.length === 0}}" class="empty-text">暂无未活跃玩家</view>

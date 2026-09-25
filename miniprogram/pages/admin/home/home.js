@@ -8,6 +8,7 @@ Page({
     userInfo: null,
     roleDisplayName: '',
     zones: [],
+    // 页面已不再展示分区（切换统一在首页）；仍加载是因为清空数据、联盟活跃等操作要用 zoneId
     selectedZone: null
   },
 
@@ -57,6 +58,8 @@ Page({
   },
 
   // 加载分区列表
+  // 分区切换统一在首页，这里只解析「当前分区」用于展示与跳转。
+  // db.getAllZones / getZonesByCreator 内部走缓存，命中即返回，不再每次等云端。
   loadZones: async function () {
     try {
       const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
@@ -109,20 +112,9 @@ Page({
     }
   },
 
-  // 分区选择变化（由组件内部处理全局状态同步）
-  onZoneChange: function (e) {
-    const selectedZone = e.detail.zone
-    if (selectedZone) {
-      this.setData({
-        selectedZone: selectedZone
-      })
-      // 同步全局分区（此前只改页面 data，其他页面读 globalData.currentZone 会拿到旧分区）
-      app.globalData.currentZone = selectedZone
-      wx.setStorageSync('lastZoneId', selectedZone._id)
-      // 联盟活跃：按新分区重新解析归属，force 绕过节流立即上报
-      app.markAllianceActive(true)
-    }
-  },
+  // 注：本页不再提供分区切换（统一在首页），故原 onZoneChange 已移除。
+  //     若将来要恢复页内切区，必须同时同步 globalData.currentZone + lastZoneId，
+  //     并调 app.markAllianceActive(true) 重新解析联盟归属。
 
   goToAllianceConfig: function () {
     wx.navigateTo({
@@ -166,9 +158,14 @@ Page({
     })
   },
 
+  // 盟管审核：带 scope=zone —— 区管控制台只审「本分区」的盟管申请
+  // （超管从自己的控制台进入时不带该参数，看到的是全部分区）
   goToReviewManager: function () {
+    const zoneId = (this.data.selectedZone && this.data.selectedZone._id) ||
+      (app.globalData.currentZone && app.globalData.currentZone._id) ||
+      wx.getStorageSync('lastZoneId') || ''
     wx.navigateTo({
-      url: '/pages/superAdmin/admin-review/admin-review?applyType=allianceManager'
+      url: '/pages/superAdmin/admin-review/admin-review?applyType=allianceManager&scope=zone&zoneId=' + zoneId
     })
   },
 

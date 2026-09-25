@@ -139,17 +139,8 @@ Page({
     })
   },
 
-  goToPositionManage: function () {
-    wx.navigateTo({
-      url: '/pages/admin/position-manage/position-manage'
-    })
-  },
-
-  goToTimeSlotConfig: function () {
-    wx.navigateTo({
-      url: '/pages/admin/time-slot-config/time-slot-config'
-    })
-  },
+  // 注：堡垒配置 / 官职管理 / 国战报名 / 兵工厂&峡谷 四个入口已从超管控制台移除
+  //     （超管走「盟管控制台」或「区管控制台」进入对应配置页，避免两套入口各改一份）
 
   goToAutoClear: function () {
     wx.navigateTo({
@@ -160,18 +151,6 @@ Page({
   goToFeedbackManage: function () {
     wx.navigateTo({
       url: '/pages/superAdmin/feedback-manage/feedback-manage'
-    })
-  },
-
-  goToBattleConfig: function () {
-    wx.navigateTo({
-      url: '/pages/user/battle-list/battle-list'
-    })
-  },
-
-  goToArsenalConfig: function () {
-    wx.navigateTo({
-      url: '/pages/superAdmin/arsenal-config/arsenal-config'
     })
   },
 

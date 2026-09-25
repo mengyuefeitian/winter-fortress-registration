@@ -13,6 +13,7 @@ Page({
     selectedAllianceIndex: 0,
     zones: [],
     selectedZone: null,
+    // 注：此页不再展示分区（分区切换统一在首页，含超管），故无 zoneLabel
     alliances: [],
     allianceIndex: 0,
     selectedAlliance: null,
@@ -91,7 +92,7 @@ Page({
       this.setData({ zones: zones })
 
       if (zones.length > 0) {
-        // 优先使用全局分区记忆
+        // 优先使用全局分区记忆（首页选的当前分区）
         let selectedZone = zones[0]
 
         if (app.globalData.currentZone) {
@@ -123,15 +124,22 @@ Page({
     }
   },
 
+  // 载入分区联盟，并尽量选回「上次选的联盟」（storage lastAllianceId），避免每次都要重选
   loadAlliances: async function (zoneId) {
     try {
       const alliances = await db.getAlliancesByZone(zoneId)
       this.setData({ alliances: alliances })
 
       if (alliances.length > 0) {
+        let index = 0
+        const lastAllianceId = wx.getStorageSync('lastAllianceId')
+        if (lastAllianceId) {
+          const found = alliances.findIndex(a => a._id === lastAllianceId)
+          if (found >= 0) index = found
+        }
         this.setData({
-          selectedAlliance: alliances[0],
-          allianceIndex: 0
+          selectedAlliance: alliances[index],
+          allianceIndex: index
         })
       }
     } catch (err) {
@@ -139,21 +147,7 @@ Page({
     }
   },
 
-  onZoneChange: function (e) {
-    const zone = e.detail.zone
-    if (!zone) return
-
-    this.setData({
-      selectedZone: zone,
-      selectedAlliance: null
-    })
-
-    this.loadAlliances(zone._id)
-
-    // 联盟活跃：切换分区后需要按新分区重新解析归属，force 绕过节流立即上报
-    app.globalData.currentZone = zone
-    app.markAllianceActive(true)
-  },
+  // 注：本页不再提供分区切换（统一在首页），故原 onZoneChange / onAdminZoneChange 已移除。
 
   onAllianceChange: function (e) {
     const index = e.detail.value
@@ -220,9 +214,17 @@ Page({
         zoneName: zoneMap[alliance.zoneId] || '未知分区'
       }))
 
+      // 尽量选回上次选的联盟
+      let index = 0
+      const lastAllianceId = wx.getStorageSync('lastAllianceId')
+      if (lastAllianceId) {
+        const found = myAlliances.findIndex(a => a._id === lastAllianceId)
+        if (found >= 0) index = found
+      }
+
       this.setData({
         myAlliances: myAlliances,
-        selectedAllianceIndex: 0
+        selectedAllianceIndex: index
       })
     } catch (err) {
       console.error('加载联盟信息失败:', err)
@@ -250,48 +252,33 @@ Page({
         }
       }
 
-      this.setData({ zones: zones, selectedZone: selectedZone, adminZoneIndex: adminZoneIndex })
+      this.setData({
+        zones: zones,
+        selectedZone: selectedZone,
+        adminZoneIndex: adminZoneIndex
+      })
 
-      const wxdb = wx.cloud.database()
-      const allianceRes = await wxdb.collection('alliances').where({
-        zoneId: selectedZone._id
-      }).orderBy('allianceIndex', 'asc').get()
-
-      const myAlliances = allianceRes.data.map(a => ({
+      // 走 db 的联盟缓存（命中即返回，不再每次等云端）
+      const list = await db.getAlliancesByZone(selectedZone._id)
+      const myAlliances = list.map(a => ({
         ...a,
         zoneName: selectedZone.zoneName
       }))
 
+      // 尽量选回上次选的联盟
+      let index = 0
+      const lastAllianceId = wx.getStorageSync('lastAllianceId')
+      if (lastAllianceId) {
+        const found = myAlliances.findIndex(a => a._id === lastAllianceId)
+        if (found >= 0) index = found
+      }
+
       this.setData({
         myAlliances: myAlliances,
-        selectedAllianceIndex: 0
+        selectedAllianceIndex: index
       })
     } catch (err) {
       console.error('加载区管联盟信息失败:', err)
-    }
-  },
-
-  // 区管切换分区（由组件内部处理全局状态同步）
-  onAdminZoneChange: async function (e) {
-    const zone = e.detail.zone
-    if (!zone) return
-
-    this.setData({ selectedZone: zone })
-
-    try {
-      const wxdb = wx.cloud.database()
-      const allianceRes = await wxdb.collection('alliances').where({
-        zoneId: zone._id
-      }).orderBy('allianceIndex', 'asc').get()
-
-      const myAlliances = allianceRes.data.map(a => ({
-        ...a,
-        zoneName: zone.zoneName
-      }))
-
-      this.setData({ myAlliances: myAlliances, selectedAllianceIndex: 0 })
-    } catch (err) {
-      console.error('加载联盟失败:', err)
     }
   },
 

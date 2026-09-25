@@ -1,4 +1,6 @@
 {
   "navigationBarTitleText": "活动配置",
-  "usingComponents": {}
+  "usingComponents": {
+    "alliance-picker": "/components/alliance-picker/alliance-picker"
+  }
 }

@@ -10,15 +10,7 @@
         </view>
       </view>
     </view>
-    <!-- 分区选择器 -->
-    <view wx:if="{{zones.length > 1}}" class="card-footer">
-      <view class="form-row">
-        <view class="form-col">
-          <text class="form-label">当前分区</text>
-          <zone-selector value="{{selectedZone}}" zones="{{zones}}" loaded="{{true}}" bind:change="onZoneChange" />
-        </view>
-      </view>
-    </view>
+    <!-- 当前分区已整块移除：分区切换统一在首页，区管控制台不再展示分区（区管/超管都不显示） -->
   </view>
 
   <!-- 配置管理 -->

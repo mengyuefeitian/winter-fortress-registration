@@ -29,6 +29,94 @@ function getDb() {
   return wx.cloud.database()
 }
 
+/* ==================== 分区 / 联盟 元数据缓存 ====================
+ * 问题：管理端每进一个页面都要回源拉 zones / alliances，云端往返常见 3-6 秒，
+ *      用户看到的就是「分区/联盟一直转圈」。
+ * 现状：这两类数据变动极少（改一次联盟名、加一个分区），完全没必要每次回源。
+ *
+ * 方案：进程内存 + 本地 storage 双层缓存
+ *   · 命中且未过期 → 直接返回，页面立刻出壳（热启动读内存、冷启动读 storage，都不等网络）
+ *   · 未命中       → 回源并回写
+ *   · 命中但过期   → 先用旧值返回，同时后台静默回源刷新（stale-while-revalidate）
+ *
+ * ⚠️ 写入类操作（建分区 / 改联盟名 / 绑盟管 / 初始化联盟）后必须 invalidateMeta 失效，
+ *    否则会读到旧数据。传 force:true 也可强制回源。
+ */
+const META_TTL = 10 * 60 * 1000
+const META_STORAGE_PREFIX = 'metaCache_'
+const _metaMem = {}
+
+function _metaRead(key) {
+  const mem = _metaMem[key]
+  if (mem && Date.now() - mem.t < META_TTL) return mem.d
+  try {
+    const raw = wx.getStorageSync(META_STORAGE_PREFIX + key)
+    if (raw && raw.t && Date.now() - raw.t < META_TTL) {
+      _metaMem[key] = raw
+      return raw.d
+    }
+  } catch (e) { /* storage 不可用时静默降级 */ }
+  return null
+}
+
+function _metaWrite(key, data) {
+  const entry = { d: data, t: Date.now() }
+  _metaMem[key] = entry
+  try { wx.setStorageSync(META_STORAGE_PREFIX + key, entry) } catch (e) { /* 超出配额时忽略 */ }
+}
+
+// 后台静默回源，不阻塞调用方。
+// 60 秒内同一个 key 只回源一次，避免连开多个页面时打出并发请求风暴。
+const META_REVALIDATE_GAP = 60 * 1000
+const _metaRevalidatedAt = {}
+
+function _metaRevalidate(key, fetcher) {
+  const last = _metaRevalidatedAt[key] || 0
+  if (Date.now() - last < META_REVALIDATE_GAP) return
+  _metaRevalidatedAt[key] = Date.now()
+  fetcher().then(function (data) {
+    if (Array.isArray(data)) _metaWrite(key, data)
+  }).catch(function () {
+    // 静默：失败就继续用旧缓存，并允许下次立刻重试
+    _metaRevalidatedAt[key] = 0
+  })
+}
+
+/**
+ * 失效元数据缓存
+ * @param {string} prefix 省略=清全部；'zones'=清所有分区缓存；'alliances'=清所有联盟缓存
+ */
+function invalidateMeta(prefix) {
+  const p = prefix || ''
+  Object.keys(_metaMem).forEach(function (k) {
+    if (k.indexOf(p) === 0) delete _metaMem[k]
+  })
+  Object.keys(_metaRevalidatedAt).forEach(function (k) {
+    if (k.indexOf(p) === 0) delete _metaRevalidatedAt[k]
+  })
+  try {
+    const info = wx.getStorageInfoSync()
+    ;(info.keys || []).forEach(function (k) {
+      if (k.indexOf(META_STORAGE_PREFIX) !== 0) return
+      if (k.slice(META_STORAGE_PREFIX.length).indexOf(p) === 0) wx.removeStorageSync(k)
+    })
+  } catch (e) { /* 忽略 */ }
+}
+
+// 统一的「缓存优先」包装
+async function _metaGet(key, fetcher, force) {
+  if (!force) {
+    const hit = _metaRead(key)
+    if (hit) {
+      _metaRevalidate(key, fetcher)
+      return hit
+    }
+  }
+  const data = await fetcher()
+  _metaWrite(key, data)
+  return data
+}
+
 /**
  * 用户相关操作
  */
@@ -276,6 +364,8 @@ async function updateZoneCreator(zoneId, userId) {
   if (!res.result || !res.result.success) {
     throw new Error((res.result && res.result.err) || '添加区管失败')
   }
+  // 分区的 adminIds 变了 → 区管可见分区列表要重算
+  invalidateMeta('zones')
   return res.result
 }
 
@@ -292,7 +382,7 @@ async function createZone(zoneCode, zoneName, creatorId) {
     throw new Error('分区编号' + zoneCode + '已存在（分区：' + existing.zoneName + '），请更换编号')
   }
 
-  return await db.collection('zones').add({
+  const result = await db.collection('zones').add({
     data: {
       zoneCode: zoneCode,
       zoneName: zoneName,
@@ -302,6 +392,9 @@ async function createZone(zoneCode, zoneName, creatorId) {
       createTime: db.serverDate()
     }
   })
+
+  invalidateMeta('zones')
+  return result
 }
 
 // 根据分区编号获取分区
@@ -314,8 +407,8 @@ async function getZoneByCode(zoneCode) {
   return res.data.length > 0 ? res.data[0] : null
 }
 
-// 获取所有活跃分区（分页获取全部记录）
-async function getAllZones() {
+// 回源：获取所有活跃分区（分页获取全部记录）
+async function _fetchAllZones() {
   const db = getDb()
   let allZones = []
   let offset = 0
@@ -334,8 +427,13 @@ async function getAllZones() {
   return allZones
 }
 
-// 获取管理员创建的分区（支持多区管）
-async function getZonesByCreator(creatorId) {
+// 获取所有活跃分区（缓存优先，10 分钟 TTL；opts.force=true 强制回源）
+async function getAllZones(opts) {
+  return await _metaGet('zones:all', _fetchAllZones, opts && opts.force)
+}
+
+// 回源：获取管理员创建的分区（支持多区管）
+async function _fetchZonesByCreator(creatorId) {
   const db = getDb()
   const _ = db.command
   let allZones = []
@@ -358,6 +456,13 @@ async function getZonesByCreator(creatorId) {
   return allZones
 }
 
+// 获取管理员创建的分区（缓存优先；opts.force=true 强制回源）
+async function getZonesByCreator(creatorId, opts) {
+  return await _metaGet('zones:creator:' + creatorId, function () {
+    return _fetchZonesByCreator(creatorId)
+  }, opts && opts.force)
+}
+
 /**
  * 联盟相关操作
  */
@@ -377,11 +482,13 @@ async function initAlliances(zoneId) {
       }
     }))
   }
-  return await Promise.all(promises)
+  const result = await Promise.all(promises)
+  invalidateMeta('alliances')
+  return result
 }
 
-// 获取分区的联盟列表
-async function getAlliancesByZone(zoneId) {
+// 回源：获取分区的联盟列表
+async function _fetchAlliancesByZone(zoneId) {
   const db = getDb()
   const res = await db.collection('alliances').where({
     zoneId: zoneId
@@ -397,6 +504,14 @@ async function getAlliancesByZone(zoneId) {
   }
 
   return res.data
+}
+
+// 获取分区的联盟列表（缓存优先，按分区分别缓存；opts.force=true 强制回源）
+async function getAlliancesByZone(zoneId, opts) {
+  if (!zoneId) return []
+  return await _metaGet('alliances:zone:' + zoneId, function () {
+    return _fetchAlliancesByZone(zoneId)
+  }, opts && opts.force)
 }
 
 // 根据ID获取联盟
@@ -448,6 +563,7 @@ async function updateAllianceName(allianceId, name) {
     }
   })
   if (res.result.err) throw new Error(res.result.err)
+  invalidateMeta('alliances')
   return res.result
 }
 
@@ -462,6 +578,7 @@ async function bindAllianceAuditors(allianceId, auditorId, action = 'add') {
       }
     })
     if (res.result.err) throw new Error(res.result.err)
+    invalidateMeta('alliances')
     return res.result
   }
   const res = await wx.cloud.callFunction({
@@ -472,6 +589,7 @@ async function bindAllianceAuditors(allianceId, auditorId, action = 'add') {
     }
   })
   if (res.result.err) throw new Error(res.result.err)
+  invalidateMeta('alliances')
   return res.result
 }
 
@@ -794,7 +912,9 @@ async function createRegistration(data) {
         timeSlotId: data.timeSlotId,
         userId: data.userId,
         nickName: data.nickName,
-        position: data.position
+        position: data.position,
+        // 报名时的熔炉等级（{kind:'fire'|'level', value}），供报名列表 / 截图展示等级图标
+        furnace: data.furnace || null
       }
     }
   })
@@ -1094,6 +1214,8 @@ async function createPositionRegistration(data) {
       userId: data.userId,
       nickName: data.nickName,
       remark: data.remark || '',
+      // 报名时的熔炉等级（{kind:'fire'|'level', value}），供报名列表 / 截图展示等级图标
+      furnace: data.furnace || null,
       status: 'active',
       createTime: db.serverDate()
     }
@@ -1426,7 +1548,7 @@ async function deleteBattleConfig(configId) {
 // 创建国战报名记录
 async function createBattleRegistration(data) {
   const db = getDb()
-  const { configId, zoneId, userId, nickName, allianceId, allianceName, furnaceLevel, barracksLevel, troopCount, diamonds, voice, position, joinExpedition, joinRoyalCity } = data
+  const { configId, zoneId, userId, nickName, allianceId, allianceName, furnaceLevel, furnace, barracks, barracksLevel, troopCount, diamonds, voice, position, joinExpedition, joinRoyalCity } = data
 
   // 检查同一 configId + nickName 是否已报名（一人多账号按昵称去重）
   const existing = await db.collection('battleRegistrations').where({
@@ -1448,6 +1570,9 @@ async function createBattleRegistration(data) {
       allianceId: allianceId,
       allianceName: allianceName,
       furnaceLevel: furnaceLevel,
+      // 结构化熔炉等级 {kind,value}：报名列表 / 截图据此展示等级图标（furnaceLevel 是给用户看的自由文本）
+      furnace: furnace || null,
+      barracks: barracks || null,
       barracksLevel: barracksLevel,
       troopCount: troopCount,
       diamonds: diamonds,
@@ -1976,6 +2101,9 @@ module.exports = {
   getZoneByCode,
   getAllZones,
   getZonesByCreator,
+
+  // 元数据缓存（分区 / 联盟）；写入类操作后调 invalidateMeta('zones' | 'alliances') 失效
+  invalidateMeta,
 
   // 联盟
   initAlliances,

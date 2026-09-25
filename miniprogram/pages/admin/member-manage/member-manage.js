@@ -72,12 +72,7 @@ Page({
     }
   },
 
-  onZoneChange: function (e) {
-    const zone = e.detail.zone
-    if (!zone) return
-    this.setData({ selectedZone: zone })
-    this.loadMembers(zone._id)
-  },
+  // 注：分区只读（切换统一在首页），原 onZoneChange 已移除；成员列表按当前分区加载。
 
   loadMembers: async function (zoneId) {
     try {

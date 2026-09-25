@@ -3,6 +3,26 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
+const ga = require('../../../utils/gameAccount')
+
+// 给成员补上「熔炉等级」展示字段（火晶图 / 圆环数字 / 是否展示）
+// 三级兜底（交给 ga.decorate）：成员自带 furnace → 老数据文本 furnaceLevel → 按 userId 查该用户主账号。
+// 第三级走 manageGameAccount.listMainByUsers，所以即使 manageAllianceActivity 还是旧版
+// （没返回 furnace），这里也能补上等级图标。
+async function decorateMembers(list) {
+  const arr = (list || []).map(m => Object.assign({}, m))
+  try {
+    await ga.decorate(arr)
+  } catch (e) {
+    console.warn('[联盟活跃] 熔炉等级兜底失败(已忽略):', e)
+  }
+  return arr
+}
+
+// 成员行 → 熔炉规格（decorateMembers 已兜底，优先用算好的 furnaceSpec）
+function memberSpec(m) {
+  return (m && m.furnaceSpec) || ga.specFromRecord(m)
+}
 
 // 单行文本截断（超出加省略号）
 function truncateText(ctx, text, maxW) {
@@ -134,14 +154,18 @@ Page({
   loadData: async function (allianceId, callback) {
     try {
       const res = await db.getAllianceActivityMembers(allianceId)
+      // 依次补熔炉等级：第一个列表发兜底查询并写入 3 分钟缓存，后两个直接命中缓存，不会重复发请求
+      const members = await decorateMembers(res.members)
+      const activeList = await decorateMembers(res.activeList)
+      const inactiveList = await decorateMembers(res.inactiveList)
       this.setData({
         allianceName: res.allianceName || '',
         weekDates: res.weekDates || [],
         dayIndex: res.dayIndex || 0,
         weekStart: res.weekStart || '',
-        members: res.members || [],
-        activeList: res.activeList || [],
-        inactiveList: res.inactiveList || [],
+        members,
+        activeList,
+        inactiveList,
         total: res.total || 0,
         activeCount: res.activeCount || 0,
         loading: false
@@ -268,8 +292,9 @@ Page({
 
       const screenshotData = this.buildScreenshotData()
       const margin = 40
-      const canvasWidth = 750
-      const innerWidth = canvasWidth - margin * 2   // 670
+      // 加宽到 900：用户列要放得下「熔炉等级图标 + 昵称」，避免昵称被截断
+      const canvasWidth = 900
+      const innerWidth = canvasWidth - margin * 2   // 820
       const rowH = 48
       const tableHeaderH = 76   // 两行表头，与 buildScreenshotData 保持一致
       const topArea = 155
@@ -280,6 +305,10 @@ Page({
         height: screenshotData.height
       })
       const ctx = canvas.getContext('2d')
+
+      // 预加载熔炉等级素材（加载失败会自动降级为程序化绘制）
+      const members = this.data.members || []
+      const badgeImgs = await ga.preloadBadges(canvas, members.map(m => memberSpec(m)))
 
       // 背景
       ctx.fillStyle = '#FFFFFF'
@@ -307,8 +336,8 @@ Page({
       ctx.lineTo(canvasWidth - margin, 135)
       ctx.stroke()
 
-      // 列宽：第一列「用户」较宽，后 7 列均分
-      const nameColW = 150
+      // 列宽：第一列「用户」较宽（要放得下熔炉等级图标 + 昵称），后 7 列均分
+      const nameColW = 250
       const dayColW = Math.floor((innerWidth - nameColW) / 7)
       const colX = [margin]
       for (let i = 1; i < 8; i++) {
@@ -349,11 +378,18 @@ Page({
           ctx.fillRect(margin, y, innerWidth, rowH)
         }
 
-        // 昵称
-        ctx.fillStyle = '#333333'
+        // 昵称：前面先画熔炉等级图标，文字起点顺延
+        const nameX = colX[0] + 8
         ctx.font = '22px sans-serif'
         ctx.textBaseline = 'middle'
-        ctx.fillText(truncateText(ctx, m.nickName, nameColW - 16), colX[0] + 8, y + rowH / 2)
+        const bw = ga.drawBadge(ctx, nameX, y + rowH / 2, ga.BADGE_SIZE, memberSpec(m), badgeImgs)
+        ctx.fillStyle = '#333333'
+        ctx.font = '22px sans-serif'
+        ctx.fillText(
+          truncateText(ctx, m.nickName, nameColW - 16 - bw),
+          nameX + bw + (bw ? 4 : 0),
+          y + rowH / 2
+        )
 
         // 7 天状态：已过去/今天画 ✓ 或 ✗；未来日期留空
         const days = m.activeDays || []

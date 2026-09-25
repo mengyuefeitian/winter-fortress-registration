@@ -1,6 +1,6 @@
 {
   "navigationBarTitleText": "盟管控制台",
   "usingComponents": {
-    "zone-selector": "/components/zone-selector/zone-selector"
+    "alliance-picker": "/components/alliance-picker/alliance-picker"
   }
 }

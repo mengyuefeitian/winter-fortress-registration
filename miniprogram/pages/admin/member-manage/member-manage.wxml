@@ -1,8 +1,8 @@
 <view class="page">
-  <!-- 分区选择 -->
-  <view wx:if="{{zones.length > 1}}" class="section">
-    <view class="section-title">选择分区</view>
-    <zone-selector value="{{selectedZone}}" zones="{{zones}}" loaded="{{true}}" bind:change="onZoneChange" />
+  <!-- 当前分区：只读。分区切换统一在首页，管理页不再提供页内切换 -->
+  <view wx:if="{{selectedZone}}" class="section">
+    <view class="section-title">当前分区</view>
+    <view class="zone-readonly">{{selectedZone.zoneName}}</view>
   </view>
 
   <!-- 区管列表 -->

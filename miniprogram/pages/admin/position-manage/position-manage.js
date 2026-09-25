@@ -11,10 +11,10 @@ Page({
     role: '',
     isSuperAdmin: false,
 
-    // 分区选择（超管可见）
+    // 当前分区（只读展示：分区切换统一在首页，此页不再提供切换）
     zones: [],
     currentZone: null,
-    showZonePicker: false,
+    zoneLoaded: false,
 
     // 日期选择
     selectedDate: '',
@@ -119,15 +119,13 @@ Page({
   // 初始化角色信息
   initRole: function () {
     const role = app.globalData.role || 'admin'
-    const isSuperAdmin = role === 'superAdmin'
     this.setData({
       role: role,
-      isSuperAdmin: isSuperAdmin,
-      showZonePicker: isSuperAdmin
+      isSuperAdmin: role === 'superAdmin'
     })
   },
 
-  // 加载分区列表
+  // 加载分区列表（db 内部走缓存，命中即返回，不再每次等云端）
   loadZones: async function () {
     try {
       const userId = app.globalData.userInfo ? app.globalData.userInfo._id : app.globalData.openid
@@ -168,6 +166,7 @@ Page({
         this.setData({
           zones: zones,
           currentZone: currentZone,
+          zoneLoaded: true,
           canCreate: hasDate && hasZone
         })
       } else {
@@ -175,30 +174,20 @@ Page({
         this.setData({
           zones: [],
           currentZone: null,
+          zoneLoaded: true,
           canCreate: false
         })
-        // 超管提示创建分区，区管提示创建分区
-        util.showInfo('当前没有分区，请先创建分区')
+        // 分区只能到首页申请开通，这里不再提供"创建"入口
+        util.showInfo('当前没有分区，请到首页申请开通分区')
       }
     } catch (err) {
       console.error('加载分区失败:', err)
+      this.setData({ zoneLoaded: true })
       util.showError('加载分区失败')
     }
   },
 
-  // 分区选择变化（由组件内部处理全局状态同步）
-  onZoneChange: function (e) {
-    const currentZone = e.detail.zone
-    if (!currentZone) return
-
-    const hasDate = this.data.selectedDate !== ''
-    const hasZone = currentZone !== null
-    this.setData({
-      currentZone: currentZone,
-      canCreate: hasDate && hasZone
-    })
-    this.loadConfigs()
-  },
+  // 注：分区只读，原 onZoneChange（页内切区）已移除；切换分区请到首页。
 
   // 格式化日期
   formatDate: function (date) {
@@ -415,10 +404,5 @@ Page({
     }
   },
 
-  // 跳转到分区管理
-  goToZoneManage: function () {
-    wx.navigateTo({
-      url: '/pages/admin/zone-manage/zone-manage'
-    })
-  }
+  // 分区相关入口已从本页移除（统一在首页 / 超管控制台 → 分区管理）
 })

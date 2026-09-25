@@ -1,7 +1,9 @@
 <!--pages/superAdmin/admin-review/admin-review.wxml -->
 <view class="page">
-  <!-- 计数哨兵：服务端真实待审核/已审核数量（与下方列表交叉验证） -->
-  <view wx:if="{{stats}}" style="display:flex;flex-wrap:wrap;gap:8rpx;padding:20rpx 24rpx;background:#f5f7fa;margin:0 24rpx 16rpx;border-radius:14rpx;">
+  <!-- 计数哨兵：服务端真实待审核/已审核数量（与下方列表交叉验证）
+       ⚠️ zoneScope（区管控制台进入）时不显示：服务端统计是全分区口径，
+       与本页「只看本分区」的列表对不上，会让人以为列表漏数据 -->
+  <view wx:if="{{stats && !zoneScope}}" style="display:flex;flex-wrap:wrap;gap:8rpx;padding:20rpx 24rpx;background:#f5f7fa;margin:0 24rpx 16rpx;border-radius:14rpx;">
     <view style="flex:1;min-width:120rpx;text-align:center;">
       <text style="display:block;font-size:38rpx;font-weight:700;color:#e54d42;">{{stats.pendingTotal}}</text>
       <text style="font-size:22rpx;color:#888;">待审核(总)</text>
@@ -91,15 +93,16 @@
       <!-- 盟管联盟选择 -->
       <view wx:if="{{item.applyType === 'allianceManager' && item.selectingAlliance}}" class="zone-select-section">
         <text class="select-label">选择分区：</text>
-        <picker bindchange="onAllianceZoneSelect" data-app-index="{{appIndex}}"
-                range="{{availableZones}}" range-key="zoneName" value="{{item.applicantZoneIndex >= 0 ? item.applicantZoneIndex : 0}}">
-          <view class="picker-compact">{{item.applicantZoneIndex >= 0 ? availableZones[item.applicantZoneIndex].zoneName : '请选择分区'}}</view>
+        <!-- 区管控制台进入（zoneLocked）：分区就是本分区，锁定不可改（切换分区统一在首页） -->
+        <view wx:if="{{zoneLocked}}" class="picker-compact">{{scopeZoneName || item.applicantZoneName || '本分区'}}</view>
+        <picker wx:else bindchange="onAllianceZoneSelect" data-app-index="{{appIndex}}"
+                range="{{availableZones}}" range-key="zoneName" value="{{item.applicantZonePickerIndex >= 0 ? item.applicantZonePickerIndex : 0}}">
+          <view class="picker-compact">{{item.applicantZonePickerIndex >= 0 ? availableZones[item.applicantZonePickerIndex].zoneName : '请选择分区'}}</view>
         </picker>
         <text class="select-label" style="margin-top: 8px;">选择联盟：</text>
-        <picker wx:if="{{item.applicantAlliances.length > 0}}" bindchange="onAllianceSelect" data-app-index="{{appIndex}}"
-                range="{{item.applicantAlliances}}" range-key="allianceName" value="{{item.alliancePickerIndex || 0}}">
-          <view class="picker-compact">{{item.applicantAlliances[item.alliancePickerIndex || 0].allianceName || '请选择'}}</view>
-        </picker>
+        <alliance-picker wx:if="{{item.applicantAlliances.length > 0}}" alliances="{{item.applicantAlliances}}"
+                         value="{{item.alliancePickerIndex || 0}}" placeholder="请选择"
+                         data-app-index="{{appIndex}}" bind:change="onAllianceSelect" />
         <view wx:else class="picker-compact text-weak">请先选择分区</view>
         <!-- 显示申请人自定义的联盟名称 -->
         <view wx:if="{{item.customAllianceName}}" class="custom-name-hint">

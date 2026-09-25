@@ -1,6 +1,4 @@
 {
   "navigationBarTitleText": "官职管理",
-  "usingComponents": {
-    "zone-selector": "/components/zone-selector/zone-selector"
-  }
+  "usingComponents": {}
 }

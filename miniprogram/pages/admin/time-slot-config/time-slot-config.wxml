@@ -11,9 +11,8 @@
       </view>
       <view class="form-col">
         <text class="form-label">联盟</text>
-        <picker wx:if="{{selectedZone && alliances.length > 0}}" range="{{alliances}}" range-key="allianceName" value="{{allianceIndex}}" bindchange="onAllianceChange">
-          <view class="picker-compact">{{selectedAlliance ? selectedAlliance.allianceName : '请选择'}}<image class="picker-compact-arrow" src="/images/icon-arrow-down.png"></image></view>
-        </picker>
+        <alliance-picker wx:if="{{selectedZone && alliances.length > 0}}" alliances="{{alliances}}" value="{{allianceIndex}}"
+                         placeholder="请选择" bind:change="onAllianceChange" />
         <view wx:else class="picker-compact disabled">请先选分区</view>
       </view>
     </view>
