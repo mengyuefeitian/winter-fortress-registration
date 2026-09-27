@@ -1,20 +1,33 @@
 <a id="readme-top"></a>
 
+<div align="center">
+
+<img src="docs/qrcode.jpg" width="180" alt="无尽冬日报名助手小程序二维码" />
+
 # 无尽冬日报名助手
+
+**五种联盟活动一个入口，报名和活跃统计都不用再翻群聊。**
+
+微信扫码立即体验 —— 堡垒、兵工厂、峡谷会战、国战、官职一站式报名，  
+打开小程序自动登记当日活跃，管理层一键导出本周活跃表。  
+基于微信云开发，无需自建服务器。
 
 [![平台](https://img.shields.io/badge/平台-微信小程序-07C160?logo=wechat)](https://mp.weixin.qq.com/)
 [![版本](https://img.shields.io/badge/version-1.17.2-blue)](https://github.com/mengyuefeitian/winter-fortress-registration/releases)
 [![后端](https://img.shields.io/badge/后端-微信云开发-4A90D9)](https://cloud.weixin.qq.com/)
 [![更新日志](https://img.shields.io/badge/docs-CHANGELOG-brightgreen)](docs/CHANGELOG.md)
 
-> 为《无尽冬日》联盟活动打造的一站式报名管理小程序：堡垒、兵工厂、峡谷会战、国战、官职五种活动一个入口，成员活跃度自动统计，告别 Excel 表格和群里刷屏报名。
+[项目简介](#项目简介) · [功能特性](#功能特性) · [使用指南](#使用指南) · [本地部署](#本地运行与部署) · [常见问题](#常见问题)
+
+</div>
+
+---
 
 <details>
 <summary><strong>目录</strong></summary>
 
 - [项目简介](#项目简介)
 - [功能特性](#功能特性)
-- [快速体验](#快速体验)
 - [使用指南](#使用指南)
 - [本地运行与部署](#本地运行与部署)
 - [项目结构](#项目结构)
@@ -67,16 +80,6 @@
 - **审核结果通知**：申请结果通过微信订阅消息直接推送到用户
 - **邮件提醒**：有人提交申请时自动通知超级管理员
 - **自动清理**：过期报名、失效时间段、超期审批记录定时自动清空
-
-<p align="right">(<a href="#readme-top">回到顶部</a>)</p>
-
-## 快速体验
-
-微信扫描下方二维码即可访问小程序：
-
-<div align="center">
-  <img src="docs/qrcode.jpg" alt="无尽冬日报名助手小程序二维码" width="280" />
-</div>
 
 <p align="right">(<a href="#readme-top">回到顶部</a>)</p>
 
