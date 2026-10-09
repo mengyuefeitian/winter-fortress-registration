@@ -75,6 +75,17 @@
           <text class="function-desc">报名峡谷会战活动</text>
         </view>
       </view>
+
+      <!-- 熊坑报名 -->
+      <view class="function-card" bindtap="goToBearPit" wx:if="{{showBattleRegistration}}">
+        <view class="function-icon">
+          <image src="/images/logo-bear-pit.svg" style="width: 32px; height: 32px;" />
+        </view>
+        <view class="function-content">
+          <text class="function-name">熊坑报名</text>
+          <text class="function-desc">按等级排座 · 可选邻居</text>
+        </view>
+      </view>
     </view>
 
     <!-- 底部说明 -->
@@ -174,6 +185,17 @@
         <view class="function-content">
           <text class="function-name">峡谷会战报名</text>
           <text class="function-desc">报名峡谷会战活动</text>
+        </view>
+      </view>
+
+      <!-- 熊坑报名 -->
+      <view class="function-card" bindtap="goToBearPit" wx:if="{{showBattleRegistration}}">
+        <view class="function-icon">
+          <image src="/images/logo-bear-pit.svg" style="width: 32px; height: 32px;" />
+        </view>
+        <view class="function-content">
+          <text class="function-name">熊坑报名</text>
+          <text class="function-desc">按等级排座 · 可选邻居</text>
         </view>
       </view>
 

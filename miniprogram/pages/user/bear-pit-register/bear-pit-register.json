@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "熊坑报名",
+  "usingComponents": {
+    "account-nickname": "/components/account-nickname/account-nickname",
+    "alliance-picker": "/components/alliance-picker/alliance-picker"
+  }
+}

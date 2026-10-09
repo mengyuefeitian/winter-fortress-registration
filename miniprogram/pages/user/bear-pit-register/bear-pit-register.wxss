@@ -1,0 +1,192 @@
+/* pages/user/bear-pit-register/bear-pit-register.wxss */
+.bpr-container {
+  padding: 16px 16px 40px;
+}
+
+.bpr-sec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.bpr-sec-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+.bpr-sec-count {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.bpr-row {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  border-bottom: 1px solid #f3f4f6;
+}
+.bpr-row:last-child {
+  border-bottom: none;
+}
+.bpr-label {
+  width: 76px;
+  flex-shrink: 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+.bpr-control {
+  flex: 1;
+  min-width: 0;
+}
+.bpr-control-end {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.bpr-input {
+  flex: 1;
+  text-align: right;
+  font-size: 14px;
+  color: #111827;
+}
+.bpr-ph {
+  color: #c4c8ce;
+  font-size: 13px;
+}
+.bpr-unit {
+  font-size: 13px;
+  color: #9ca3af;
+  margin-left: 4px;
+}
+.bpr-tip {
+  font-size: 13px;
+  color: #9ca3af;
+}
+.bpr-hint {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #9ca3af;
+  line-height: 1.7;
+}
+
+/* 二选一 */
+.bpr-modes {
+  display: flex;
+  gap: 10px;
+}
+.bpr-mode {
+  flex: 1;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #ffffff;
+}
+.bpr-mode.on {
+  border-color: #e94560;
+  background: #fff5f7;
+}
+.bpr-mode.disabled {
+  opacity: 0.5;
+}
+.bpr-mode-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+.bpr-mode.on .bpr-mode-name {
+  color: #e94560;
+}
+.bpr-mode-desc {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #9ca3af;
+  line-height: 1.5;
+}
+
+/* 邻居网格：一行 3 个 */
+.bpr-nb-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 14px 0 8px;
+  font-size: 12px;
+  color: #6b7280;
+}
+.bpr-nb-chosen {
+  color: #e94560;
+  font-weight: 600;
+}
+.bpr-nb-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.bpr-nb-item {
+  width: calc((100% - 16px) / 3);
+  box-sizing: border-box;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 4px;
+  text-align: center;
+  background: #ffffff;
+}
+.bpr-nb-item.picked {
+  border-color: #e94560;
+  background: #fff5f7;
+}
+.bpr-nb-item.taken {
+  opacity: 0.42;
+  background: #f9fafb;
+}
+.bpr-nb-nick {
+  display: block;
+  font-size: 13px;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bpr-nb-item.picked .bpr-nb-nick {
+  color: #e94560;
+  font-weight: 600;
+}
+.bpr-nb-lv {
+  display: block;
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+.bpr-nb-empty {
+  font-size: 12px;
+  color: #9ca3af;
+  line-height: 1.7;
+}
+.bpr-nb-clear {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #6b7280;
+  text-align: center;
+  text-decoration: underline;
+}
+
+/* 提交 */
+.bpr-submit {
+  margin-top: 20px;
+  background: #e94560;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+}
+.bpr-submit[disabled] {
+  opacity: 0.6;
+  color: #ffffff;
+}
+.bpr-foot {
+  margin-top: 14px;
+  font-size: 11px;
+  color: #9ca3af;
+  line-height: 1.7;
+}

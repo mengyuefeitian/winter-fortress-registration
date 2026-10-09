@@ -488,6 +488,14 @@ Page({
     })
   },
 
+  // 熊坑报名
+  goToBearPit: function () {
+    if (!this.ensureLogin()) return
+    wx.navigateTo({
+      url: '/pages/user/bear-pit/bear-pit'
+    })
+  },
+
   // 意见与建议
   goToFeedback: function () {
     wx.navigateTo({
