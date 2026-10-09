@@ -6,14 +6,14 @@
 
 # 无尽冬日报名助手
 
-**五种联盟活动一个入口，报名和活跃统计都不用再翻群聊。**
+**六种联盟活动一个入口，报名和活跃统计都不用再翻群聊。**
 
-微信扫码立即体验 —— 堡垒、兵工厂、峡谷会战、国战、官职一站式报名，  
+微信扫码立即体验 —— 堡垒、兵工厂、峡谷会战、熊坑、国战、官职一站式报名，  
 打开小程序自动登记当日活跃，管理层一键导出本周活跃表。  
 基于微信云开发，无需自建服务器。
 
 [![平台](https://img.shields.io/badge/平台-微信小程序-07C160?logo=wechat)](https://mp.weixin.qq.com/)
-[![版本](https://img.shields.io/badge/version-1.17.4-blue)](https://github.com/mengyuefeitian/winter-fortress-registration/releases)
+[![版本](https://img.shields.io/badge/version-1.18.0-blue)](https://github.com/mengyuefeitian/winter-fortress-registration/releases)
 [![后端](https://img.shields.io/badge/后端-微信云开发-4A90D9)](https://cloud.weixin.qq.com/)
 [![更新日志](https://img.shields.io/badge/docs-CHANGELOG-brightgreen)](docs/CHANGELOG.md)
 
@@ -58,7 +58,8 @@
 
 ### 报名管理
 
-- **五种活动全覆盖**：堡垒、兵工厂、峡谷会战、国战、官职报名，一个小程序全搞定
+- **六种活动全覆盖**：堡垒、兵工厂、峡谷会战、熊坑、国战、官职报名，一个小程序全搞定
+- **熊坑排位图**：108 个座位按「地心探险等级」自动排位，可选一位邻居连坐；每个联盟一张图，支持缩放查看与保存到相册
 - **分角色管理**：普通用户 / 盟管 / 区管 / 超级管理员，权限逐级细分
 - **多分区 / 多联盟**：分区与联盟数量不限，支持多区管协同
 - **在线申请与审核**：申请盟管、区管、开通分区均在线提交，上级一键审批，结果通过订阅消息推送
@@ -88,7 +89,7 @@
 ### 普通用户
 
 1. 首页选择自己所在的分区
-2. 选择要报名的活动（堡垒 / 兵工厂 / 峡谷会战 / 国战 / 官职）
+2. 选择要报名的活动（堡垒 / 兵工厂 / 峡谷会战 / 熊坑 / 国战 / 官职）
 3. 选择游戏账号、填写位置信息即可完成报名
 4. 在【我的】→【我的报名】中随时查看或取消
 
@@ -138,6 +139,7 @@
 | 分区与联盟 | `zones`、`alliances` |
 | 活动配置 | `timeSlots`、`battleConfigs`、`arsenalConfigs`、`canyonConfigs`、`positionConfigs` |
 | 报名记录 | `registrations`、`battleRegistrations`、`arsenalRegistrations`、`canyonRegistrations`、`positionRegistrations` |
+| 熊坑排位 | `bearPitBoards`（每个联盟一份文档，成员数组整体读写） |
 | 游戏账号 | `gameAccounts` |
 | 联盟活跃 | `allianceMembers`（持久成员名单）、`allianceActivity`（周活跃记录，仅保留本周） |
 | 其他 | `feedbacks` |
@@ -227,6 +229,7 @@
 
 ## 更新日志
 
+- **v1.18.0** — 新增「熊坑报名」：每个联盟一张 108 座的方形排位图，按地心探险等级自动排座，可指定一位邻居连坐；管理员可删除并重排，支持缩放查看与保存到相册
 - **v1.17.4** — 代码包静态资源瘦身：图标分辨率按实际显示尺寸下调、PNG 调色板量化，资源总大小 357.7KB → 101.0KB（满足「图片和音频资源不超过 200K」）
 - **v1.17.3** — 修复国战报名「射手营（弓兵）等级」选完不生效（等级选择器 target 与页面字段命名不一致，写进了不存在的字段）
 - **v1.17.2** — 官职报名页视觉收敛（切换条减高、等级徽章放大）；「功能介绍」新增 v1.17.0 说明入口

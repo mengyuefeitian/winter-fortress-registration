@@ -1,0 +1,27 @@
+<!--pages/user/bear-pit-map/bear-pit-map.wxml-->
+<view class="bpm-page">
+
+  <!-- 顶部工具条 -->
+  <view class="bpm-bar">
+    <view class="bpm-seg">
+      <view class="bpm-seg-item {{mode === 'nick' ? 'on' : ''}}" bindtap="switchMode" data-mode="nick">昵称</view>
+      <view class="bpm-seg-item {{mode === 'index' ? 'on' : ''}}" bindtap="switchMode" data-mode="index">编号</view>
+    </view>
+    <view class="bpm-actions">
+      <view class="bpm-btn" bindtap="resetView">复位</view>
+      <view class="bpm-btn bpm-btn-primary" bindtap="saveAlbum">保存到相册</view>
+    </view>
+  </view>
+
+  <!-- 画布 -->
+  <view class="bpm-canvas-wrap">
+    <canvas type="2d" id="pitCanvas" class="bpm-canvas"
+            bindtouchstart="onTouchStart" bindtouchmove="onTouchMove" bindtouchend="onTouchEnd"
+            bindtouchcancel="onTouchEnd"></canvas>
+    <view wx:if="{{loading}}" class="bpm-loading"><text>加载中…</text></view>
+  </view>
+
+  <view class="bpm-foot">
+    <text>双指缩放 · 单指拖动 · 共 {{seatTotal}} 个座位 · 已报名 {{memberCount}} 人</text>
+  </view>
+</view>

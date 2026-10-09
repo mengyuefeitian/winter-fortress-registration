@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "熊坑",
+  "usingComponents": {
+    "alliance-picker": "/components/alliance-picker/alliance-picker",
+    "float-reminder": "/components/float-reminder/float-reminder"
+  }
+}

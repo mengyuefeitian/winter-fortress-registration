@@ -1,0 +1,95 @@
+<!--pages/user/bear-pit/bear-pit.wxml-->
+<view class="bp-container">
+
+  <!-- 标题 + 统计 + 报名按钮 -->
+  <view class="bp-hero">
+    <view class="bp-hero-top">
+      <text class="bp-hero-title">熊坑</text>
+      <text class="bp-hero-count">已报名 {{memberCount}} 人</text>
+    </view>
+    <view class="bp-hero-btn {{seatsFull ? 'bp-hero-btn-disabled' : ''}}" bindtap="goRegister">
+      <text>{{seatsFull ? '座位已满' : '我要报名'}}</text>
+    </view>
+  </view>
+
+  <!-- 分区 / 联盟（每个联盟一张图） -->
+  <view class="card">
+    <view wx:if="{{selectedZone}}" class="bp-zone-row">
+      <text class="bp-label">分区</text>
+      <text class="bp-zone-name">{{selectedZone.zoneName}}</text>
+    </view>
+    <view wx:else class="bp-zone-row">
+      <text class="bp-tip">请先在首页选择您的分区</text>
+    </view>
+    <view wx:if="{{selectedZone}}" class="bp-alliance-row">
+      <text class="bp-label">联盟</text>
+      <view class="bp-alliance-picker">
+        <alliance-picker wx:if="{{alliances.length > 0}}" alliances="{{alliances}}" value="{{allianceIndex}}"
+                         bind:change="onAllianceChange" />
+        <text wx:else class="bp-tip">该分区暂无联盟</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 熊坑分布图 -->
+  <view class="card">
+    <view class="bp-section-head">
+      <text class="bp-section-title">熊坑分布图</text>
+      <view class="bp-seg">
+        <view class="bp-seg-item {{thumbMode === 'nick' ? 'on' : ''}}" bindtap="switchThumbMode" data-mode="nick">昵称</view>
+        <view class="bp-seg-item {{thumbMode === 'index' ? 'on' : ''}}" bindtap="switchThumbMode" data-mode="index">编号</view>
+      </view>
+    </view>
+
+    <view wx:if="{{!selectedAlliance}}" class="bp-empty">
+      <text>请先选择联盟</text>
+    </view>
+    <block wx:else>
+      <view class="bp-thumb-wrap" bindtap="openMap">
+        <canvas type="2d" id="bearPitThumb" class="bp-thumb"></canvas>
+        <view class="bp-thumb-hint">点击查看大图 · 可缩放 / 保存到相册</view>
+      </view>
+      <view class="bp-legend">
+        <view class="bp-legend-item"><view class="bp-legend-dot" style="background:#FFE89C"></view><text>西北</text></view>
+        <view class="bp-legend-item"><view class="bp-legend-dot" style="background:#9BC1E6"></view><text>东北</text></view>
+        <view class="bp-legend-item"><view class="bp-legend-dot" style="background:#FED966"></view><text>东南</text></view>
+        <view class="bp-legend-item"><view class="bp-legend-dot" style="background:#BDD7EE"></view><text>西南</text></view>
+        <view class="bp-legend-item"><view class="bp-legend-dot" style="background:#FFFFFF;border:1px dashed #9ca3af"></view><text>空位</text></view>
+      </view>
+    </block>
+  </view>
+
+  <!-- 报名人员 -->
+  <view class="card">
+    <view class="bp-section-head">
+      <text class="bp-section-title">报名人员</text>
+      <text class="bp-section-count">{{memberCount}} / {{seatTotal}}</text>
+    </view>
+
+    <view wx:if="{{loading}}" class="bp-empty"><text>加载中…</text></view>
+    <view wx:elif="{{!selectedAlliance}}" class="bp-empty"><text>请先选择联盟</text></view>
+    <view wx:elif="{{tableList.length === 0}}" class="bp-empty">
+      <text class="bp-empty-emoji">🐻</text>
+      <text>还没有人报名，快来占座</text>
+    </view>
+    <view wx:else class="bp-grid">
+      <view wx:for="{{tableList}}" wx:key="regId" class="bp-grid-item">
+        <view class="bp-grid-main">
+          <text class="bp-grid-lv">地心 {{item.dixinText}}</text>
+          <text class="bp-grid-nick">{{item.nickName}}</text>
+        </view>
+        <view class="bp-grid-side">
+          <text class="bp-grid-seat">{{item.seatIndex}}号</text>
+          <text wx:if="{{item.neighborSeat}}" class="bp-grid-nb">邻{{item.neighborSeat}}</text>
+        </view>
+        <view wx:if="{{canManage}}" class="bp-grid-del" catchtap="removeMember" data-index="{{index}}">删</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="bp-foot">
+    <text class="bp-foot-text">座位按「地心探险」从高到低由内圈往外排；更换账号等级后需重新报名才会重排。</text>
+  </view>
+
+  <float-reminder id="entryReminder" />
+</view>

@@ -1993,6 +1993,49 @@ async function getCanyonStats(configId, options = {}) {
 }
 
 /**
+ * 熊坑报名（bearPit）
+ *
+ * 一个联盟一张「看板」：cloudfunctions/bearPit 负责读写 bearPitBoards 文档并整体重排座位。
+ * 座位几何 / 排位规则见 utils/bearPitLayout.js。
+ */
+
+// 读取某联盟的熊坑看板（报名人员 + 座位号）
+async function getBearPitBoard(allianceId) {
+  const res = await wx.cloud.callFunction({
+    name: 'bearPit',
+    data: { action: 'getBoard', data: { allianceId } }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '加载熊坑看板失败')
+  }
+  return res.result.board || { allianceId, members: [], seatTotal: 0 }
+}
+
+// 报名 / 改报（同一昵称即覆盖），服务端整体重排座位
+async function bearPitRegister(payload) {
+  const res = await wx.cloud.callFunction({
+    name: 'bearPit',
+    data: { action: 'register', data: payload }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '熊坑报名失败')
+  }
+  return res.result
+}
+
+// 管理员删除某条报名（盟管 / 区管 / 超管），服务端重排并把失效邻居重置为「无邻居」
+async function bearPitRemove(payload) {
+  const res = await wx.cloud.callFunction({
+    name: 'bearPit',
+    data: { action: 'remove', data: payload }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '删除熊坑报名失败')
+  }
+  return res.result
+}
+
+/**
  * 意见反馈
  */
 async function createFeedback(userId, nickName, type, content, contactInfo, imageUrls) {
@@ -2221,6 +2264,11 @@ module.exports = {
   // 兵营/峡谷统计
   getArsenalStats,
   getCanyonStats,
+
+  // 熊坑报名
+  getBearPitBoard,
+  bearPitRegister,
+  bearPitRemove,
 
   // 联盟活跃
   getAllianceActivityMembers,

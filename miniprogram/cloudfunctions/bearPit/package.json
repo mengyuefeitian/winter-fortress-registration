@@ -1,0 +1,9 @@
+{
+  "name": "bearPit",
+  "version": "1.0.0",
+  "description": "Bear pit (熊坑) registration board: seat planning and neighbor binding",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}
