@@ -18,6 +18,34 @@
 
 ---
 
+## v1.17.3（修复国战报名「射手营等级」选不中）
+
+### 现象
+国战报名 → 选日期 → 兵营等级 → **弓兵（射手营）**：选完等级点确定，格子里的值不更新；
+盾兵、矛兵都正常。部分用户表现为「点了没反应」，并且因为提交校验要求三兵营齐全，
+射手营恒为空时会卡在「请完整选择兵营等级（盾/矛/射）」，看上去像「无法选择」。
+
+### 根因：`bow` 与 `archer` 两套命名混用
+- 账号存储 / 报名记录里射手营的 key 是 **`bow`**（`gameAccounts.barracks.bow`、`battleRegistrations.barracks.bow`）。
+- 但国战报名页的数据字段叫 **`archer`**（`archerSpec` / `archerView`，与 `ga.specsOf()` 返回的 `archerSpec` 对齐）。
+- `openLevelSheet` / `onLevelConfirm` 都是用 `target + 'Spec'` 拼字段名，而
+  `data-target="bow"`、`TARGET_TITLES` 的 key 也是 `bow` → 确认后写进了**不存在的 `bowSpec`**，
+  真正的 `archerSpec` 从未被赋值，`archerView.has` 一直是 false。
+  打开弹窗时同理读到 `bowSpec`（undefined），所以也不会回显既有值。
+
+### 修法
+- `battle-registration.wxml`：射手营块的 `data-target` 改 **`archer`**（样式类 `lv-row-bow` 保留）。
+- `battle-registration.js`：`TARGET_TITLES` 的 key `bow` → **`archer`**，并在两处加注释说明
+  「存储叫 bow、页面字段叫 archer，不是一个命名空间」。
+- 新增回归测试 `.workbuddy/tools/battle_level_target_test.js`：校验 wxml 里每个 `data-target`
+  都能对上页面字段，并模拟「点射手营 → 选火晶 8 + T12 → 确认」，断言 `archerSpec`/`archerView`
+  被更新、`validate()` 不再被射手营卡住。
+
+### 版本号
+- `utils/version.js` 的 `APP_VERSION` → **1.17.3**（只修 bug，升第三位）。
+
+---
+
 ## v1.17.2（官职报名页视觉收敛 / 功能介绍补 v1.17.0）
 
 ### 功能介绍（`pages/user/updates`）

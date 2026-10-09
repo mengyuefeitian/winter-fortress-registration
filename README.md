@@ -13,7 +13,7 @@
 基于微信云开发，无需自建服务器。
 
 [![平台](https://img.shields.io/badge/平台-微信小程序-07C160?logo=wechat)](https://mp.weixin.qq.com/)
-[![版本](https://img.shields.io/badge/version-1.17.2-blue)](https://github.com/mengyuefeitian/winter-fortress-registration/releases)
+[![版本](https://img.shields.io/badge/version-1.17.3-blue)](https://github.com/mengyuefeitian/winter-fortress-registration/releases)
 [![后端](https://img.shields.io/badge/后端-微信云开发-4A90D9)](https://cloud.weixin.qq.com/)
 [![更新日志](https://img.shields.io/badge/docs-CHANGELOG-brightgreen)](docs/CHANGELOG.md)
 
@@ -227,9 +227,9 @@
 
 ## 更新日志
 
+- **v1.17.3** — 修复国战报名「射手营（弓兵）等级」选完不生效（等级选择器 target 与页面字段命名不一致，写进了不存在的字段）
 - **v1.17.2** — 官职报名页视觉收敛（切换条减高、等级徽章放大）；「功能介绍」新增 v1.17.0 说明入口
 - **v1.17.0** — 游戏账号全面升级：多账号管理、报名自动填充、兵种阶级（T11/T12）同步、等级选择器全站统一；分区权限收紧与盟管审核按分区隔离
-- **v1.16.0** — 国战报名页等级图标放大并居中；盟管 / 区管控制台移除分区显示
 
 完整变更记录见 [`docs/CHANGELOG.md`](docs/CHANGELOG.md)，版本说明页见[官网更新日志](https://www.xiaoanhome.xyz/winter-fortress)。
 

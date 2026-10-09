@@ -75,7 +75,9 @@
           </view>
           <image class="level-pick-arrow" src="/images/icon-chevron-right.png" mode="aspectFit" />
         </view>
-        <view class="level-pick-row lv-row-tri lv-row-bow" hover-class="lv-hover-bow" bindtap="openLevelSheet" data-target="bow">
+        <!-- ⚠️ data-target 必须用 archer（本页数据字段是 archerSpec / archerView），
+             写成 bow 会导致选择后写进不存在的 bowSpec，射手营永远选不中 -->
+        <view class="level-pick-row lv-row-tri lv-row-bow" hover-class="lv-hover-bow" bindtap="openLevelSheet" data-target="archer">
           <image class="level-pick-bic" src="/images/game-account/barracks-bow.png" mode="aspectFit" />
           <view class="level-pick-value">
             <block wx:if="{{archerView.has}}">

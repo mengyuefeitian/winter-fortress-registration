@@ -6,11 +6,15 @@ const shareEntry = require('../../../utils/shareEntry')
 const ga = require('../../../utils/gameAccount')
 
 // 熔炉 / 三兵营 的标题与图标
+// ⚠️ 这里的 key 必须等于页面数据字段去掉 Spec 的部分（furnaceSpec / shieldSpec / spearSpec / archerSpec），
+//    openLevelSheet 与 onLevelConfirm 都是用 `target + 'Spec'` 拼字段名的。
+//    射手营在「账号存储」里叫 bow（gameAccounts.barracks.bow / 报名记录 barracks.bow），
+//    但在本页数据里叫 archer —— 两边不是一个命名空间，别混用（曾因这里写成 bow 导致射手营选不中）。
 const TARGET_TITLES = {
   furnace: { title: '熔炉等级', icon: '/images/game-account/furnace.png' },
   shield: { title: '盾兵营等级', icon: '/images/game-account/barracks-shield.png' },
   spear: { title: '矛兵营等级', icon: '/images/game-account/barracks-spear.png' },
-  bow: { title: '射手营等级', icon: '/images/game-account/barracks-bow.png' }
+  archer: { title: '射手营等级', icon: '/images/game-account/barracks-bow.png' }
 }
 
 Page({
