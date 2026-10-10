@@ -57,7 +57,9 @@ const MAX_MEMBERS = 100
 //   v2 = 邻居改为「就近换位」（2026-10-10）
 //   v3 = 落座改为「严格按地心等级名次」+ 邻居只在本环内换位、不允许把等级更高的
 //        人挤到外圈（修正用户截图里「第一名跑到 11 号、最后一名占了 1 号位」）
-const LAYOUT_VERSION = 3
+//   v4 = **同一环内自由换位**（可挪到空位、可与同环的人互换），保证邻居能挨上
+//        （修正「到处混/灰姨在二环却连不到一环的邻居」）
+const LAYOUT_VERSION = 4
 
 // 绘制用色
 const PIT_STYLE = {
@@ -276,13 +278,14 @@ function resetNeighbor(u) {
  * @param {Array} members 报名人员 [{ nickName, dixin, createTime, mode, neighborNick }]
  * @returns {Array} 新数组，带 seatIndex（座位号，1 起）/ neighborSeat / mode / neighborNick
  *
- * 规则（用户口径：**优先按地心探险等级排，然后再调整相邻的位置**）：
- *  1. 地心探险等级越高越靠内圈（座位号越小）；同级先报名靠内
+ * 规则（用户口径 2026-10-10：**同一环内可以互换位置，保障邻居能相邻**）：
+ *  1. 地心探险等级越高越靠内圈；同级先报名靠前 —— 先按名次各就各位
  *  2. 旗子位不能排人（直接跳过）
- *  3. 邻居：尽量把 A 排在指定邻居 B 旁边；A→B→C 链条一起考虑
+ *  3. 邻居：把 A 排在指定邻居 B 旁边；A→B→C 链条一节一节往回贴
  *  4. 邻居目标被删除 / 被别人抢走 → 自动重置为「按地心排」
- *  5. 修正阶段**只在本环内做就近换位**：跟「座位号离自己最近、不会拆散别人
- *     邻居、且不会把等级更高且更靠内的人挤到外圈」的人换，位移还有上限
+ *  5. 修正阶段：**环的归属不变**（仍由名次决定），人在自己那一环里**任意换位**
+ *     （挪到空位 / 与同环的人互换），让邻居尽量挨上；只接受「不减少已连上邻居数」
+ *     的移动，避免反复横跳
  */
 function planSeats(members) {
   const list = (members || []).map(function (m) { return Object.assign({}, m) })
@@ -333,119 +336,164 @@ function planSeats(members) {
     }
   })
 
-  // 3) 落座顺序：**严格按排名**（地心探险高 → 座位号小）
+  // 3) 落座顺序：**严格按名次**（地心探险高 → 座位号小）
   //    ⚠️ 曾经把「整条链挪到链内排名最高者位置」，结果排名靠后的人拿到了很靠内的
-  //       座位号（用户看到的「地心探险等级最低的跑到 1 环 1 号位」）。邻居一律留到第 6 步
-  //       用**就近换位**处理：谁的座位号都不许因为邻居而大幅跳跃。
+  //       座位号（用户看到的「地心探险等级最低的跑到 1 环 1 号位」）。邻居一律留到第 5 步
+  //       用「环内换位」处理。
   const order = rank.slice()
 
-  // 4) 落座：按编号顺序取「可坐」的座位（旗子位跳过）
-  const occ = {}
+  // 4) 落座：按名次顺序取「可坐」的座位（旗子位跳过）—— 这一步只决定**环的归属**
   let cursor = 0
   order.forEach(function (u) {
     while (cursor < SEATS.length && SEATS[cursor].isFlag) cursor++
     const seat = cursor < SEATS.length ? SEATS[cursor] : null
     cursor++
     u.seatIndex = seat ? seat.index : 0
-    if (seat) occ[seat.index] = u
   })
 
-  // 5) 相邻修正：**就近换位**（用户口径：「优先按地心排，然后再调整相邻的位置」）
+  // 5) 环内自由换位：**保证邻居相邻**
   //
-  //    目标：座位号 ≈ 地心探险等级名次。选邻居的人要挨着邻居，但只跟「座位号离自己最近、
-  //    且换完之后不会拆散别人邻居」的人换，**并且位移不超过 MAX_SWAP 个座位号**——
-  //    否则宁可放弃这次连坐，也绝不把低地心探险等级的人塞到很靠内的位置。
-  //    ⚠️ 历史坑：旧实现取 neighborsOf(target)[0]（座位号最小的那个）就换，
-  //       于是「最后一名选了第一名当邻居」→ 最后一名直接坐到 1 号位。
-  const MAX_SWAP = 6
-
-  // 换位上限：位移 = 两人座位号之差（换完之后两人各挪这么远）
-  const seatOfNick = {}
-  const rankPos = {}
+  //  用户口径（2026-10-10）：「到处混和灰姨在第二环，就可以在二环任意位置……
+  //  同一环内可以互换位置。为了保障需要相邻的两个人能够相邻。」
+  //
+  //  · **环 = 名次段**，第 i 名 → 第 i 个可坐座位，其所在的环就是这个人的所属环，永不改变；
+  //  · 人在**自己那一环里可以任意换位**（挪到空位 / 与同环的人互换），环内的先后顺序
+  //    让位给邻居 —— 这样「二环的人」就能挑到贴着「一环邻居」的那个二环座位。
+  //
+  //  ⚠️ 旧实现的两个坑（用户截图里邻居全部没连上，就是这个原因）：
+  //   (a) 候选只从已占座（occ）里取 —— 只跟「有人坐的座位」换，**空位再多也用不上**；
+  //       人少（140 个位置才排 11 人）时空位一大把，邻居修正等于完全失效；
+  //   (b) MAX_SWAP = 6 的位移上限 —— 同环内稍远一点的位置也去不了。
+  const ringOf = {}    // nick -> 所属环（名次决定，永不改变）
+  const homeSeat = {}  // nick -> 名次对应的座位
+  const rankOf = {}    // nick -> 名次
   order.forEach(function (u, i) {
-    seatOfNick[nickKey(u.nickName)] = u.seatIndex
-    rankPos[nickKey(u.nickName)] = i + 1
+    const k = nickKey(u.nickName)
+    const s = u.seatIndex ? seatByIndex(u.seatIndex) : null
+    homeSeat[k] = s
+    ringOf[k] = s ? s.ring : 0
+    rankOf[k] = i + 1
   })
 
-  // 「当前已经挨着」的邻居关系 —— 只有这些不许被换位拆散。
-  // 还没挨着的（各自会在后面被修好）不参与校验，否则谁都换不动。
-  const held = {}
-  function refreshHeld(nick) {
-    const k = nickKey(nick)
-    const tk = targetOf[k]
-    const sk = seatByIndex(seatOfNick[k])
-    const st = tk ? seatByIndex(seatOfNick[tk]) : null
-    held[k] = !!(tk && sk && st && areAdjacent(sk, st))
-  }
-  order.forEach(function (u) { refreshHeld(u.nickName) })
-
-  function relationsHold(skipNick) {
-    for (let i = 0; i < order.length; i++) {
-      const x = order[i]
-      const xk = nickKey(x.nickName)
-      if (xk === skipNick) continue
-      if (!held[xk]) continue
-      const tk = targetOf[xk]
-      const sx = seatByIndex(seatOfNick[xk])
-      const st = seatByIndex(seatOfNick[tk])
-      if (!sx || !st || !areAdjacent(sx, st)) return false
-    }
-    return true
-  }
-
+  const seatOf = {}   // nick -> 当前座位
+  const nickAt = {}   // 座位号 -> nick
   order.forEach(function (u) {
-    const uk = nickKey(u.nickName)
-    const tk = targetOf[uk]
-    if (!tk) return
-    const tu = byNick[tk]
-    if (!tu || !tu.seatIndex) return
-    const su = seatByIndex(u.seatIndex)
-    const st = seatByIndex(tu.seatIndex)
-    if (!su || !st) return
-    if (areAdjacent(su, st)) return
+    const k = nickKey(u.nickName)
+    const s = homeSeat[k]
+    if (s) { seatOf[k] = s; nickAt[s.index] = k }
+  })
 
-    // 候选 = 目标座位四周、已被人占着的座位（旗子位不能占）
-    const cands = neighborsOf(st)
-    let best = null
-    for (let i = 0; i < cands.length; i++) {
-      const seat = cands[i]
-      if (seat.isFlag) continue
-      const v = occ[seat.index]
-      if (!v || v === u || v === tu) continue
-      const vk = nickKey(v.nickName)
+  const nextOf = {}   // nick -> 他选的邻居（出边）
+  Object.keys(targetOf).forEach(function (k) { nextOf[k] = targetOf[k] })
 
-      const d = Math.abs(v.seatIndex - u.seatIndex)   // 位移 = 扰动量
-      if (d > MAX_SWAP) continue                      // 跳太远就不换，宁可放弃连坐
+  function areBonded(u, t) {
+    const su = seatOf[u]
+    const st = seatOf[t]
+    return !!(su && st && areAdjacent(su, st))
+  }
 
-      // 不让「地心更低的人」把「地心更高、而且本来更靠内的人」挤到外圈
-      // （用户截图病因：最后一名跟第 5 名换了位，直接坐到一环里）
-      if (rankPos[vk] < rankPos[uk] && seat.ring < su.ring) continue
+  /** 当前已经连上的邻居对数（移动只许让它不变少，避免反复横跳） */
+  function bondCount() {
+    let n = 0
+    order.forEach(function (u) {
+      const k = nickKey(u.nickName)
+      if (targetOf[k] && areBonded(k, targetOf[k])) n++
+    })
+    return n
+  }
 
-      seatOfNick[uk] = v.seatIndex
-      seatOfNick[vk] = u.seatIndex
-      const ok = relationsHold(uk)      // u 自己的邻居由这次换位满足，不用检查
-      seatOfNick[uk] = u.seatIndex
-      seatOfNick[vk] = v.seatIndex
-      if (!ok) continue
+  /** 链深：沿「他选的邻居」还能走几节（链尾 = 0）。链尾优先定，再一节节往回贴。 */
+  function chainDepth(k) {
+    let d = 0
+    let cur = k
+    const guard = {}
+    while (nextOf[cur] && !guard[cur]) { guard[cur] = 1; d++; cur = nextOf[cur] }
+    return d
+  }
 
-      if (!best || d < best.d || (d === best.d && v.seatIndex < best.v.seatIndex)) {
-        best = { v: v, d: d }
+  const edges = order
+    .map(function (u) {
+      const k = nickKey(u.nickName)
+      if (!targetOf[k]) return null
+      return { u: k, t: targetOf[k], d: chainDepth(k), r: rankOf[k] }
+    })
+    .filter(Boolean)
+    .sort(function (a, b) { return a.d - b.d || a.r - b.r })
+
+  const ringSeatList = {}
+  SEATABLE.forEach(function (s) {
+    if (!ringSeatList[s.ring]) ringSeatList[s.ring] = []
+    ringSeatList[s.ring].push(s)
+  })
+
+  let bonds = bondCount()
+  for (let pass = 0; pass < 24; pass++) {
+    let moved = false
+    edges.forEach(function (e) {
+      if (areBonded(e.u, e.t)) return
+      const su = seatOf[e.u]
+      const st = seatOf[e.t]
+      if (!su || !st) return
+      const myRing = ringOf[e.u]
+      const pool = ringSeatList[myRing] || []
+
+      // 候选 = 本人所属环里、与目标座位相邻的座位
+      //   · 空位 → 直接挪过去；
+      //   · 有人 → 只有「同环、且不是自己/目标」的人才可以互换（换完两人都还在本环）
+      const cands = pool.filter(function (s) {
+        if (s.index === su.index) return false
+        if (!areAdjacent(s, st)) return false
+        const occ = nickAt[s.index]
+        if (!occ) return true
+        if (occ === e.u || occ === e.t) return false
+        return ringOf[occ] === myRing
+      }).sort(function (a, b) {
+        const oa = nickAt[a.index] ? 1 : 0
+        const ob = nickAt[b.index] ? 1 : 0
+        if (oa !== ob) return oa - ob                    // 空位优先
+        const da = Math.abs(a.index - su.index)
+        const db = Math.abs(b.index - su.index)
+        if (da !== db) return da - db                    // 离现在的位置近优先
+        return a.index - b.index                         // 再按座位号稳定排序
+      })
+
+      let best = null
+      for (let i = 0; i < cands.length; i++) {
+        const s = cands[i]
+        const occ = nickAt[s.index]        // undefined = 空位
+        // 试算：u 挪到 s；若 s 有人，那人挪到 u 原来的座位
+        delete nickAt[su.index]
+        seatOf[e.u] = s
+        nickAt[s.index] = e.u
+        if (occ) { seatOf[occ] = su; nickAt[su.index] = occ }
+        const n = bondCount()
+        // 回滚
+        delete nickAt[s.index]
+        seatOf[e.u] = su
+        nickAt[su.index] = e.u
+        if (occ) { seatOf[occ] = s; nickAt[s.index] = occ }
+
+        if (n > bonds) { best = { s: s, occ: occ, n: n }; break }
       }
-    }
-    if (!best) return
+      if (!best) return
 
-    const v = best.v
-    const vk = nickKey(v.nickName)
-    const uSeat = u.seatIndex
-    const vSeat = v.seatIndex
-    occ[uSeat] = v
-    occ[vSeat] = u
-    u.seatIndex = vSeat
-    v.seatIndex = uSeat
-    seatOfNick[uk] = vSeat
-    seatOfNick[vk] = uSeat
-    refreshHeld(uk)
-    refreshHeld(vk)
+      const s = best.s
+      const occ = best.occ
+      delete nickAt[su.index]
+      seatOf[e.u] = s
+      nickAt[s.index] = e.u
+      if (occ) { seatOf[occ] = su; nickAt[su.index] = occ }
+      bonds = best.n
+      moved = true
+    })
+    if (!moved) break
+  }
+
+  // 回写座位号
+  order.forEach(function (u) {
+    const k = nickKey(u.nickName)
+    const s = seatOf[k]
+    u.seatIndex = s ? s.index : 0
   })
 
   // 6) 回写最终邻居座位号（相邻才算绑上）

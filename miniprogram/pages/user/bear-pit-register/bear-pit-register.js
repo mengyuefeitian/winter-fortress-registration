@@ -1,8 +1,8 @@
 // pages/user/bear-pit-register/bear-pit-register.js
 // 熊坑报名：联盟 / 昵称 / 地心探险等级 + 二选一（按地心排 · 邻居）
-// 排位口径：先按地心探险等级从高到低排，选邻居的人只做「本环内就近换位」，
-// 不会把等级更高的人顶到后面、也不会让等级低的人挤进内环
-// （详见 utils/bearPitLayout.js planSeats）。
+// 排位口径：先按地心探险等级从高到低把每个人排进自己那一环（环永不改变），
+// 然后在**自己那一环内自由换位**（可挪空位 / 与同环的人互换），保证选了邻居的人
+// 能挨上邻居；等级低的人不会被带进更靠内的环（详见 utils/bearPitLayout.js planSeats）。
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
