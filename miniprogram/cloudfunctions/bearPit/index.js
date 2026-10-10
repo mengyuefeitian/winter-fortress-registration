@@ -14,6 +14,12 @@
 //
 // 位置口径（见 layout.js）：全部 140 个位置，其中 16 个是「旗子位」不能排人，
 // 可坐 124 个；但**最多只排 100 人**（layout.MAX_MEMBERS）。
+//
+// 排位规则：战力（＝报名填的那个数）越高座位号越小；选「邻居」的人只做就近换位，
+// 不会把高战力的人顶到后面（用户口径：优先按战力排，然后再调整相邻的位置）。
+//
+// 看板文档带 layoutVersion：座位几何 / 排位规则升级后，getBoard 发现版本落后会
+// 自动重排一次并回写，用户不用重新报名（见 layout.LAYOUT_VERSION）。
 
 const cloud = require('wx-server-sdk')
 const layout = require('./layout')
@@ -96,6 +102,8 @@ async function saveBoard(board, members) {
     allianceId: board.allianceId,
     zoneId: board.zoneId || '',
     members,
+    // 记下算这些座位号用的布局版本：老看板（版本落后）在 getBoard 时自动重排一次
+    layoutVersion: layout.LAYOUT_VERSION,
     updateTime: db.serverDate()
   }
   if (board._id) {
@@ -110,14 +118,21 @@ async function saveBoard(board, members) {
 
 async function getBoard(data) {
   const board = await readBoard(data.allianceId)
+  let members = board.members || []
+  // 座位几何 / 排位规则升级过 → 老座位号已经不对了，就地重排一次并回写（一次性自愈）
+  if (board._id && board.layoutVersion !== layout.LAYOUT_VERSION) {
+    members = replan(members)
+    await saveBoard(board, members)
+  }
   return {
     success: true,
     board: {
       allianceId: board.allianceId,
       zoneId: board.zoneId || '',
-      members: board.members || [],
+      members: members,
       seatTotal: layout.TOTAL_SLOTS,
       maxMembers: layout.MAX_MEMBERS,
+      layoutVersion: layout.LAYOUT_VERSION,
       updateTime: board.updateTime || 0
     }
   }

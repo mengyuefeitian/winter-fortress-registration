@@ -76,7 +76,7 @@
     <view wx:else class="bp-grid">
       <view wx:for="{{tableList}}" wx:key="regId" class="bp-grid-item">
         <view class="bp-grid-main">
-          <text class="bp-grid-lv">地心 {{item.dixinText}}</text>
+          <text class="bp-grid-lv">战力 {{item.dixinText}}</text>
           <text class="bp-grid-nick">{{item.nickName}}</text>
         </view>
         <view class="bp-grid-side">
@@ -89,7 +89,7 @@
   </view>
 
   <view class="bp-foot">
-    <text class="bp-foot-text">座位按「地心探险」从高到低由内圈往外排；更换账号等级后需重新报名才会重排。</text>
+    <text class="bp-foot-text">座位按「战力」从高到低由内圈往外排（战力＝报名填的地心探险等级）；选了邻居的人只和旁边的人就近换位。改了数值后需重新报名才会重排。</text>
   </view>
 
   <float-reminder id="entryReminder" />
