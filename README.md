@@ -13,7 +13,7 @@
 基于微信云开发，无需自建服务器。
 
 [![平台](https://img.shields.io/badge/平台-微信小程序-07C160?logo=wechat)](https://mp.weixin.qq.com/)
-[![版本](https://img.shields.io/badge/version-1.18.4-blue)](https://github.com/mengyuefeitian/winter-fortress-registration/releases)
+[![版本](https://img.shields.io/badge/version-1.18.5-blue)](https://github.com/mengyuefeitian/winter-fortress-registration/releases)
 [![后端](https://img.shields.io/badge/后端-微信云开发-4A90D9)](https://cloud.weixin.qq.com/)
 [![更新日志](https://img.shields.io/badge/docs-CHANGELOG-brightgreen)](docs/CHANGELOG.md)
 
@@ -229,6 +229,7 @@
 
 ## 更新日志
 
+- **v1.18.5** — 修正「熊坑分布图」显示：昵称按宽度和高度双向缩字号，一定落在方格内（手机端不再顶出格子）；地心探险等级徽标统一贴到座位右下角（原来在右上角会压住昵称第一行），长昵称改为均衡断行
 - **v1.18.4** — 修正「熊坑排位」：改为「同一环内自由换位」（可挪空位 / 与同环的人互换），选了邻居的人一定能挨上邻居（之前只跟已占座的人换、空位用不上，人少时邻居全连不上）；环的归属仍由地心探险等级名次决定
 - **v1.18.3** — 修正「熊坑排位」：座位号改为严格等于地心探险等级名次（最高等级坐 1 号位），一环 1–8 号固定给排名前 8 的人，邻居只在本环内就近换位；报名表「手动输入」默认留空；全部界面统一叫「地心探险」
 - **v1.18.2** — 修正「熊坑排位」：严格按战力从高到低占座，选了邻居的人只做「就近换位」，不再把战力更高的人顶到后面（历史看板读取时自动重排一次）
