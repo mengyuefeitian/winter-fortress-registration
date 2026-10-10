@@ -11,6 +11,9 @@
 //   register  { zoneId, allianceId, nickName, ... }  → 覆盖报名 + 重排
 //   remove    { allianceId, regId }                  → 盟管/区管/超管删除 + 重排
 //   (clearBoard 留给超管清空，谨慎使用)
+//
+// 位置口径（见 layout.js）：全部 140 个位置，其中 16 个是「旗子位」不能排人，
+// 可坐 124 个；但**最多只排 100 人**（layout.MAX_MEMBERS）。
 
 const cloud = require('wx-server-sdk')
 const layout = require('./layout')
@@ -113,7 +116,8 @@ async function getBoard(data) {
       allianceId: board.allianceId,
       zoneId: board.zoneId || '',
       members: board.members || [],
-      seatTotal: layout.TOTAL_SEATS,
+      seatTotal: layout.TOTAL_SLOTS,
+      maxMembers: layout.MAX_MEMBERS,
       updateTime: board.updateTime || 0
     }
   }
@@ -168,8 +172,8 @@ async function register(data) {
       updateTime: now
     })
   } else {
-    if (members.length >= layout.TOTAL_SEATS) {
-      throw new Error('熊坑座位已满（' + layout.TOTAL_SEATS + ' 个），无法新增报名')
+    if (members.length >= layout.MAX_MEMBERS) {
+      throw new Error('熊坑最多排 ' + layout.MAX_MEMBERS + ' 人，已经满了')
     }
     members.push({
       regId: newRegId(),
@@ -194,7 +198,8 @@ async function register(data) {
     success: true,
     member: mine,
     members: planned,
-    seatTotal: layout.TOTAL_SEATS
+    seatTotal: layout.TOTAL_SLOTS,
+    maxMembers: layout.MAX_MEMBERS
   }
 }
 
@@ -226,7 +231,8 @@ async function remove(data) {
     success: true,
     removed: members.length - next.length,
     members: planned,
-    seatTotal: layout.TOTAL_SEATS
+    seatTotal: layout.TOTAL_SLOTS,
+    maxMembers: layout.MAX_MEMBERS
   }
 }
 

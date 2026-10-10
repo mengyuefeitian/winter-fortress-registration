@@ -23,7 +23,10 @@ Page({
     members: [],
     tableList: [],
     memberCount: 0,
-    seatTotal: layout.TOTAL_SEATS,
+    // 图上位置总数（140，含 16 个旗子位）——只用于绘制与说明
+    seatTotal: layout.TOTAL_SLOTS,
+    // 可报名人数上限（100）——用户口径「140 座但只排 100 人」
+    capacity: layout.MAX_MEMBERS,
     seatsFull: false,
     canManage: false,
     thumbMode: 'nick'
@@ -125,8 +128,9 @@ Page({
         members: members,
         tableList: tableList,
         memberCount: members.length,
-        seatTotal: board.seatTotal || layout.TOTAL_SEATS,
-        seatsFull: members.length >= (board.seatTotal || layout.TOTAL_SEATS),
+        seatTotal: board.seatTotal || layout.TOTAL_SLOTS,
+        capacity: board.maxMembers || layout.MAX_MEMBERS,
+        seatsFull: members.length >= (board.maxMembers || layout.MAX_MEMBERS),
         loading: false
       }, () => {
         this.renderThumb()
@@ -161,7 +165,8 @@ Page({
         dpr: dpr,
         mode: this.data.thumbMode,
         members: this.data.members,
-        seatTotal: this.data.seatTotal
+        seatTotal: this.data.seatTotal,
+        maxMembers: this.data.capacity
       })
     })
   },

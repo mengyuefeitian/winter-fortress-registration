@@ -1,21 +1,29 @@
 /**
  * utils/bearPitDraw.js —— 「熊坑分布图」canvas 绘制
  *
- * 主页缩略图与地图大图共用同一套绘制逻辑（差别只在 opts）。
- * 绘制内容自内向外：
- *   熊坑本体（橙）+ 四角战旗（红）→ 108 个固定大小的座位（空位画淡底 + 虚线框）
- *   → 草地底纹 + 网格线 → 底部说明
+ * 几何完全来自 utils/bearPitLayout.js（唯一来源），本文件只负责画。
+ * 画面结构与用户给的参考图一致：
+ *   四个风车色块（四色只是配色，方便看图）→ 每块里 2×2 细格一个座位
+ *   → 中心 3×3 红「熊坑」→ 16 个旗子位（红，不能排人）→ 邻居红虚线 → 文字
  *
- * 坐标系：先 translate 到画布中心，再 scale(u)，于是所有绘制都用「座位单位」
- * （1 = 一个座位的边长，整张图 ±4.5）。这样缩放 / 拖动只是改 scale / offset。
+ * 坐标系：map 坐标 = 细格坐标（0..25），绘制前统一 translate(-12.5,-12.5)，
+ * 于是整张图以 (12.5,12.5) 为中心。缩放 / 拖动只改 u / offset，不用改绘制代码。
  */
 
 const layout = require('./bearPitLayout')
 
 const FONT_STACK = '-apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif'
 
-// 画布留白（座位单位）
-const PAD = 0.42
+// 画布留白（细格单位）
+const PAD = 0.6
+
+// 每个色块的「已坐」加深色（空位用原色，坐人后用深一档，一眼能看出谁坐哪）
+const ON_FILL = {
+  '#FFE796': '#FFD24D',
+  '#99C3E5': '#6FA8D8',
+  '#FAD969': '#F5BE2E',
+  '#BDD7EE': '#93BFE3'
+}
 
 function roundRect(ctx, x, y, w, h, r) {
   const rr = Math.max(0, Math.min(r, w / 2, h / 2))
@@ -50,10 +58,7 @@ function greedyWrap(ctx, text, maxW) {
   return lines.length ? lines : ['']
 }
 
-/**
- * 自动缩字号 + 最多 maxLines 行；仍放不下则末行省略号
- * 返回 { fs, lines }
- */
+/** 自动缩字号 + 最多 maxLines 行；仍放不下则末行省略号。返回 { fs, lines } */
 function fitText(ctx, text, maxW, maxLines, startFs, minFs, weight) {
   const w = weight || '700'
   let fs = startFs
@@ -76,6 +81,24 @@ function fitText(ctx, text, maxW, maxLines, startFs, minFs, weight) {
 }
 
 /**
+ * 旗子位：在座位上画一个 1×1 细格的红格（与参考图逐像素一致）。
+ * 红格落在座位的哪个角由 layout 里的 corner（TL/TR/BL/BR）决定；
+ * 座位其余 3 格保持色块本色——红格只是「这个位置留给插旗子，不能排人」的标记。
+ */
+function drawFlag(ctx, seat) {
+  const half = seat.w / 2
+  const right = seat.corner === 'TR' || seat.corner === 'BR'
+  const bottom = seat.corner === 'BL' || seat.corner === 'BR'
+  const x = seat.x + (right ? half : 0)
+  const y = seat.y + (bottom ? half : 0)
+  ctx.fillStyle = layout.PIT_STYLE.flagFill
+  ctx.fillRect(x, y, half, half)
+  ctx.strokeStyle = layout.PIT_STYLE.pitStroke
+  ctx.lineWidth = 0.05
+  ctx.strokeRect(x + 0.025, y + 0.025, half - 0.05, half - 0.05)
+}
+
+/**
  * 绘制熊坑分布图
  * @param {CanvasRenderingContext2D} ctx
  * @param {Object} opts
@@ -83,10 +106,10 @@ function fitText(ctx, text, maxW, maxLines, startFs, minFs, weight) {
  *   dpr           设备像素比（默认 1）
  *   scale/offsetX/offsetY  缩放与平移（px）
  *   mode          'index' 编号 | 'nick' 昵称
- *   colorMode     'quadrant'（默认，四象限配色）| 'ring'
  *   members       [{ nickName, dixin, seatIndex, neighborSeat }]
  *   footer        是否画底部说明文字
- *   seatTotal     座位总数（默认 108）
+ *   seatTotal     位置总数（默认 140）
+ *   background    是否铺底色（默认 true）
  */
 function drawPit(ctx, opts) {
   const o = opts || {}
@@ -94,13 +117,13 @@ function drawPit(ctx, opts) {
   const height = o.height || 300
   const dpr = o.dpr || 1
   const mode = o.mode === 'nick' ? 'nick' : 'index'
-  const colorMode = o.colorMode || 'quadrant'
   const members = o.members || []
   const scale = o.scale || 1
   const offsetX = o.offsetX || 0
   const offsetY = o.offsetY || 0
   const footer = o.footer !== false
   const style = layout.PIT_STYLE
+  const G = layout.GRID
 
   // 座位号 → 成员
   const bySeat = {}
@@ -109,176 +132,158 @@ function drawPit(ctx, opts) {
     if (s >= 1) bySeat[s] = m
   })
 
-  const base = Math.min(width, height) / (layout.MAP_HALF * 2 + PAD * 2)
-  const u = base * scale
+  const u = Math.min(width, height) / (G + PAD * 2) * scale
 
   ctx.save()
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   ctx.clearRect(0, 0, width, height)
-  ctx.fillStyle = '#FAFBF7'
-  ctx.fillRect(0, 0, width, height)
+  if (o.background !== false) {
+    ctx.fillStyle = '#FFFFFF'
+    ctx.fillRect(0, 0, width, height)
+  }
 
   ctx.translate(width / 2 + offsetX, height / 2 + offsetY)
   ctx.scale(u, u)
+  ctx.translate(-G / 2, -G / 2)
 
-  const outer = layout.MAP_HALF + 0.3
-
-  // 1) 草地底板
-  ctx.fillStyle = style.grass
-  roundRect(ctx, -outer, -outer, outer * 2, outer * 2, 0.35)
-  ctx.fill()
-
-  // 2) 草地网格（每 1 个座位单位一格，淡色）
-  ctx.strokeStyle = style.grassLine
-  ctx.lineWidth = 0.018
-  ctx.beginPath()
-  for (let g = -Math.floor(outer); g <= Math.floor(outer); g++) {
-    ctx.moveTo(g, -outer)
-    ctx.lineTo(g, outer)
-    ctx.moveTo(-outer, g)
-    ctx.lineTo(outer, g)
-  }
-  ctx.stroke()
-
-  // 3) 熊坑本体（中心 2×2）
-  const pitGrad = ctx.createLinearGradient(-layout.PIT_HALF, -layout.PIT_HALF, layout.PIT_HALF, layout.PIT_HALF)
-  pitGrad.addColorStop(0, '#F09A52')
-  pitGrad.addColorStop(1, style.pitFill)
-  ctx.fillStyle = pitGrad
-  roundRect(ctx, -layout.PIT_HALF, -layout.PIT_HALF, layout.PIT_HALF * 2, layout.PIT_HALF * 2, 0.14)
-  ctx.fill()
-  ctx.strokeStyle = 'rgba(90,42,0,0.35)'
-  ctx.lineWidth = 0.04
-  ctx.stroke()
-
-  ctx.fillStyle = style.pitText
-  ctx.font = '800 0.62px ' + FONT_STACK
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText('熊坑', 0, 0.03)
-
-  // 4) 熊坑四角战旗
-  const flag = 0.3
-  const corners = [[-layout.PIT_HALF, -layout.PIT_HALF], [layout.PIT_HALF, -layout.PIT_HALF], [layout.PIT_HALF, layout.PIT_HALF], [-layout.PIT_HALF, layout.PIT_HALF]]
-  corners.forEach(function (c) {
-    const fx = c[0] < 0 ? c[0] - flag + 0.06 : c[0] - 0.06
-    const fy = c[1] < 0 ? c[1] - flag + 0.06 : c[1] - 0.06
-    ctx.fillStyle = style.flagFill
-    roundRect(ctx, fx, fy, flag, flag, 0.05)
-    ctx.fill()
-    ctx.strokeStyle = 'rgba(255,255,255,0.85)'
-    ctx.lineWidth = 0.03
-    ctx.stroke()
+  // 1) 四个风车色块
+  layout.BLOCKS.forEach(function (b) {
+    const c0 = b.c0
+    const r0 = b.r0
+    ctx.fillStyle = b.fill
+    ctx.fillRect(c0, r0, b.c1 - c0 + 1, b.r1 - r0 + 1)
   })
 
-  // 5) 座位：先把全部 108 个「槽位」画出来（空位只画淡底 + 虚线框）
+  // 2) 座位格子：空位 = 色块本色 + 细格线；坐人 = 加深一档
+  ctx.lineWidth = 0.05
+  layout.SEATS.forEach(function (seat) {
+    const member = bySeat[seat.index]
+    if (seat.isFlag) {
+      // 旗子位：只画细格线（红格由 drawFlag 补），永远不填「已坐」色
+      ctx.strokeStyle = style.seatStroke
+      ctx.strokeRect(seat.c + 0.025, seat.r + 0.025, seat.w - 0.05, seat.h - 0.05)
+      return
+    }
+    if (member) {
+      const base = layout.blockOf(seat.block).fill
+      ctx.fillStyle = ON_FILL[base] || base
+      ctx.fillRect(seat.c, seat.r, seat.w, seat.h)
+    }
+    ctx.strokeStyle = style.seatStroke
+    ctx.strokeRect(seat.c + 0.025, seat.r + 0.025, seat.w - 0.05, seat.h - 0.05)
+  })
+
+  // 3) 中心熊坑（3×3）
+  const p = layout.PIT
+  ctx.fillStyle = style.pitFill
+  ctx.fillRect(p.c0, p.r0, p.c1 - p.c0 + 1, p.r1 - p.r0 + 1)
+  ctx.strokeStyle = style.pitStroke
+  ctx.lineWidth = 0.1
+  ctx.strokeRect(p.c0, p.r0, p.c1 - p.c0 + 1, p.r1 - p.r0 + 1)
+  ctx.fillStyle = style.pitInk
+  ctx.font = '700 0.95px ' + FONT_STACK
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  for (let i = 0; i < layout.SEATS.length; i++) {
-    const seat = layout.SEATS[i]
-    const box = layout.seatBox(seat)
+  ctx.fillText('熊坑', (p.c0 + p.c1 + 1) / 2, (p.r0 + p.r1 + 1) / 2 + 0.03)
+
+  // 4) 旗子位
+  layout.FLAG_SEATS.forEach(function (seat) { drawFlag(ctx, seat) })
+
+  // 5) 座位文字
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  layout.SEATS.forEach(function (seat) {
+    if (seat.isFlag) return
     const member = bySeat[seat.index]
-    const color = layout.colorOf(seat, colorMode)
-
-    if (!member) {
-      ctx.fillStyle = 'rgba(255,255,255,0.42)'
-      roundRect(ctx, box.x, box.y, box.w, box.h, 0.1)
-      ctx.fill()
-      ctx.save()
-      ctx.setLineDash([0.09, 0.07])
-      ctx.strokeStyle = 'rgba(120,130,110,0.5)'
-      ctx.lineWidth = 0.03
-      ctx.stroke()
-      ctx.restore()
-    } else {
-      ctx.fillStyle = color.fill
-      roundRect(ctx, box.x, box.y, box.w, box.h, 0.1)
-      ctx.fill()
-      ctx.strokeStyle = style.seatStroke
-      ctx.lineWidth = style.seatStrokeWidth
-      ctx.stroke()
-    }
-
-    // 6) 座位内的文字：编号 or 昵称
+    const ink = layout.blockOf(seat.block).ink
+    const cx = seat.c + seat.w / 2
+    const cy = seat.r + seat.h / 2
     if (mode === 'index') {
-      ctx.fillStyle = member ? color.ink : 'rgba(120,130,110,0.55)'
-      ctx.font = '700 0.4px ' + FONT_STACK
-      ctx.fillText(String(seat.index), seat.x, seat.y + 0.015)
+      ctx.fillStyle = member ? ink : 'rgba(60,60,60,0.45)'
+      ctx.font = (member ? '700 ' : '400 ') + (member ? 0.62 : 0.5) + 'px ' + FONT_STACK
+      ctx.fillText(String(seat.index), cx, cy + 0.02)
     } else if (member) {
-      drawNickLabel(ctx, seat, member, color)
+      drawNickLabel(ctx, seat, member, ink)
     } else {
-      // 空位只画很淡的座位号，提示编号规律但不喧宾夺主
-      ctx.fillStyle = 'rgba(120,130,110,0.34)'
-      ctx.font = '600 0.24px ' + FONT_STACK
-      ctx.fillText(String(seat.index), seat.x, seat.y + 0.01)
+      ctx.fillStyle = 'rgba(60,60,60,0.32)'
+      ctx.font = '400 0.4px ' + FONT_STACK
+      ctx.fillText(String(seat.index), cx, cy + 0.02)
     }
+  })
 
-    // 邻居连线：绑定了邻居的座位，画一条淡淡的虚线到邻居座位
-    if (member && member.neighborSeat && bySeat[member.neighborSeat]) {
-      const other = layout.seatByIndex(member.neighborSeat)
-      if (other && member.seatIndex < member.neighborSeat) {
-        ctx.save()
-        ctx.setLineDash([0.08, 0.06])
-        ctx.strokeStyle = 'rgba(233,69,96,0.85)'
-        ctx.lineWidth = 0.05
-        ctx.beginPath()
-        ctx.moveTo(seat.x, seat.y)
-        ctx.lineTo(other.x, other.y)
-        ctx.stroke()
-        ctx.restore()
-      }
-    }
-  }
+  // 6) 邻居连线（每对只画一次）
+  ctx.save()
+  ctx.setLineDash([0.16, 0.12])
+  ctx.strokeStyle = 'rgba(233,53,43,0.9)'
+  ctx.lineWidth = 0.11
+  members.forEach(function (m) {
+    if (!m.neighborSeat || Number(m.neighborSeat) <= Number(m.seatIndex)) return
+    const a = layout.seatByIndex(m.seatIndex)
+    const b = layout.seatByIndex(m.neighborSeat)
+    if (!a || !b) return
+    ctx.beginPath()
+    ctx.moveTo(a.c + a.w / 2, a.r + a.h / 2)
+    ctx.lineTo(b.c + b.w / 2, b.r + b.h / 2)
+    ctx.stroke()
+  })
+  ctx.restore()
+
+  // 7) 外框
+  ctx.strokeStyle = 'rgba(28,28,28,0.85)'
+  ctx.lineWidth = 0.14
+  ctx.strokeRect(0, 0, G, G)
 
   ctx.restore()
 
-  // 7) 底部说明（画在 CSS 像素空间，避免随缩放变形）
+  // 8) 底部说明（画在 CSS 像素空间，避免随缩放变形）
   if (footer) {
     const occupied = members.filter(function (m) { return Number(m.seatIndex) >= 1 }).length
-    const total = o.seatTotal || layout.TOTAL_SEATS
+    const total = o.seatTotal || layout.TOTAL_SLOTS
+    const cap = o.maxMembers || layout.MAX_MEMBERS
     ctx.save()
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.fillStyle = '#6B7280'
     ctx.font = '500 11px ' + FONT_STACK
     ctx.textAlign = 'center'
     ctx.textBaseline = 'alphabetic'
-    ctx.fillText('共 ' + total + ' 个座位 · 已报名 ' + occupied + ' 人', width / 2, height - 5)
+    ctx.fillText('共 ' + total + ' 个位置（可排 ' + cap + ' 人）· 已排 ' + occupied + ' 人', width / 2, height - 5)
     ctx.restore()
   }
 }
 
-// 昵称模式：昵称自动缩字号、最多两行；地心等级做右上角的小数字徽标
-function drawNickLabel(ctx, seat, member, color) {
-  const maxW = 0.82
+// 昵称模式：昵称自动缩字号、最多两行；地心等级做右上角小徽标
+function drawNickLabel(ctx, seat, member, ink) {
+  const maxW = seat.w * 0.86
   const name = String(member.nickName || '')
   const lv = member.dixin
   const hasLevel = lv !== null && lv !== undefined && lv !== ''
 
+  const cx = seat.c + seat.w / 2
+  const cy = seat.r + seat.h / 2
+
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
 
-  // 有等级徽标时，昵称往下让出徽标的位置
-  const centerY = hasLevel ? seat.y + 0.13 : seat.y
-  const fit = fitText(ctx, name, maxW, 2, 0.32, 0.19, '700')
-  const lineH = fit.fs * 1.04
-  const totalH = lineH * fit.lines.length
-  let y = centerY - totalH / 2 + lineH / 2
-  ctx.fillStyle = color.ink
+  const centerY = hasLevel ? cy + seat.h * 0.09 : cy
+  const fit = fitText(ctx, name, maxW, 2, seat.h * 0.34, seat.h * 0.18, '700')
+  const lineH = fit.fs * 1.05
+  let y = centerY - (lineH * fit.lines.length) / 2 + lineH / 2
+  ctx.fillStyle = ink
   ctx.font = '700 ' + fit.fs.toFixed(3) + 'px ' + FONT_STACK
   fit.lines.forEach(function (line) {
-    ctx.fillText(line, seat.x, y)
+    ctx.fillText(line, cx, y)
     y += lineH
   })
 
   if (hasLevel) {
     const txt = String(lv)
-    ctx.font = '700 0.19px ' + FONT_STACK
-    const bw = Math.max(0.26, ctx.measureText(txt).width + 0.12)
-    const bh = 0.22
-    const bx = seat.x + 0.5 - bw - 0.05
-    const by = seat.y - 0.5 + 0.05
-    ctx.fillStyle = 'rgba(17,24,39,0.7)'
-    roundRect(ctx, bx, by, bw, bh, 0.05)
+    ctx.font = '700 ' + (seat.h * 0.24).toFixed(3) + 'px ' + FONT_STACK
+    const bw = Math.max(seat.w * 0.34, ctx.measureText(txt).width + seat.w * 0.14)
+    const bh = seat.h * 0.30
+    const bx = seat.c + seat.w - bw - seat.w * 0.05
+    const by = seat.r + seat.h * 0.04
+    ctx.fillStyle = 'rgba(31,35,41,0.82)'
+    roundRect(ctx, bx, by, bw, bh, bh * 0.28)
     ctx.fill()
     ctx.fillStyle = '#FFFFFF'
     ctx.fillText(txt, bx + bw / 2, by + bh / 2 + 0.005)

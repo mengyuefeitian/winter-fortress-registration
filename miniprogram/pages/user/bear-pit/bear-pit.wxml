@@ -55,6 +55,7 @@
         <view class="bp-legend-item"><view class="bp-legend-dot" style="background:#FED966"></view><text>东南</text></view>
         <view class="bp-legend-item"><view class="bp-legend-dot" style="background:#BDD7EE"></view><text>西南</text></view>
         <view class="bp-legend-item"><view class="bp-legend-dot" style="background:#FFFFFF;border:1px dashed #9ca3af"></view><text>空位</text></view>
+        <view class="bp-legend-item"><view class="bp-legend-dot" style="background:#E8352B"></view><text>旗子位（不可占）</text></view>
       </view>
     </block>
   </view>
@@ -63,7 +64,7 @@
   <view class="card">
     <view class="bp-section-head">
       <text class="bp-section-title">报名人员</text>
-      <text class="bp-section-count">{{memberCount}} / {{seatTotal}}</text>
+      <text class="bp-section-count">{{memberCount}} / {{capacity}}</text>
     </view>
 
     <view wx:if="{{loading}}" class="bp-empty"><text>加载中…</text></view>

@@ -24,7 +24,8 @@ Page({
     canNeighbor: false,
 
     memberCount: 0,
-    seatTotal: layout.TOTAL_SEATS,
+    // 可报名人数上限（100）——图上是 140 个位置，但只排 100 人
+    capacity: layout.MAX_MEMBERS,
     submitting: false
   },
 
@@ -119,7 +120,7 @@ Page({
       this._boardMembers = board.members || []
       this.setData({
         memberCount: this._boardMembers.length,
-        seatTotal: board.seatTotal || layout.TOTAL_SEATS
+        capacity: board.maxMembers || layout.MAX_MEMBERS
       }, () => this.buildNeighborList())
     } catch (err) {
       console.error('加载熊坑看板失败:', err)
