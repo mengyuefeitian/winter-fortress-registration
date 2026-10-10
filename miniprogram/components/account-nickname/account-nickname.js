@@ -35,9 +35,10 @@ Component({
       this.setData({ sheetOpen: false, manualOpen: false })
     },
 
-    // 进入手动输入：把当前昵称带进输入框
+    // 进入手动输入：**输入框留空**（用户口径：手动输入时默认就该是空的，
+    // 不要带出上一次填过的昵称，否则每次都要先删干净）
     onManual: function () {
-      this.setData({ manualOpen: true, localValue: this.data.value })
+      this.setData({ manualOpen: true, localValue: '' })
     },
 
     onManualInput: function (e) {

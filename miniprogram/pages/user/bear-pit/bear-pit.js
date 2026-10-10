@@ -110,7 +110,7 @@ Page({
     })
   },
 
-  // 拉看板：members 已由云函数按「战力降序 → 顺延外圈」重排好，seatIndex 即座位号
+  // 拉看板：members 已由云函数按「地心探险等级降序 → 由内圈往外」重排好，seatIndex 即座位号
   loadBoard: async function (allianceId) {
     try {
       const board = await db.getBearPitBoard(allianceId)
