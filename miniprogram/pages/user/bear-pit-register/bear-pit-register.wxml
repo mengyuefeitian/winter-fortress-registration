@@ -26,9 +26,9 @@
       </view>
     </view>
 
-    <!-- 战力（就是地心探险等级，报名时按它从高到低排座） -->
+    <!-- 地心探险等级（报名时按它从高到低排座） -->
     <view class="bpr-row">
-      <text class="bpr-label">战力</text>
+      <text class="bpr-label">地心探险</text>
       <view class="bpr-control bpr-control-end">
         <input class="bpr-input" type="number" placeholder="选账号后自动带出" placeholder-class="bpr-ph"
                value="{{dixin}}" bindinput="onDixinInput" />
@@ -36,11 +36,11 @@
       </view>
     </view>
     <view class="bpr-hint">
-      <text>战力＝地心探险等级，越高越靠近熊坑内圈；改了要重新报名才会重排座位。</text>
+      <text>地心探险等级越高，座位越靠近熊坑内圈；改了要重新报名才会重排座位。</text>
     </view>
   </view>
 
-  <!-- 二选一：按战力排 / 邻居 -->
+  <!-- 二选一：按地心排 / 邻居 -->
   <view class="card">
     <view class="bpr-sec-head">
       <text class="bpr-sec-title">排位方式</text>
@@ -49,8 +49,8 @@
 
     <view class="bpr-modes">
       <view class="bpr-mode {{mode === 'power' ? 'on' : ''}}" bindtap="selectMode" data-mode="power">
-        <text class="bpr-mode-name">按战力排</text>
-        <text class="bpr-mode-desc">按战力从高到低自动占座</text>
+        <text class="bpr-mode-name">按地心排</text>
+        <text class="bpr-mode-desc">按地心探险等级从高到低自动占座</text>
       </view>
       <view class="bpr-mode {{mode === 'neighbor' ? 'on' : ''}} {{canNeighbor ? '' : 'disabled'}}" bindtap="selectMode" data-mode="neighbor">
         <text class="bpr-mode-name">邻居</text>
@@ -65,7 +65,7 @@
         <text wx:if="{{neighborNick}}" class="bpr-nb-chosen">已选：{{neighborNick}}</text>
       </view>
       <view wx:if="{{neighborList.length === 0}}" class="bpr-nb-empty">
-        <text>本联盟还没有其他人报名，只能先按战力排；等有人报名后再来改报即可选邻居。</text>
+        <text>本联盟还没有其他人报名，只能先按地心排；等有人报名后再来改报即可选邻居。</text>
       </view>
       <view wx:else class="bpr-nb-grid">
         <view wx:for="{{neighborList}}" wx:key="nickName"

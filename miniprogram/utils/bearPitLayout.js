@@ -24,10 +24,12 @@
  * ── 编号规则（用户口径） ────────────────────────────────────────────────
  *  · 按「到熊坑中心的距离」由内向外一圈圈排；同一圈里从**正下方**开始**顺时针**
  *    （正下方 → 左侧 → 上方 → 右侧），所以 1 号在熊坑正下方。
- *  · 座位号 ≈ **战力名次**：战力越高座位号越小（越靠内圈），同战力先报名靠内。
- *    选了「邻居」的人会和邻居挨着，但只做**就近换位**，不会把高战力的人顶到后面。
- *  · 贴住熊坑的那 8 个座位（每块 2 个）会自然排成 1–8 号 = **一环 8 个**；
- *    9、10 号就进入二环，与用户描述一致。
+ *  · 座位号 = **地心探险等级名次**：等级越高座位号越小（越靠内圈），同级先报名靠内。
+ *    选了「邻居」的人只在本环里做**就近换位**；如果换位会让「等级更高、本来更靠内」
+ *    的人被挤到外圈，就宁可放弃这次连坐 —— 绝不允许等级低的人插进内环
+ *    （用户反馈过「等级最低的跑到 1 环 1 号位」）。
+ *  · 贴住熊坑的那 8 个座位（每块 2 个）就是 1 环 = 1–8 号，1 号在正下方；
+ *    9 号起进入二环，与用户描述一致。
  *
  * ── 与云函数的关系 ──────────────────────────────────────────────────────
  *  cloudfunctions/bearPit/layout.js 是同一套算法的手工副本（云函数不能 require
@@ -78,8 +80,11 @@ const MAX_MEMBERS = 100
 
 // 布局 / 排位算法版本。改动座位几何或排位规则时必须 +1：
 // 云函数 getBoard 发现看板上记录的版本落后，会自动重排一次并回写（一次性自愈，
-// 免去让盟管重新报名）。v2 = 邻居改为「就近换位」（2026-10-10）
-const LAYOUT_VERSION = 2
+// 免去让盟管重新报名）。
+//   v2 = 邻居改为「就近换位」（2026-10-10）
+//   v3 = 落座改为「严格按地心等级名次」+ 邻居只在本环内换位、不允许把等级更高的
+//        人挤到外圈（修正用户截图里「第一名跑到 11 号、最后一名占了 1 号位」）
+const LAYOUT_VERSION = 3
 
 // 绘制用色
 const PIT_STYLE = {
@@ -270,7 +275,7 @@ function timeOf(m) {
   return isNaN(v) ? 0 : v
 }
 
-/** 排名：战力高 → 靠前（更靠内圈）；同战力 → 先报名靠内；再同 → 按昵称 */
+/** 排名：地心探险等级高 → 靠前（更靠内圈）；同等级 → 先报名靠内；再同 → 按昵称 */
 function compareRank(a, b) {
   const da = dixinOf(a)
   const db = dixinOf(b)
@@ -284,7 +289,7 @@ function compareRank(a, b) {
 }
 
 /**
- * 邻居关系失效：清空并回落为「按战力排」。
+ * 邻居关系失效：清空并回落为「按地心排」。
  * 管理员删人、或目标被别人抢走后不能留下悬空的邻居指向。
  */
 function resetNeighbor(u) {
@@ -298,13 +303,13 @@ function resetNeighbor(u) {
  * @param {Array} members 报名人员 [{ nickName, dixin, createTime, mode, neighborNick }]
  * @returns {Array} 新数组，带 seatIndex（座位号，1 起）/ neighborSeat / mode / neighborNick
  *
- * 规则（用户口径：**优先按战力排，然后再调整相邻的位置**）：
- *  1. 战力（＝报名填的那个数）越高越靠内圈（座位号越小）；同战力先报名靠内
+ * 规则（用户口径：**优先按地心探险等级排，然后再调整相邻的位置**）：
+ *  1. 地心探险等级越高越靠内圈（座位号越小）；同级先报名靠内
  *  2. 旗子位不能排人（直接跳过）
- *  3. 邻居：尽量把 A 排在指定邻居 B 旁边；A→B→C 链条整条拉直
- *  4. 邻居目标被删除 / 被别人抢走 → 自动重置为「按战力排」
- *  5. 修正阶段**只做就近换位**：跟「座位号离自己最近、且不会拆散别人邻居」的人换，
- *     不让低战力的人插到高战力的人前面
+ *  3. 邻居：尽量把 A 排在指定邻居 B 旁边；A→B→C 链条一起考虑
+ *  4. 邻居目标被删除 / 被别人抢走 → 自动重置为「按地心排」
+ *  5. 修正阶段**只在本环内做就近换位**：跟「座位号离自己最近、不会拆散别人
+ *     邻居、且不会把等级更高且更靠内的人挤到外圈」的人换，位移还有上限
  */
 function planSeats(members) {
   const list = (members || []).map(function (m) { return Object.assign({}, m) })
@@ -355,47 +360,13 @@ function planSeats(members) {
     }
   })
 
-  // 3) 并查集：把链/环的成员并成一组
-  const parent = {}
-  function find(k) {
-    if (parent[k] === undefined) parent[k] = k
-    while (parent[k] !== k) { parent[k] = parent[parent[k]]; k = parent[k] }
-    return k
-  }
-  function union(a, b) {
-    const ra = find(a)
-    const rb = find(b)
-    if (ra !== rb) parent[ra] = rb
-  }
-  rank.forEach(function (u) {
-    const uk = nickKey(u.nickName)
-    find(uk)
-    if (targetOf[uk]) union(uk, targetOf[uk])
-  })
-  const groups = {}
-  rank.forEach(function (u) {
-    const k = nickKey(u.nickName)
-    const r = find(k)
-    if (!groups[r]) groups[r] = []
-    groups[r].push(u)
-  })
+  // 3) 落座顺序：**严格按排名**（地心探险高 → 座位号小）
+  //    ⚠️ 曾经把「整条链挪到链内排名最高者位置」，结果排名靠后的人拿到了很靠内的
+  //       座位号（用户看到的「地心探险等级最低的跑到 1 环 1 号位」）。邻居一律留到第 6 步
+  //       用**就近换位**处理：谁的座位号都不许因为邻居而大幅跳跃。
+  const order = rank.slice()
 
-  // 4) 输出顺序：整条链挪到「链内排名最高者」的位置，链内按排名
-  const emitted = {}
-  const order = []
-  rank.forEach(function (u) {
-    const uk = nickKey(u.nickName)
-    if (emitted[uk]) return
-    const group = groups[find(uk)] || [u]
-    group.slice().sort(compareRank).forEach(function (x) {
-      const xk = nickKey(x.nickName)
-      if (emitted[xk]) return
-      emitted[xk] = 1
-      order.push(x)
-    })
-  })
-
-  // 5) 落座：按编号顺序取「可坐」的座位（旗子位跳过）
+  // 4) 落座：按编号顺序取「可坐」的座位（旗子位跳过）
   const occ = {}
   let cursor = 0
   order.forEach(function (u) {
@@ -406,24 +377,42 @@ function planSeats(members) {
     if (seat) occ[seat.index] = u
   })
 
-  // 6) 相邻修正：**就近换位**（用户口径 2026-10-10：「优先按战力排，然后再调整相邻的位置」）
+  // 5) 相邻修正：**就近换位**（用户口径：「优先按地心排，然后再调整相邻的位置」）
   //
-  //    目标是「座位号 ≈ 战力名次」：选邻居的人要和邻居挨着，但腾位置时只跟
-  //    「座位号离自己最近、且换完之后不会拆散别人邻居」的人换。
-  //    ⚠️ 旧实现是取 neighborsOf(target)[0]（座位号最小的那个），会出现
-  //       「7 号的人跟 4 号的人换 → 低战力的插到前面、高战力的被顶到 7 号」，
-  //       这正是用户看到的「没有按战力排」。
-  const seatOfNick = {}
-  order.forEach(function (u) { seatOfNick[nickKey(u.nickName)] = u.seatIndex })
+  //    目标：座位号 ≈ 地心探险等级名次。选邻居的人要挨着邻居，但只跟「座位号离自己最近、
+  //    且换完之后不会拆散别人邻居」的人换，**并且位移不超过 MAX_SWAP 个座位号**——
+  //    否则宁可放弃这次连坐，也绝不把低地心探险等级的人塞到很靠内的位置。
+  //    ⚠️ 历史坑：旧实现取 neighborsOf(target)[0]（座位号最小的那个）就换，
+  //       于是「最后一名选了第一名当邻居」→ 最后一名直接坐到 1 号位。
+  const MAX_SWAP = 6
 
-  // 试算用：除 skipNick 外，其他人的「邻居」是否都还挨着
+  // 换位上限：位移 = 两人座位号之差（换完之后两人各挪这么远）
+  const seatOfNick = {}
+  const rankPos = {}
+  order.forEach(function (u, i) {
+    seatOfNick[nickKey(u.nickName)] = u.seatIndex
+    rankPos[nickKey(u.nickName)] = i + 1
+  })
+
+  // 「当前已经挨着」的邻居关系 —— 只有这些不许被换位拆散。
+  // 还没挨着的（各自会在后面被修好）不参与校验，否则谁都换不动。
+  const held = {}
+  function refreshHeld(nick) {
+    const k = nickKey(nick)
+    const tk = targetOf[k]
+    const sk = seatByIndex(seatOfNick[k])
+    const st = tk ? seatByIndex(seatOfNick[tk]) : null
+    held[k] = !!(tk && sk && st && areAdjacent(sk, st))
+  }
+  order.forEach(function (u) { refreshHeld(u.nickName) })
+
   function relationsHold(skipNick) {
     for (let i = 0; i < order.length; i++) {
       const x = order[i]
       const xk = nickKey(x.nickName)
       if (xk === skipNick) continue
+      if (!held[xk]) continue
       const tk = targetOf[xk]
-      if (!tk) continue
       const sx = seatByIndex(seatOfNick[xk])
       const st = seatByIndex(seatOfNick[tk])
       if (!sx || !st || !areAdjacent(sx, st)) return false
@@ -449,8 +438,15 @@ function planSeats(members) {
       const seat = cands[i]
       if (seat.isFlag) continue
       const v = occ[seat.index]
-      if (!v || v === u) continue
+      if (!v || v === u || v === tu) continue
       const vk = nickKey(v.nickName)
+
+      const d = Math.abs(v.seatIndex - u.seatIndex)   // 位移 = 扰动量
+      if (d > MAX_SWAP) continue                      // 跳太远就不换，宁可放弃连坐
+
+      // 不让「地心更低的人」把「地心更高、而且本来更靠内的人」挤到外圈
+      // （用户截图病因：最后一名跟第 5 名换了位，直接坐到一环里）
+      if (rankPos[vk] < rankPos[uk] && seat.ring < su.ring) continue
 
       seatOfNick[uk] = v.seatIndex
       seatOfNick[vk] = u.seatIndex
@@ -459,7 +455,6 @@ function planSeats(members) {
       seatOfNick[vk] = v.seatIndex
       if (!ok) continue
 
-      const d = Math.abs(v.seatIndex - u.seatIndex)   // 座位号距离 = 扰动量
       if (!best || d < best.d || (d === best.d && v.seatIndex < best.v.seatIndex)) {
         best = { v: v, d: d }
       }
@@ -476,9 +471,11 @@ function planSeats(members) {
     v.seatIndex = uSeat
     seatOfNick[uk] = vSeat
     seatOfNick[vk] = uSeat
+    refreshHeld(uk)
+    refreshHeld(vk)
   })
 
-  // 7) 回写最终邻居座位号（相邻才算绑上）
+  // 6) 回写最终邻居座位号（相邻才算绑上）
   order.forEach(function (u) {
     const uk = nickKey(u.nickName)
     const tk = targetOf[uk]

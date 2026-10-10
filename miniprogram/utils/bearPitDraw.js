@@ -246,12 +246,12 @@ function drawPit(ctx, opts) {
     ctx.font = '500 11px ' + FONT_STACK
     ctx.textAlign = 'center'
     ctx.textBaseline = 'alphabetic'
-    ctx.fillText('共 ' + total + ' 个位置（可排 ' + cap + ' 人）· 已排 ' + occupied + ' 人', width / 2, height - 5)
+    ctx.fillText('共 ' + total + ' 个位置（可排 ' + cap + ' 人）· 已排 ' + occupied + ' 人 · 数字＝地心探险等级', width / 2, height - 5)
     ctx.restore()
   }
 }
 
-// 昵称模式：昵称自动缩字号、最多两行；战力（dixin 字段）做右上角小徽标
+// 昵称模式：昵称自动缩字号、最多两行；地心探险等级（dixin 字段）做右上角小徽标
 function drawNickLabel(ctx, seat, member, ink) {
   const maxW = seat.w * 0.86
   const name = String(member.nickName || '')

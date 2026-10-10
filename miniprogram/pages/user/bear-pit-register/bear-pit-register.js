@@ -1,7 +1,8 @@
 // pages/user/bear-pit-register/bear-pit-register.js
-// 熊坑报名：联盟 / 昵称 / 战力（＝地心探险等级）+ 二选一（按战力排 · 邻居）
-// 排位口径：先按战力从高到低排，选邻居的人只跟旁边的人「就近换位」，
-// 不会把战力更高的人顶到后面（详见 utils/bearPitLayout.js planSeats）。
+// 熊坑报名：联盟 / 昵称 / 地心探险等级 + 二选一（按地心排 · 邻居）
+// 排位口径：先按地心探险等级从高到低排，选邻居的人只做「本环内就近换位」，
+// 不会把等级更高的人顶到后面、也不会让等级低的人挤进内环
+// （详见 utils/bearPitLayout.js planSeats）。
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
@@ -146,7 +147,7 @@ Page({
       .filter(m => layout.nickKey(m.nickName) !== me)
       .map(m => ({
         nickName: m.nickName,
-        dixinText: (m.dixin === null || m.dixin === undefined || m.dixin === '') ? '战力 —' : '战力 ' + m.dixin,
+        dixinText: (m.dixin === null || m.dixin === undefined || m.dixin === '') ? '—' : String(m.dixin),
         taken: !!takenMap[layout.nickKey(m.nickName)]
       }))
     const canNeighbor = list.filter(x => !x.taken).length > 0
@@ -177,7 +178,7 @@ Page({
   selectMode: function (e) {
     const mode = e.currentTarget.dataset.mode
     if (mode === 'neighbor' && !this.data.canNeighbor) {
-      util.showInfo('还没有其他已报名的人，先按战力排吧')
+      util.showInfo('还没有其他已报名的人，先按地心排吧')
       return
     }
     this.setData({ mode: mode })
@@ -209,7 +210,7 @@ Page({
       return
     }
     if (this.data.mode === 'neighbor' && !this.data.neighborNick) {
-      util.showInfo('请选择一位邻居，或改选「按战力排」')
+      util.showInfo('请选择一位邻居，或改选「按地心排」')
       return
     }
 
