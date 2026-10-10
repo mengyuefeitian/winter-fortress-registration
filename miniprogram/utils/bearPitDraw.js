@@ -58,24 +58,47 @@ function greedyWrap(ctx, text, maxW) {
   return lines.length ? lines : ['']
 }
 
-/** 自动缩字号 + 最多 maxLines 行；仍放不下则末行省略号。返回 { fs, lines } */
-function fitText(ctx, text, maxW, maxLines, startFs, minFs, weight) {
+// 均衡换行：中文昵称优先「每行字数均匀」，避免「城南种 / 田」这种尾行只剩一个字
+function balancedWrap(ctx, text, maxW) {
+  const lines = greedyWrap(ctx, text, maxW)
+  if (lines.length <= 1) return lines
+  const chars = String(text || '').split('')
+  const per = Math.ceil(chars.length / lines.length)
+  const out = []
+  for (let i = 0; i < chars.length; i += per) out.push(chars.slice(i, i + per).join(''))
+  if (out.length > lines.length) return lines
+  for (let i = 0; i < out.length; i++) {
+    if (ctx.measureText(out[i]).width > maxW) return lines
+  }
+  return out
+}
+
+/** 自动缩字号 + 最多 maxLines 行 + 最多 maxH 高；仍放不下则末行省略号。返回 { fs, lines } */
+function fitText(ctx, text, maxW, maxLines, startFs, minFs, weight, maxH) {
   const w = weight || '700'
+  const LINE = 1.05
+  const H = (maxH && maxH > 0) ? maxH : Infinity
+  const fits = function (lines, fs) {
+    return lines.length <= maxLines && lines.length * fs * LINE <= H + 1e-9
+  }
   let fs = startFs
   let lines = []
   while (fs > minFs + 1e-6) {
     ctx.font = w + ' ' + fs.toFixed(3) + 'px ' + FONT_STACK
-    lines = greedyWrap(ctx, text, maxW)
-    if (lines.length <= maxLines) return { fs: fs, lines: lines }
+    lines = balancedWrap(ctx, text, maxW)
+    if (fits(lines, fs)) return { fs: fs, lines: lines }
     fs -= 0.01
   }
+  // 到最小字号还是放不下：先砍行数（高度不够时），再砍末行加省略号
   ctx.font = w + ' ' + minFs + 'px ' + FONT_STACK
-  lines = greedyWrap(ctx, text, maxW)
-  if (lines.length > maxLines) {
-    lines = lines.slice(0, maxLines)
-    let last = lines[maxLines - 1]
+  lines = balancedWrap(ctx, text, maxW)
+  let keep = maxLines
+  while (keep > 1 && keep * minFs * LINE > H) keep--
+  if (lines.length > keep) {
+    lines = lines.slice(0, keep)
+    let last = lines[keep - 1]
     while (last.length > 1 && ctx.measureText(last + '…').width > maxW) last = last.slice(0, -1)
-    lines[maxLines - 1] = last + '…'
+    lines[keep - 1] = last + '…'
   }
   return { fs: minFs, lines: lines }
 }
@@ -251,23 +274,59 @@ function drawPit(ctx, opts) {
   }
 }
 
-// 昵称模式：昵称自动缩字号、最多两行；地心探险等级（dixin 字段）做右上角小徽标
+/**
+ * 昵称模式：昵称自动缩字号、最多两行，并且保证整体**落在座位格子内**；
+ * 地心探险等级做成深色小徽标，统一贴在座位**右下角**
+ * （原来是右上角，会压住昵称第一行，用户 2026-10-10 反馈）。
+ *
+ * 版面把一个座位分成两区：昵称占上方（有徽标时就是徽标上沿以上的区域），
+ * 徽标占右下角。缩字号同时受「宽度」和「昵称区高度」两个约束，
+ * 所以 5 个字的长昵称也不会顶出格子、更不会和徽标叠在一起。
+ */
 function drawNickLabel(ctx, seat, member, ink) {
-  const maxW = seat.w * 0.86
   const name = String(member.nickName || '')
   const lv = member.dixin
   const hasLevel = lv !== null && lv !== undefined && lv !== ''
 
   const cx = seat.c + seat.w / 2
-  const cy = seat.r + seat.h / 2
+  const maxW = seat.w * 0.86 // 左右各留 7% 余量
+
+  // ① 徽标尺寸先量出来：昵称的可用高度取决于它的上沿
+  let badge = null
+  if (hasLevel) {
+    const txt = String(lv)
+    const maxBW = seat.w * 0.64
+    let bfs = seat.h * 0.22
+    ctx.font = '700 ' + bfs.toFixed(3) + 'px ' + FONT_STACK
+    let bw = ctx.measureText(txt).width + seat.w * 0.12
+    if (bw > maxBW) {
+      // 位数多（4 位以上）时压一档字号，别让徽标把半格都吃掉
+      bfs = Math.max(seat.h * 0.15, bfs * maxBW / bw)
+      ctx.font = '700 ' + bfs.toFixed(3) + 'px ' + FONT_STACK
+      bw = Math.min(maxBW, ctx.measureText(txt).width + seat.w * 0.12)
+    }
+    const bh = seat.h * 0.26
+    badge = {
+      txt: txt,
+      fs: bfs,
+      w: Math.min(bw, maxBW),
+      h: bh,
+      x: seat.c + seat.w * 0.94 - Math.min(bw, maxBW),
+      y: seat.r + seat.h * 0.94 - bh
+    }
+  }
+
+  // ② 昵称区域：整格，或（有徽标时）徽标上沿往上的那块
+  const areaTop = seat.r + seat.h * 0.07
+  const areaBottom = badge ? badge.y - seat.h * 0.06 : seat.r + seat.h * 0.93
+  const areaH = Math.max(seat.h * 0.18, areaBottom - areaTop)
 
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-
-  const centerY = hasLevel ? cy + seat.h * 0.09 : cy
-  const fit = fitText(ctx, name, maxW, 2, seat.h * 0.34, seat.h * 0.18, '700')
+  const fit = fitText(ctx, name, maxW, 2, seat.h * 0.34, seat.h * 0.15, '700', areaH)
   const lineH = fit.fs * 1.05
-  let y = centerY - (lineH * fit.lines.length) / 2 + lineH / 2
+  const areaCY = (areaTop + areaBottom) / 2
+  let y = areaCY - (lineH * fit.lines.length) / 2 + lineH / 2
   ctx.fillStyle = ink
   ctx.font = '700 ' + fit.fs.toFixed(3) + 'px ' + FONT_STACK
   fit.lines.forEach(function (line) {
@@ -275,18 +334,14 @@ function drawNickLabel(ctx, seat, member, ink) {
     y += lineH
   })
 
-  if (hasLevel) {
-    const txt = String(lv)
-    ctx.font = '700 ' + (seat.h * 0.24).toFixed(3) + 'px ' + FONT_STACK
-    const bw = Math.max(seat.w * 0.34, ctx.measureText(txt).width + seat.w * 0.14)
-    const bh = seat.h * 0.30
-    const bx = seat.c + seat.w - bw - seat.w * 0.05
-    const by = seat.r + seat.h * 0.04
+  // ③ 徽标最后画，统一右下角
+  if (badge) {
+    roundRect(ctx, badge.x, badge.y, badge.w, badge.h, badge.h * 0.3)
     ctx.fillStyle = 'rgba(31,35,41,0.82)'
-    roundRect(ctx, bx, by, bw, bh, bh * 0.28)
     ctx.fill()
     ctx.fillStyle = '#FFFFFF'
-    ctx.fillText(txt, bx + bw / 2, by + bh / 2 + 0.005)
+    ctx.font = '700 ' + badge.fs.toFixed(3) + 'px ' + FONT_STACK
+    ctx.fillText(badge.txt, badge.x + badge.w / 2, badge.y + badge.h / 2 + 0.005)
   }
 }
 
