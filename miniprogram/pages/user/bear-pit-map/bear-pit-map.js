@@ -14,7 +14,8 @@ Page({
     mode: 'nick',
     loading: true,
     memberCount: 0,
-    seatTotal: layout.TOTAL_SEATS
+    seatTotal: layout.TOTAL_SLOTS,
+    capacity: layout.MAX_MEMBERS
   },
 
   onLoad: function (options) {
@@ -69,7 +70,8 @@ Page({
       this.setData({
         loading: false,
         memberCount: this._members.length,
-        seatTotal: board.seatTotal || layout.TOTAL_SEATS
+        seatTotal: board.seatTotal || layout.TOTAL_SLOTS,
+        capacity: board.maxMembers || layout.MAX_MEMBERS
       }, () => this.redraw())
     } catch (err) {
       console.error('加载熊坑看板失败:', err)
@@ -99,7 +101,8 @@ Page({
       offsetY: offsetY,
       mode: mode,
       members: this._members,
-      seatTotal: this.data.seatTotal
+      seatTotal: this.data.seatTotal,
+      maxMembers: this.data.capacity
     })
   },
 

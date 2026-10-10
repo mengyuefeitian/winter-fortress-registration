@@ -4,7 +4,7 @@
   <view class="card">
     <view class="bpr-sec-head">
       <text class="bpr-sec-title">报名信息</text>
-      <text class="bpr-sec-count">已报名 {{memberCount}} / {{seatTotal}}</text>
+      <text class="bpr-sec-count">已报名 {{memberCount}} / {{capacity}}</text>
     </view>
 
     <!-- 联盟 -->

@@ -22,6 +22,6 @@
   </view>
 
   <view class="bpm-foot">
-    <text>双指缩放 · 单指拖动 · 共 {{seatTotal}} 个座位 · 已报名 {{memberCount}} 人</text>
+    <text>双指缩放 · 单指拖动 · 共 {{seatTotal}} 个位置（可排 {{capacity}} 人）· 已报名 {{memberCount}} 人</text>
   </view>
 </view>
