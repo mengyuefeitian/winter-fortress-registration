@@ -51,6 +51,11 @@ const FLAG_SLOTS = [
 // 最多可排多少人（用户要求：140 个位置但只排 100 人）
 const MAX_MEMBERS = 100
 
+// 布局 / 排位算法版本。改动座位几何或排位规则时必须 +1：
+// 云函数 getBoard 发现看板上记录的版本落后，会自动重排一次并回写（一次性自愈，
+// 免去让盟管重新报名）。v2 = 邻居改为「就近换位」（2026-10-10）
+const LAYOUT_VERSION = 2
+
 // 绘制用色
 const PIT_STYLE = {
   pitFill: '#E8352B',
@@ -240,7 +245,7 @@ function timeOf(m) {
   return isNaN(v) ? 0 : v
 }
 
-/** 排名：地心探险高 → 靠前（更靠内圈）；同等级 → 先报名靠内；再同 → 按昵称 */
+/** 排名：战力高 → 靠前（更靠内圈）；同战力 → 先报名靠内；再同 → 按昵称 */
 function compareRank(a, b) {
   const da = dixinOf(a)
   const db = dixinOf(b)
@@ -268,12 +273,13 @@ function resetNeighbor(u) {
  * @param {Array} members 报名人员 [{ nickName, dixin, createTime, mode, neighborNick }]
  * @returns {Array} 新数组，带 seatIndex（座位号，1 起）/ neighborSeat / mode / neighborNick
  *
- * 规则：
- *  1. 地心探险越高越靠内圈（座位号越小）；同级先报名靠内
+ * 规则（用户口径：**优先按战力排，然后再调整相邻的位置**）：
+ *  1. 战力（＝报名填的那个数）越高越靠内圈（座位号越小）；同战力先报名靠内
  *  2. 旗子位不能排人（直接跳过）
  *  3. 邻居：尽量把 A 排在指定邻居 B 旁边；A→B→C 链条整条拉直
  *  4. 邻居目标被删除 / 被别人抢走 → 自动重置为「按战力排」
- *  5. 修正阶段只跟「无任何邻居关系」的人换位，不破坏别人已绑好的邻居
+ *  5. 修正阶段**只做就近换位**：跟「座位号离自己最近、且不会拆散别人邻居」的人换，
+ *     不让低战力的人插到高战力的人前面
  */
 function planSeats(members) {
   const list = (members || []).map(function (m) { return Object.assign({}, m) })
@@ -375,7 +381,31 @@ function planSeats(members) {
     if (seat) occ[seat.index] = u
   })
 
-  // 6) 相邻修正：没排到目标旁边的，跟「零邻居关系」的人换位
+  // 6) 相邻修正：**就近换位**（用户口径 2026-10-10：「优先按战力排，然后再调整相邻的位置」）
+  //
+  //    目标是「座位号 ≈ 战力名次」：选邻居的人要和邻居挨着，但腾位置时只跟
+  //    「座位号离自己最近、且换完之后不会拆散别人邻居」的人换。
+  //    ⚠️ 旧实现是取 neighborsOf(target)[0]（座位号最小的那个），会出现
+  //       「7 号的人跟 4 号的人换 → 低战力的插到前面、高战力的被顶到 7 号」，
+  //       这正是用户看到的「没有按战力排」。
+  const seatOfNick = {}
+  order.forEach(function (u) { seatOfNick[nickKey(u.nickName)] = u.seatIndex })
+
+  // 试算用：除 skipNick 外，其他人的「邻居」是否都还挨着
+  function relationsHold(skipNick) {
+    for (let i = 0; i < order.length; i++) {
+      const x = order[i]
+      const xk = nickKey(x.nickName)
+      if (xk === skipNick) continue
+      const tk = targetOf[xk]
+      if (!tk) continue
+      const sx = seatByIndex(seatOfNick[xk])
+      const st = seatByIndex(seatOfNick[tk])
+      if (!sx || !st || !areAdjacent(sx, st)) return false
+    }
+    return true
+  }
+
   order.forEach(function (u) {
     const uk = nickKey(u.nickName)
     const tk = targetOf[uk]
@@ -386,22 +416,41 @@ function planSeats(members) {
     const st = seatByIndex(tu.seatIndex)
     if (!su || !st) return
     if (areAdjacent(su, st)) return
+
+    // 候选 = 目标座位四周、已被人占着的座位（旗子位不能占）
     const cands = neighborsOf(st)
+    let best = null
     for (let i = 0; i < cands.length; i++) {
-      const target = cands[i]
-      if (target.isFlag) continue
-      const v = occ[target.index]
+      const seat = cands[i]
+      if (seat.isFlag) continue
+      const v = occ[seat.index]
       if (!v || v === u) continue
       const vk = nickKey(v.nickName)
-      if (targetOf[vk] || chosenBy[vk]) continue   // 动了他会破坏别人的邻居
-      const uSeat = u.seatIndex
-      const vSeat = v.seatIndex
-      occ[uSeat] = v
-      occ[vSeat] = u
-      u.seatIndex = vSeat
-      v.seatIndex = uSeat
-      break
+
+      seatOfNick[uk] = v.seatIndex
+      seatOfNick[vk] = u.seatIndex
+      const ok = relationsHold(uk)      // u 自己的邻居由这次换位满足，不用检查
+      seatOfNick[uk] = u.seatIndex
+      seatOfNick[vk] = v.seatIndex
+      if (!ok) continue
+
+      const d = Math.abs(v.seatIndex - u.seatIndex)   // 座位号距离 = 扰动量
+      if (!best || d < best.d || (d === best.d && v.seatIndex < best.v.seatIndex)) {
+        best = { v: v, d: d }
+      }
     }
+    if (!best) return
+
+    const v = best.v
+    const vk = nickKey(v.nickName)
+    const uSeat = u.seatIndex
+    const vSeat = v.seatIndex
+    occ[uSeat] = v
+    occ[vSeat] = u
+    u.seatIndex = vSeat
+    v.seatIndex = uSeat
+    seatOfNick[uk] = vSeat
+    seatOfNick[vk] = uSeat
   })
 
   // 7) 回写最终邻居座位号（相邻才算绑上）
@@ -428,6 +477,7 @@ module.exports = {
   BLOCKS,
   FLAG_SLOTS,
   MAX_MEMBERS,
+  LAYOUT_VERSION,
   TOTAL_SLOTS,
   // 兼容旧调用点：位置总数（140）
   TOTAL_SEATS: TOTAL_SLOTS,

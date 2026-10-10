@@ -251,7 +251,7 @@ function drawPit(ctx, opts) {
   }
 }
 
-// 昵称模式：昵称自动缩字号、最多两行；地心等级做右上角小徽标
+// 昵称模式：昵称自动缩字号、最多两行；战力（dixin 字段）做右上角小徽标
 function drawNickLabel(ctx, seat, member, ink) {
   const maxW = seat.w * 0.86
   const name = String(member.nickName || '')

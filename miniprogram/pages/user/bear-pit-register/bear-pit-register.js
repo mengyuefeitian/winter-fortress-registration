@@ -1,5 +1,7 @@
 // pages/user/bear-pit-register/bear-pit-register.js
-// 熊坑报名：联盟 / 昵称 / 地心探险等级 + 二选一（按战力排 · 邻居）
+// 熊坑报名：联盟 / 昵称 / 战力（＝地心探险等级）+ 二选一（按战力排 · 邻居）
+// 排位口径：先按战力从高到低排，选邻居的人只跟旁边的人「就近换位」，
+// 不会把战力更高的人顶到后面（详见 utils/bearPitLayout.js planSeats）。
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
@@ -144,7 +146,7 @@ Page({
       .filter(m => layout.nickKey(m.nickName) !== me)
       .map(m => ({
         nickName: m.nickName,
-        dixinText: (m.dixin === null || m.dixin === undefined || m.dixin === '') ? '地心 —' : '地心 ' + m.dixin,
+        dixinText: (m.dixin === null || m.dixin === undefined || m.dixin === '') ? '战力 —' : '战力 ' + m.dixin,
         taken: !!takenMap[layout.nickKey(m.nickName)]
       }))
     const canNeighbor = list.filter(x => !x.taken).length > 0
