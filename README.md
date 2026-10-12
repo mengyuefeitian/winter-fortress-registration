@@ -13,7 +13,7 @@
 基于微信云开发，无需自建服务器。
 
 [![平台](https://img.shields.io/badge/平台-微信小程序-07C160?logo=wechat)](https://mp.weixin.qq.com/)
-[![版本](https://img.shields.io/badge/version-1.18.6-blue)](https://github.com/mengyuefeitian/winter-fortress-registration/releases)
+[![版本](https://img.shields.io/badge/version-1.18.7-blue)](https://github.com/mengyuefeitian/winter-fortress-registration/releases)
 [![后端](https://img.shields.io/badge/后端-微信云开发-4A90D9)](https://cloud.weixin.qq.com/)
 [![更新日志](https://img.shields.io/badge/docs-CHANGELOG-brightgreen)](docs/CHANGELOG.md)
 
@@ -229,6 +229,7 @@
 
 ## 更新日志
 
+- **v1.18.7** — 新增「新版本自动更新提示」：打开小程序时微信自动比对线上版本，下载完成后弹窗引导用户「立即重启」升级到最新版（官方 `getUpdateManager` 机制，无需后台）
 - **v1.18.6** — 修正「熊坑分布图」手机端昵称跑出座位格：Canvas 文字不再依赖 `textBaseline='middle'`（iOS 上给 `ctx.font` 赋值会把它重置掉），统一改用 alphabetic + `measureText` 实测墨迹盒定位，昵称锚点另加硬夹紧
 - **v1.18.5** — 修正「熊坑分布图」显示：昵称按宽度和高度双向缩字号，一定落在方格内（手机端不再顶出格子）；地心探险等级徽标统一贴到座位右下角（原来在右上角会压住昵称第一行），长昵称改为均衡断行
 - **v1.18.4** — 修正「熊坑排位」：改为「同一环内自由换位」（可挪空位 / 与同环的人互换），选了邻居的人一定能挨上邻居（之前只跟已占座的人换、空位用不上，人少时邻居全连不上）；环的归属仍由地心探险等级名次决定
