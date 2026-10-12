@@ -50,8 +50,57 @@ App({
     // 自动登录
     this.autoLogin()
 
+    // 新版本自动检查：有新版下载完成后弹窗引导用户重启更新
+    this.checkForUpdate()
+
     // 联盟活跃：打开小程序自动把本人标记为今日活跃（内部有节流，失败静默）
     this.markAllianceActive()
+  },
+
+  /**
+   * 新版本自动更新检查（微信官方机制，无需自建后台）
+   * 流程：小程序「冷启动」时微信自动比对线上版本 → 发现新版则在后台静默下载 →
+   *       下载完成后触发 onUpdateReady → 弹窗引导用户重启，applyUpdate 切到新版本。
+   * 注意：
+   * - 只在冷启动检查；小程序常驻后台时不触发，需用户杀掉重开才会拉新包。
+   * - onCheckForUpdate 的 hasUpdate=true 仅代表"查到新版"，包尚未下完，不能 applyUpdate。
+   * - applyUpdate 会关闭并重启小程序、清空页面栈，故提示挂在全局 onLaunch，不放在业务页面。
+   */
+  checkForUpdate: function () {
+    if (!wx.getUpdateManager) {
+      console.warn('[更新] 当前基础库不支持 getUpdateManager')
+      return
+    }
+    const updateManager = wx.getUpdateManager()
+
+    updateManager.onCheckForUpdate(function (res) {
+      // res.hasUpdate 仅代表"查到新版"，此时包还没下载完
+      console.log('[更新] 检查完成，hasUpdate =', res.hasUpdate)
+    })
+
+    updateManager.onUpdateReady(function () {
+      wx.showModal({
+        title: '发现新版本',
+        content: '已为你下载好最新版本，重启后即可体验。',
+        confirmText: '立即重启',
+        cancelText: '稍后',
+        success: function (m) {
+          if (m.confirm) {
+            updateManager.applyUpdate() // 关闭并重启小程序，应用新版本
+          }
+        }
+      })
+    })
+
+    updateManager.onUpdateFailed(function () {
+      // 多为弱网导致下载失败
+      wx.showModal({
+        title: '更新失败',
+        content: '新版本下载失败，请检查网络后，在微信中删除本小程序再重新打开。',
+        showCancel: false,
+        confirmText: '我知道了'
+      })
+    })
   },
 
   onShow: function () {
