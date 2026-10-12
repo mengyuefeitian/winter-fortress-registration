@@ -17,6 +17,57 @@ const FONT_STACK = '-apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica
 // 画布留白（细格单位）
 const PAD = 0.6
 
+// ---------------------------------------------------------------------------
+// 文字基线
+//
+// 微信 Canvas 2D（尤其 iOS）上 `textBaseline = 'middle'` 不可靠：
+//   ① 给 ctx.font 赋值会把 textBaseline 重置回默认值 alphabetic，
+//      所以「先设 baseline 再设 font」的写法等于没设；
+//   ② 即使生效，middle 的位置依赖字体自身的 ascent/descent，中日韩字体
+//      与数字字体差得很多，同一段代码在不同机型上会上下漂。
+//
+// 因此这里统一约定：
+//   · 一律使用 alphabetic（所有平台都严格一致）
+//   · 每次设置 ctx.font 之后立刻重设 textAlign / textBaseline
+//   · 需要「垂直居中」时，用 measureText 实测墨迹盒，自己反推基线位置
+// ---------------------------------------------------------------------------
+function setFont(ctx, fs, weight) {
+  ctx.font = (weight || '400') + ' ' + fs.toFixed(3) + 'px ' + FONT_STACK
+  // 注意顺序：font 之后再设，否则被 font 赋值重置掉
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'alphabetic'
+}
+
+/** 文字相对 alphabetic 基线的墨迹上沿 / 下沿（细格；正数表示在基线之上） */
+function inkMetrics(ctx, text, fs) {
+  let m = null
+  try { m = ctx.measureText(text) } catch (e) { m = null }
+  let a = 0
+  let d = 0
+  if (m) {
+    a = Number(m.actualBoundingBoxAscent)
+    d = Number(m.actualBoundingBoxDescent)
+  }
+  if (!(a > 0) && !(d > 0)) {
+    // 量不到（iOS 上 actualBoundingBox* 经常返回 0）→ 用字形经验值兜底
+    if (/^[0-9]+$/.test(String(text))) {
+      a = fs * 0.72; d = fs * 0.02 // 数字：只有帽高，不下伸
+    } else {
+      a = fs * 0.88; d = fs * 0.12 // 中日韩：字面基本占满 em 框
+    }
+  }
+  return { asc: a, desc: d }
+}
+
+/** 在 (cx, centerY) 画一行字，使其「墨迹盒」垂直居中 */
+function fillLineCentered(ctx, text, cx, centerY, fs, weight) {
+  setFont(ctx, fs, weight)
+  const mt = inkMetrics(ctx, text, fs)
+  const baseline = centerY + (mt.asc - mt.desc) / 2
+  ctx.fillText(text, cx, baseline)
+  return { top: baseline - mt.asc, bottom: baseline + mt.desc }
+}
+
 // 每个色块的「已坐」加深色（空位用原色，坐人后用深一档，一眼能看出谁坐哪）
 const ON_FILL = {
   '#FFE796': '#FFD24D',
@@ -84,13 +135,13 @@ function fitText(ctx, text, maxW, maxLines, startFs, minFs, weight, maxH) {
   let fs = startFs
   let lines = []
   while (fs > minFs + 1e-6) {
-    ctx.font = w + ' ' + fs.toFixed(3) + 'px ' + FONT_STACK
+    setFont(ctx, fs, w)
     lines = balancedWrap(ctx, text, maxW)
     if (fits(lines, fs)) return { fs: fs, lines: lines }
     fs -= 0.01
   }
   // 到最小字号还是放不下：先砍行数（高度不够时），再砍末行加省略号
-  ctx.font = w + ' ' + minFs + 'px ' + FONT_STACK
+  setFont(ctx, minFs, w)
   lines = balancedWrap(ctx, text, maxW)
   let keep = maxLines
   while (keep > 1 && keep * minFs * LINE > H) keep--
@@ -204,17 +255,14 @@ function drawPit(ctx, opts) {
   ctx.lineWidth = 0.1
   ctx.strokeRect(p.c0, p.r0, p.c1 - p.c0 + 1, p.r1 - p.r0 + 1)
   ctx.fillStyle = style.pitInk
-  ctx.font = '700 0.95px ' + FONT_STACK
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText('熊坑', (p.c0 + p.c1 + 1) / 2, (p.r0 + p.r1 + 1) / 2 + 0.03)
+  fillLineCentered(ctx, '熊坑', (p.c0 + p.c1 + 1) / 2, (p.r0 + p.r1 + 1) / 2 + 0.03, 0.95, '700')
 
   // 4) 旗子位
   layout.FLAG_SEATS.forEach(function (seat) { drawFlag(ctx, seat) })
 
-  // 5) 座位文字
+  // 5) 座位文字（基线由 fillLineCentered / drawNickLabel 各自负责，这里只给个兜底）
   ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
+  ctx.textBaseline = 'alphabetic'
   layout.SEATS.forEach(function (seat) {
     if (seat.isFlag) return
     const member = bySeat[seat.index]
@@ -223,14 +271,12 @@ function drawPit(ctx, opts) {
     const cy = seat.r + seat.h / 2
     if (mode === 'index') {
       ctx.fillStyle = member ? ink : 'rgba(60,60,60,0.45)'
-      ctx.font = (member ? '700 ' : '400 ') + (member ? 0.62 : 0.5) + 'px ' + FONT_STACK
-      ctx.fillText(String(seat.index), cx, cy + 0.02)
+      fillLineCentered(ctx, String(seat.index), cx, cy + 0.02, member ? 0.62 : 0.5, member ? '700' : '400')
     } else if (member) {
       drawNickLabel(ctx, seat, member, ink)
     } else {
       ctx.fillStyle = 'rgba(60,60,60,0.32)'
-      ctx.font = '400 0.4px ' + FONT_STACK
-      ctx.fillText(String(seat.index), cx, cy + 0.02)
+      fillLineCentered(ctx, String(seat.index), cx, cy + 0.02, 0.4, '400')
     }
   })
 
@@ -297,12 +343,12 @@ function drawNickLabel(ctx, seat, member, ink) {
     const txt = String(lv)
     const maxBW = seat.w * 0.64
     let bfs = seat.h * 0.22
-    ctx.font = '700 ' + bfs.toFixed(3) + 'px ' + FONT_STACK
+    setFont(ctx, bfs, '700')
     let bw = ctx.measureText(txt).width + seat.w * 0.12
     if (bw > maxBW) {
       // 位数多（4 位以上）时压一档字号，别让徽标把半格都吃掉
       bfs = Math.max(seat.h * 0.15, bfs * maxBW / bw)
-      ctx.font = '700 ' + bfs.toFixed(3) + 'px ' + FONT_STACK
+      setFont(ctx, bfs, '700')
       bw = Math.min(maxBW, ctx.measureText(txt).width + seat.w * 0.12)
     }
     const bh = seat.h * 0.26
@@ -316,32 +362,54 @@ function drawNickLabel(ctx, seat, member, ink) {
     }
   }
 
-  // ② 昵称区域：整格，或（有徽标时）徽标上沿往上的那块
+  // ② 昵称区域：上下边界一律写成 seat.r / seat.h 的常量表达式，
+  //    不再经过 badge.y 这类中间量，也不再依赖 ctx.textBaseline。
+  //    （有徽标时下沿 = seat.r + 0.62h，等价于 badge.y - 0.06h）
   const areaTop = seat.r + seat.h * 0.07
-  const areaBottom = badge ? badge.y - seat.h * 0.06 : seat.r + seat.h * 0.93
+  const areaBottom = badge ? seat.r + seat.h * 0.62 : seat.r + seat.h * 0.93
   const areaH = Math.max(seat.h * 0.18, areaBottom - areaTop)
+  const areaCY = (areaTop + areaBottom) / 2
 
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
   const fit = fitText(ctx, name, maxW, 2, seat.h * 0.34, seat.h * 0.15, '700', areaH)
   const lineH = fit.fs * 1.05
-  const areaCY = (areaTop + areaBottom) / 2
-  let y = areaCY - (lineH * fit.lines.length) / 2 + lineH / 2
+  // 只保留非空行：万一某端换行结果里混进空串，不能让它把「墨迹总高」算虚高
+  const lines = (fit.lines || []).filter(function (t) { return String(t || '').length > 0 })
+  if (!lines.length) lines.push(String(name || ''))
+  const n = lines.length
+
+  // ③ 按「实测墨迹盒」整体居中：首行基线 = 区域中心 − 墨迹总高/2 + 墨迹上沿
+  setFont(ctx, fit.fs, '700')
+  let asc = 0
+  let desc = 0
+  lines.forEach(function (t) {
+    const mt = inkMetrics(ctx, t, fit.fs)
+    if (mt.asc > asc) asc = mt.asc
+    if (mt.desc > desc) desc = mt.desc
+  })
+  const inkH = asc + (n - 1) * lineH + desc
+  let firstBaseline = areaCY - inkH / 2 + asc
+
+  // ④ 硬夹紧：墨迹整体不许越过座位上沿、也不许压到徽标
+  const minTop = seat.r + seat.h * 0.04
+  const maxBottom = (badge ? badge.y : seat.r + seat.h) - seat.h * 0.04
+  const inkTop = firstBaseline - asc
+  const inkBottom = firstBaseline + (n - 1) * lineH + desc
+  if (inkTop < minTop) firstBaseline += minTop - inkTop
+  else if (inkBottom > maxBottom) firstBaseline -= inkBottom - maxBottom
+
   ctx.fillStyle = ink
-  ctx.font = '700 ' + fit.fs.toFixed(3) + 'px ' + FONT_STACK
-  fit.lines.forEach(function (line) {
-    ctx.fillText(line, cx, y)
-    y += lineH
+  lines.forEach(function (line, i) {
+    setFont(ctx, fit.fs, '700')
+    ctx.fillText(line, cx, firstBaseline + i * lineH)
   })
 
-  // ③ 徽标最后画，统一右下角
+  // ⑤ 徽标最后画，统一右下角
   if (badge) {
     roundRect(ctx, badge.x, badge.y, badge.w, badge.h, badge.h * 0.3)
     ctx.fillStyle = 'rgba(31,35,41,0.82)'
     ctx.fill()
     ctx.fillStyle = '#FFFFFF'
-    ctx.font = '700 ' + badge.fs.toFixed(3) + 'px ' + FONT_STACK
-    ctx.fillText(badge.txt, badge.x + badge.w / 2, badge.y + badge.h / 2 + 0.005)
+    fillLineCentered(ctx, badge.txt, badge.x + badge.w / 2, badge.y + badge.h / 2 + 0.005, badge.fs, '700')
   }
 }
 
