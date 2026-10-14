@@ -90,7 +90,7 @@ Page({
   // 输入分区编号
   onZoneCodeInput: function (e) {
     let value = e.detail.value.replace(/\D/g, '')
-    value = value.slice(0, 4)
+    value = value.slice(0, 5)
     this.setData({
       newZoneCode: value
     })
@@ -108,15 +108,9 @@ Page({
     try {
       let zoneCode = this.data.newZoneCode
 
-      if (!zoneCode || zoneCode.length < 1 || zoneCode.length > 4) {
-        util.showInfo('请输入1-4位数字')
-        return
-      }
-
-      zoneCode = zoneCode.padStart(4, '0')
-
-      if (!util.validateZoneCode(zoneCode)) {
-        util.showInfo('分区编号格式不正确，请输入有效数字 (0001-9999)')
+      zoneCode = util.normalizeZoneCode(zoneCode)
+      if (!zoneCode) {
+        util.showInfo('请输入有效的分区编号（1-99999）')
         return
       }
 
@@ -169,7 +163,7 @@ Page({
   // 编辑分区编号输入
   onEditZoneCodeInput: function (e) {
     let value = e.detail.value.replace(/\D/g, '')
-    value = value.slice(0, 4)
+    value = value.slice(0, 5)
     this.setData({
       editZoneCode: value
     })
@@ -187,15 +181,9 @@ Page({
     try {
       let zoneCode = this.data.editZoneCode
 
-      if (!zoneCode || zoneCode.length < 1 || zoneCode.length > 4) {
-        util.showInfo('请输入1-4位数字')
-        return
-      }
-
-      zoneCode = zoneCode.padStart(4, '0')
-
-      if (!util.validateZoneCode(zoneCode)) {
-        util.showInfo('分区编号格式不正确')
+      zoneCode = util.normalizeZoneCode(zoneCode)
+      if (!zoneCode) {
+        util.showInfo('请输入有效的分区编号（1-99999）')
         return
       }
 

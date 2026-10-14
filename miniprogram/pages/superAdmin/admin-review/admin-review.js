@@ -717,7 +717,7 @@ Page({
     let inputZoneCode, inputZoneName
 
     // 若申请内容仅为4位数字，自动填入分区编号和名称
-    if (/^\d{4}$/.test(trimmed)) {
+    if (/^\d{1,5}$/.test(trimmed)) {
       inputZoneCode = trimmed
       inputZoneName = trimmed
     } else {
@@ -810,15 +810,20 @@ Page({
     try {
       util.showLoading('正在检查分区...')
 
-      const paddedCode = zoneCode.padStart(4, '0')
+      const normalizedCode = util.normalizeZoneCode(zoneCode)
+      if (!normalizedCode) {
+        util.hideLoading()
+        util.showInfo('分区编号格式不正确（1-99999）')
+        return
+      }
 
       // 检查分区编号是否已存在
-      const existingZone = await db.getZoneByCode(paddedCode)
+      const existingZone = await db.getZoneByCode(normalizedCode)
 
       if (existingZone) {
         // 分区已存在，自动拒绝并通知用户
         util.hideLoading()
-        await this.autoRejectZoneCreation(applicationId, index, paddedCode, existingZone.zoneName)
+        await this.autoRejectZoneCreation(applicationId, index, normalizedCode, existingZone.zoneName)
         return
       }
 
@@ -828,7 +833,7 @@ Page({
       const reviewerId = app.globalData.openid
 
       // 创建分区（createZone 内部会再次检查编号是否重复）
-      const zoneResult = await db.createZone(paddedCode, zoneName, userId)
+      const zoneResult = await db.createZone(normalizedCode, zoneName, userId)
 
       // 初始化12个联盟
       if (zoneResult && zoneResult._id) {
@@ -871,7 +876,7 @@ Page({
       // 异步发送审核结果通知（不阻塞）
       this.sendReviewNotify(applicationId, 'approved', {
         zoneName: zoneName,
-        zoneCode: paddedCode
+        zoneCode: normalizedCode
       })
 
     } catch (err) {
@@ -884,7 +889,7 @@ Page({
   // 自动拒绝分区开通申请（分区已存在时）
   autoRejectZoneCreation: async function (applicationId, index, zoneCode, existingZoneName) {
     this.clearReviewCache()
-    const rejectReason = '分区' + zoneCode + '已开通，开通失败'
+    const rejectReason = '分区' + normalizedCode + '已开通，开通失败'
 
     try {
       const reviewerId = app.globalData.openid
@@ -919,7 +924,7 @@ Page({
       // 异步发送审核结果通知（不阻塞）
       this.sendReviewNotify(applicationId, 'rejected', {
         rejectReason: rejectReason,
-        zoneCode: zoneCode,
+        zoneCode: normalizedCode,
         auto: true
       })
     } catch (err) {

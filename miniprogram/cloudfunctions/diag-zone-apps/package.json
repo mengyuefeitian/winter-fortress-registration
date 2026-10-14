@@ -1,0 +1,9 @@
+{
+  "name": "diag-zone-apps",
+  "version": "1.0.0",
+  "description": "只读诊断：列出分区开通申请",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

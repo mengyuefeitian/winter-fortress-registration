@@ -51,17 +51,31 @@ function formatTimeSlotName(timeValue, slotIndex) {
 }
 
 /**
- * 验证分区编号格式
- * @param {string} code 分区编号
+ * 规范化分区编号
+ * 规则：去除首尾空白与非数字字符 → 取最多 5 位数字 → 数值须在 1-99999；
+ * 长度 ≤ 4 时左侧补零到 4 位（兼容历史 4 位存储，例如 "909" → "0909"），
+ * 长度 5 时保持原样（支持 10000-99999）。
+ * 返回 '' 表示非法。
+ * @param {string|number} code 分区编号
+ * @returns {string} 规范化后的编号
+ */
+function normalizeZoneCode(code) {
+  if (code === null || code === undefined) return ''
+  const digits = String(code).replace(/[^0-9]/g, '').slice(0, 5)
+  if (!digits) return ''
+  const num = parseInt(digits, 10)
+  if (num < 1 || num > 99999) return ''
+  // ≤4 位补零到 4 位（兼容既有 4 位存储），5 位保持原样
+  return digits.length <= 4 ? digits.padStart(4, '0') : digits
+}
+
+/**
+ * 验证分区编号格式（支持 1-5 位数字，数值 1-99999）
+ * @param {string|number} code 分区编号
  * @returns {boolean} 是否有效
  */
 function validateZoneCode(code) {
-  // 必须是4位数字，范围0001-9999
-  const regex = /^[0-9]{4}$/
-  if (!regex.test(code)) return false
-
-  const num = parseInt(code, 10)
-  return num >= 1 && num <= 9999
+  return !!normalizeZoneCode(code)
 }
 
 /**
@@ -271,6 +285,7 @@ module.exports = {
   formatDate,
   formatTimeSlotName,
   validateZoneCode,
+  normalizeZoneCode,
   validatePhone,
   showLoading,
   hideLoading,
