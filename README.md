@@ -13,7 +13,7 @@
 基于微信云开发，无需自建服务器。
 
 [![平台](https://img.shields.io/badge/平台-微信小程序-07C160?logo=wechat)](https://mp.weixin.qq.com/)
-[![版本](https://img.shields.io/badge/version-1.18.10-blue)](https://github.com/mengyuefeitian/winter-fortress-registration/releases)
+[![版本](https://img.shields.io/badge/version-1.18.11-blue)](https://github.com/mengyuefeitian/winter-fortress-registration/releases)
 [![后端](https://img.shields.io/badge/后端-微信云开发-4A90D9)](https://cloud.weixin.qq.com/)
 [![更新日志](https://img.shields.io/badge/docs-CHANGELOG-brightgreen)](docs/CHANGELOG.md)
 
@@ -229,8 +229,9 @@
 
 ## 更新日志
 
+- **v1.18.11** — 申请提交顺序回调为「**先发邮件 → 再写库 → 回读校验 → 失败告警**」：邮件无条件先到（写库静默失败也能第一时间知晓），写完立即回读校验，校验不到再发一封「入库失败」告警邮件，杜绝「收到邮件却查不到条目」；区管申请同样改为先发邮件再写库
 - **v1.18.10** — 修复「超管收到申请邮件却在审核列表找不到条目」：审核列表缓存新增 60 秒 TTL（旧实现从不校验缓存时间），刷新失败不再被静默吞掉（会明确提示列表非最新），并新增下拉刷新强制重拉入口
-- **v1.18.9** — 修复分区开通申请「邮件已发、库里无记录」的数据丢失：提交改为云端原子操作（先写库、写成功才发邮件），新增 `submitZoneCreation` 云函数
+- **v1.18.9** — 修复分区开通申请「邮件已发、库里无记录」的数据丢失：提交改为云端原子操作，新增 `submitZoneCreation` 云函数（注：该版采用的是「先写库后发邮件」，方向有误，**v1.18.11 已改回先发邮件再写库**）
 - **v1.18.8** — 放宽分区编号规则：支持 1–5 位数字、数值 1–99999（如 `909` 合法、`0909` 等价、支持 5 位编号）；区管建/编分区与超管批准分区开通统一走 `normalizeZoneCode`，不再强制 4 位
 - **v1.18.7** — 新增「新版本自动更新提示」：打开小程序时微信自动比对线上版本，下载完成后弹窗引导用户「立即重启」升级到最新版（官方 `getUpdateManager` 机制，无需后台）
 - **v1.18.6** — 修正「熊坑分布图」手机端昵称跑出座位格：Canvas 文字不再依赖 `textBaseline='middle'`（iOS 上给 `ctx.font` 赋值会把它重置掉），统一改用 alphabetic + `measureText` 实测墨迹盒定位，昵称锚点另加硬夹紧

@@ -59,6 +59,10 @@ Page({
 
     util.showLoading('正在提交...')
 
+    // 用于判断「邮件已发出、但库里没写进去」——只有这种情况才补发告警邮件
+    let mailSent = false
+    let wrote = false
+
     try {
       const userId = app.globalData.openid
       if (!userId) {
@@ -102,16 +106,19 @@ Page({
         zoneName: this.data.selectedZone.zoneName
       }
 
-      // 创建区管申请
-      await db.createAdminApplication(userId, phone, 'zoneManager', extraData)
-
-      // 异步发送邮件通知超管（不阻塞）
+      // ① 先发邮件通知超管（无论后续写库是否成功，超管都能第一时间看到申请）
       sendApplyEmail({
         applyType: 'zoneManager',
         nickName: app.globalData.userInfo ? app.globalData.userInfo.nickName : '',
         phone: phone,
         zoneName: this.data.selectedZone.zoneName
       })
+      mailSent = true
+
+      // ② 再创建区管申请（写库）。顺序不要调换：写库若静默失败，
+      //    至少邮件已经到达超管，catch 里还会补发一封入库失败告警。
+      await db.createAdminApplication(userId, phone, 'zoneManager', extraData)
+      wrote = true
 
       util.hideLoading()
       util.showSuccess('申请已提交，等待审核')
@@ -123,6 +130,29 @@ Page({
 
     } catch (err) {
       util.hideLoading()
+      // 邮件已发出但申请没写进 admins：补发告警，避免超管「收到邮件却在审核列表里找不到」
+      if (mailSent && !wrote) {
+        const zoneN = (this.data.selectedZone && this.data.selectedZone.zoneName) || ''
+        try {
+          wx.cloud.callFunction({
+            name: 'sendApplyEmail',
+            data: {
+              alert: true,
+              subject: '[冬日堡垒][⚠️入库失败] 区管申请未写入数据库',
+              html: '<h2 style="color:#c0392b">⚠️ 区管申请：邮件已发送，但数据库写入失败</h2>' +
+                '<p>该申请<strong>没有</strong>进入 admins 集合，超管在「管理员审核」中<strong>看不到</strong>这条申请。</p>' +
+                `<p><strong>手机号：</strong>${phone || '未提供'}</p>` +
+                `<p><strong>分区：</strong>${zoneN}</p>` +
+                `<p><strong>用户 openid：</strong>${app.globalData.openid || ''}</p>` +
+                `<p><strong>失败原因：</strong>${(err && err.message) || '未知'}</p>`
+            }
+          })
+        } catch (e) {
+          console.error('[apply-zone-manager] 入库失败告警发送异常:', e)
+        }
+        util.showErrorLong('申请已通知管理员，但系统记录写入失败，请联系管理员处理')
+        return
+      }
       util.showError('申请失败：' + (err.message || '未知错误'))
     } finally {
       this.setData({ submitting: false })

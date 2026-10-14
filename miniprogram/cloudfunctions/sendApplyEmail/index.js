@@ -56,6 +56,18 @@ exports.main = async (event, context) => {
 
     const transporter = createTransporter()
 
+    // 告警模式：调用方直接给 subject / html（用于「申请已通知但入库失败」等异常告警）。
+    // 注意：告警邮件必须在写库失败时也能发出，所以与业务申请邮件共用同一出口。
+    if (event && event.alert === true) {
+      await transporter.sendMail({
+        from: `"冬日堡垒异常告警" <${EMAIL_CONFIG.user}>`,
+        to: EMAIL_CONFIG.user,
+        subject: event.subject || '[冬日堡垒][⚠️系统告警]',
+        html: event.html || '<p>（无正文）</p>'
+      })
+      return { success: true, alert: true }
+    }
+
     const subject = `[冬日堡垒][新${typeName}申请待审核]`
 
     let detail = ''
