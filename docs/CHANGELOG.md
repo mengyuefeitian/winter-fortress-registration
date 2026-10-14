@@ -18,6 +18,31 @@
 
 ---
 
+## v1.18.10（修复：超管审核列表显示旧缓存 + 刷新失败静默 → 「邮件有通知却找不到审批条目」）
+
+**问题现象**：用户提交分区开通申请后超管收到邮件，但超管进入「管理员审核」看不到该条目，且反复复现。
+
+**根因（三处叠加；已排除「写入丢失」与「分区编号格式限制」）**
+
+| # | 缺陷 | 位置 | 后果 |
+|---|---|---|---|
+| 1 | 缓存无 TTL：写入时存了 `time`，读取时**从不校验** | `admin-review.js` | 多旧的数据都无脑渲染 |
+| 2 | 刷新失败被静默吞掉：云函数报错/超时直接 `return`，且错误提示被 `if (!servedFromCache)` **全部屏蔽** | `admin-review.js` | 界面停留在旧列表，用户误以为「没有这条申请」 |
+| 3 | 无手动刷新入口：页面既无 `onPullDownRefresh`，json 也无 `enablePullDownRefresh` | `admin-review.js` / `.json` | 遇到旧列表**连强制重拉都做不到**；缓存只在执行审核动作后才清 |
+
+- **排除依据**：`admins` 集合权限为 `{"read":true,"write":true}`（所有用户可读写）、**无安全规则、无数据库触发器** → 客户端写入永远放行，不存在「909 被 4 位数字格式拒绝」。
+- **数据佐证**：导出库中 `zoneCreation` 共 16 条（12 approved + 4 rejected），时间跨度 09-29 → 10-14，**每条都有 `reviewTime`/`reviewedBy`** → 说明**写入从未中断**，问题在读取侧，不在写入侧。
+- **另一条易漏链路**：申请若被自动拒绝为 `rejectType:'zoneAlreadyExists'`，申请人打开小程序看到「分区开通通知」弹窗并确认后，`index.js` 会**删除该记录** → 记录从库中消失（此前只盯 pending，漏掉「pending→rejected→被删」）。
+
+**修法**
+- 缓存加 TTL（60s）：读取时校验 `time`，过期不再静默兜底，并恢复「加载中」转圈。
+- 刷新失败**必须提示**：移除 `if (!servedFromCache)` 屏蔽；缓存新鲜（≤TTL）轻提示，缓存过期/无缓存则弹窗（`showErrorLong`）明示「当前是本地缓存，可能不是最新，请下拉刷新」。
+- 新增下拉刷新：`enablePullDownRefresh: true` + `onPullDownRefresh`（清缓存 → 重拉 → `stopPullDownRefresh`），给超管强制刷新入口。
+
+**校验**：`node --check` 全量、JSON 全量、`wxml_check`（55 文件 0 问题）、`component_check`（0 告警）全绿。
+
+---
+
 ## v1.18.9（修复：分区开通申请「邮件已发、库里无记录」的数据丢失 bug）
 
 - **问题现象**：超管多次收到「分区开通」审核邮件，但进入「分区开通审批」却看不到对应申请。用户导出数据库核对后发现：邮件通知了近 3 条申请，但 `admins` 集合里只有 2 条对应记录，**少了中间那一条**；且全部 `zoneCreation` 记录 `status` 均为 `approved` / `rejected`，**一条 `pending` 都没有**。
