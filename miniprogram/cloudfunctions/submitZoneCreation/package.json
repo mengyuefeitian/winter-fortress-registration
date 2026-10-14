@@ -1,7 +1,7 @@
 {
   "name": "submitZoneCreation",
   "version": "1.0.0",
-  "description": "分区开通申请云端原子提交（先写库后发邮件）",
+  "description": "分区开通申请云端提交（先发邮件 → 再写库 → 回读校验 → 失败告警）",
   "main": "index.js",
   "dependencies": {
     "wx-server-sdk": "~2.6.3"

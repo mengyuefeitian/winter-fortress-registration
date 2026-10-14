@@ -1033,8 +1033,8 @@ Page({
             const phone = app.globalData.phone || ''
             const nickName = app.globalData.userInfo ? app.globalData.userInfo.nickName : ''
 
-            // 改为云端原子提交：先写库、写成功后才发邮件（submitZoneCreation 云函数保证），
-            // 彻底避免「邮件发了但库里没记录」的问题
+            // 云端提交（submitZoneCreation）：先发邮件通知超管 → 再写库 → 回读校验，
+            // 校验不到再发一封「入库失败」告警邮件。顺序由云函数保证，不要在这里改。
             const res = await wx.cloud.callFunction({
               name: 'submitZoneCreation',
               data: {
@@ -1048,8 +1048,15 @@ Page({
             util.hideLoading()
 
             if (!res || !res.result || !res.result.success) {
-              const msg = (res && res.result && res.result.error) || '申请提交失败，请稍后重试'
-              util.showError(msg)
+              const r = (res && res.result) || {}
+              const msg = r.error || '申请提交失败，请稍后重试'
+              // 云端已先发邮件、但写库没落库：必须让申请人明确知道要联系管理员，
+              // toast 两秒会截断，这里用弹窗（r.mailSent 存在即代表走到了写库阶段）
+              if (r.mailSent === true || r.mailSent === false) {
+                util.showErrorLong(msg)
+              } else {
+                util.showError(msg)
+              }
               return
             }
 

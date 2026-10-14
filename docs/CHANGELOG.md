@@ -18,6 +18,136 @@
 
 ---
 
+## v1.18.13（游戏账号保存 -502001 真正根因：MongoDB 不允许在 null 上创建子字段）
+
+**报错原文（真机）**
+```
+保存失败：document.update:fail -502001 database request fail.
+[FailedOperation] multiple write errors:
+[{write errors: [{Cannot create field 'kind' in element {bow: null}}]}, {<nil>}]
+(-502001) [stage=accountUpdate] [id=74f7e2ce...]
+```
+
+**根因（v1.18.12 的推断被证伪，以此版为准）**
+
+云数据库底层是 MongoDB，**不允许在标量上创建子字段**。账号里的 `furnace` / `barracks.shield|spear|bow` 在未设置时存的是 `null`，一旦要把它们从 `null` 改成 `{kind,value,stage}` 这样的**对象**，就被拒绝：
+
+| 账号里的旧值 | 要写入的新值 | 结果 |
+|---|---|---|
+| `barracks.bow = null` | `{kind:'fire',value:8,stage:'T11'}` | ❌ `Cannot create field 'kind' in element {bow: null}` |
+| `barracks.bow = {…}`（已是对象） | 新的 `{…}` | ✅ 覆盖已有字段，允许 |
+| `barracks.bow = null` | `null` | ✅ 同类型，允许 |
+
+熊坑报名建出的账号 `barracks` 三项全是 `null`、`furnace` 也是 `null`，所以**只有这类账号保存失败**；「信息完整」的账号这些字段本就是对象，从未出问题。
+（同理，熊坑报名的 `syncFromRegistration` 回写 barracks 时也会撞上这个错，而它被 `.catch(() => {})` 静默吞掉——这正是「联盟一直没写进去」的元凶。）
+
+> ⚠️ **勘误**：v1.18.12 曾推断根因是「主账号额外触发 `syncUserProfile`」，该推断**已由上述报错证伪**。v1.18.12 对 `syncUserProfile` 的降级改造本身无害（派生数据同步失败本就不该拖垮保存），予以保留。
+
+**修法**
+- 新增 `scalarToObjectPaths(oldDoc, patch, base)`：递归找出所有「旧值是标量（null）→ 新值是对象」的字段路径。
+- 新增 `safeUpdate(id, oldDoc, patch)`：**先把这些路径整体 `_.remove()` 删除，再写入新对象**，绕过 MongoDB 限制。
+- `save` 分支与 `syncFromRegistration` 分支的 update 全部改用 `safeUpdate`。
+- 熊坑报名页补传联盟（v1.18.12 已做）现在才真正能落库——之前被这个 `-502001` 挡住了。
+
+**验证**（5 个场景，含边界）：
+
+| 场景 | 需先删除的路径 | 判定 |
+|---|---|---|
+| 熊坑账号：`furnace:null` + `barracks` 三项 null → 对象 | `furnace`, `barracks.shield`, `barracks.spear`, `barracks.bow` | ✅ |
+| 部分填写：shield 已对象，spear/bow 仍 null → 对象 | `barracks.spear`, `barracks.bow` | ✅（说明**只填部分兵营也会失败**，不限于熊坑账号） |
+| 对象 → null（降级清空） | 无 | ✅ 无误删 |
+| 字段不存在 → 创建对象 | 无 | ✅ 无误删 |
+| null → null | 无 | ✅ 无误删 |
+
+**校验**：`node --check` 全量、JSON 全量、`wxml_check`（55 文件 0 问题）、`component_check`（0 告警）全部通过。
+
+**部署注意**：必须重新部署 `manageGameAccount`（见下方清单）。
+
+---
+
+## v1.18.12（熊坑报名创建的游戏账号：补写联盟信息 + 主账号保存不再被资料同步拖垮）
+> ⚠️ 本节的根因推断（"`syncUserProfile` 拖垮保存"）**已被 v1.18.13 证伪**，真正根因见 v1.18.13。本节保留的两项改动（熊坑补传联盟、`syncUserProfile` 失败降级）本身仍然有效、予以保留。
+
+**问题现象**（用户真机反馈，两条）
+1. 「通过熊坑报名新增的账号」在「我的 > 游戏账号」里**没有联盟信息**——报名时明明选了联盟，账号里却是空的。
+2. 编辑这类账号、点保存时报 `document.update:fail-502001...`（toast 截断看不全）；**信息完整的账号保存正常，只有这类账号失败**。
+
+**根因**
+
+| # | 成因 | 位置 |
+|---|---|---|
+| 1 | 熊坑报名回写账号时**只传了 `gameNickName` 和 `dixin`，漏传 `allianceId` / `allianceName`**；云函数 `syncFromRegistration` 里 `mergePatch` 遵循「只写本次真正填了的值」，联盟为空就整个不写 → 熊坑建出来的账号联盟一栏恒为空 | `pages/user/bear-pit-register/bear-pit-register.js:233` |
+| 2 | 熊坑报名末尾会 `applyMain` 把该账号**设为主账号**；而保存主账号时 `save` 分支会额外调 `syncUserProfile()` 同步 `users.gameNickName`。这一步里还有一次 `db.collection('users').doc(...).update()`，**它一抛错就把整个保存拖垮**——非主账号不触发这个函数，所以「只有那一个账号保存失败」 | `cloudfunctions/manageGameAccount/index.js` `syncUserProfile` |
+
+**为什么第 2 条只对这类账号成立**：登录态/账号来源不同，`isMain` 也不同。熊坑报名的账号必然被设为主账号（`syncFromRegistration` 结尾无条件 `applyMain`），因此它是唯一会走到 `syncUserProfile` 的那条；其余非主账号保存路径短，不会触发，故「信息完整的反而没问题」。
+
+**修法**
+- `bear-pit-register.js`：`ga.syncFromRegistration` 补传 `allianceId` / `allianceName`（与国战报名 `battle-registration.js` 对齐）；顺带把原本 `.catch(() => {})` 的静默吞错误改为 `console.warn`，回写失败不再无声无息。
+- `manageGameAccount` 云函数 `syncUserProfile()`：改为**保证不抛错**——`users.gameNickName` 只是派生数据，账号本身已写成功，没理由因同步失败让保存失败。两条兜底路径各自 `try/catch` + `console.error`，日志带 `stage=syncUserProfile`。
+- `save` 分支的账号 update 失败日志补上 `stage=accountUpdate` 与 `payload`，返回给前端的错误串也带该标签，便于区分「账号写入失败」与「users 同步失败」。
+
+**校验**：`node --check` 全量、JSON 全量、`wxml_check`（55 文件 0 问题）、`component_check`（0 告警）全部通过。
+
+**部署注意**：动了 `manageGameAccount` 云函数，需重新「上传并部署：云端安装依赖」。
+
+**存量数据**：已被熊坑建出、缺联盟的账号，下次熊坑报名时会自动回填（`mergePatch` 只写非空值）；也可直接在「我的 > 游戏账号」编辑该账号手动选择联盟并保存。
+
+---
+
+## v1.18.11（提交顺序回调：先发邮件 → 再写库 → 回读校验 → 失败告警）
+
+**背景（用户明确要求）**：写库这一步出现过「不抛错但没落库」的情况，前端完全无感；
+**只有邮件先到，超管才知道有人提交了申请**。因此申请提交必须保持「先邮件提醒，再写数据」。
+
+**v1.18.9 的顺序被推翻**：v1.18.9 把提交改成了「先写库、写成功才发邮件」（云端原子提交），
+方向搞反了——写库静默失败时邮件根本不会发，超管彻底无感。本版改回「先邮件后写库」。
+
+**新的提交顺序（`cloudfunctions/submitZoneCreation`）**
+
+| 步骤 | 动作 | 失败处理 |
+|---|---|---|
+| ① | **先发申请邮件**（无条件必达） | 记日志，继续写库（不因邮件失败中断申请） |
+| ② | 写库 `admins.add(...)` | 捕获异常，进入 ④ |
+| ③ | **回读校验** `doc(_id).get()` | 读不到 → 进入 ④ |
+| ④ | **发「入库失败」告警邮件** + 返回明确错误 | 超管收到第二封告警邮件，申请人看到弹窗提示联系管理员 |
+
+**为什么必须加 ③④**：只把顺序反过来会导致「收到邮件却查不到条目」的老问题复发。
+回读校验 + 告警邮件让**写库失败同样可见**——邮件必达，且失败必定被告警。
+
+**配套改动**
+- `cloudfunctions/sendApplyEmail`：新增 `alert` 告警模式（调用方传 `subject`/`html`），与业务申请邮件共用同一出口，原有逻辑不变。
+- `pages/index/index.js`：写库失败场景改用 `showErrorLong` 弹窗（toast 会截断），文案「申请已通知管理员，但系统记录写入失败，请联系管理员处理」。
+- `pages/user/apply-zone-manager/apply-zone-manager.js`：区管申请同样改为「先发邮件 → 再写库」；仅在「邮件已发且写库失败」时补发告警（`mailSent && !wrote` 双标志，避免前面步骤失败造成误报）。
+
+**部署注意**：`submitZoneCreation`（新增）与 `sendApplyEmail`（已改，新增 alert 分支）都需重新「上传并部署：云端安装依赖」。
+
+---
+
+## v1.18.10（修复：超管审核列表显示旧缓存 + 刷新失败静默 → 「邮件有通知却找不到审批条目」）
+
+**问题现象**：用户提交分区开通申请后超管收到邮件，但超管进入「管理员审核」看不到该条目，且反复复现。
+
+**根因（三处叠加；已排除「写入丢失」与「分区编号格式限制」）**
+
+| # | 缺陷 | 位置 | 后果 |
+|---|---|---|---|
+| 1 | 缓存无 TTL：写入时存了 `time`，读取时**从不校验** | `admin-review.js` | 多旧的数据都无脑渲染 |
+| 2 | 刷新失败被静默吞掉：云函数报错/超时直接 `return`，且错误提示被 `if (!servedFromCache)` **全部屏蔽** | `admin-review.js` | 界面停留在旧列表，用户误以为「没有这条申请」 |
+| 3 | 无手动刷新入口：页面既无 `onPullDownRefresh`，json 也无 `enablePullDownRefresh` | `admin-review.js` / `.json` | 遇到旧列表**连强制重拉都做不到**；缓存只在执行审核动作后才清 |
+
+- **排除依据**：`admins` 集合权限为 `{"read":true,"write":true}`（所有用户可读写）、**无安全规则、无数据库触发器** → 客户端写入永远放行，不存在「909 被 4 位数字格式拒绝」。
+- **数据佐证**：导出库中 `zoneCreation` 共 16 条（12 approved + 4 rejected），时间跨度 09-29 → 10-14，**每条都有 `reviewTime`/`reviewedBy`** → 说明**写入从未中断**，问题在读取侧，不在写入侧。
+- **另一条易漏链路**：申请若被自动拒绝为 `rejectType:'zoneAlreadyExists'`，申请人打开小程序看到「分区开通通知」弹窗并确认后，`index.js` 会**删除该记录** → 记录从库中消失（此前只盯 pending，漏掉「pending→rejected→被删」）。
+
+**修法**
+- 缓存加 TTL（60s）：读取时校验 `time`，过期不再静默兜底，并恢复「加载中」转圈。
+- 刷新失败**必须提示**：移除 `if (!servedFromCache)` 屏蔽；缓存新鲜（≤TTL）轻提示，缓存过期/无缓存则弹窗（`showErrorLong`）明示「当前是本地缓存，可能不是最新，请下拉刷新」。
+- 新增下拉刷新：`enablePullDownRefresh: true` + `onPullDownRefresh`（清缓存 → 重拉 → `stopPullDownRefresh`），给超管强制刷新入口。
+
+**校验**：`node --check` 全量、JSON 全量、`wxml_check`（55 文件 0 问题）、`component_check`（0 告警）全绿。
+
+---
+
 ## v1.18.9（修复：分区开通申请「邮件已发、库里无记录」的数据丢失 bug）
 
 - **问题现象**：超管多次收到「分区开通」审核邮件，但进入「分区开通审批」却看不到对应申请。用户导出数据库核对后发现：邮件通知了近 3 条申请，但 `admins` 集合里只有 2 条对应记录，**少了中间那一条**；且全部 `zoneCreation` 记录 `status` 均为 `approved` / `rejected`，**一条 `pending` 都没有**。

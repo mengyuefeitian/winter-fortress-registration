@@ -35,6 +35,20 @@ Page({
     }
   },
 
+  // 下拉刷新：强制清缓存重拉。
+  // ⚠️ 原先本页既无 onPullDownRefresh 也无 enablePullDownRefresh，缓存只在「执行审核动作后」
+  //    才 clearReviewCache()，超管遇到旧列表时连手动刷新的入口都没有。
+  onPullDownRefresh: async function () {
+    try {
+      this.clearReviewCache()
+      await this.loadApplications()
+    } catch (e) {
+      console.error('下拉刷新失败:', e)
+    } finally {
+      wx.stopPullDownRefresh()
+    }
+  },
+
   // 等待角色就绪
   waitForRoleReady: function (options) {
     if (app.globalData.roleReady) {
@@ -141,10 +155,14 @@ Page({
     const scopeSuffix = (this.data.zoneScope && this._scopeZoneId) ? '_z' + this._scopeZoneId : ''
     const cacheKey = 'adminReviewCache_' + (applyType || 'all') + scopeSuffix
 
-    // 1) 缓存优先：只要缓存存在即立刻渲染（不转圈），后台静默刷新覆盖。
+    // 1) 缓存优先：命中即立刻渲染（不转圈），后台静默刷新覆盖。
     //    这样冷启动只发生在首次，之后每次进入都秒显；即使云函数被回收，
     //    用户看到的也是上次的列表，后台那次刷新不再阻塞界面。
+    // ⚠️ 但缓存必须有 TTL：旧实现写入时存了 time 却从不校验，且刷新失败时静默吞掉错误，
+    //    导致超管看到的永远是旧列表却毫不知情（表现为「邮件有通知但找不到审批条目」）。
+    const CACHE_TTL = 60 * 1000
     let servedFromCache = false
+    let cacheIsFresh = false
     try {
       const cached = wx.getStorageSync(cacheKey)
       if (cached && Array.isArray(cached.applications)) {
@@ -154,10 +172,12 @@ Page({
           stats: cached.stats || null
         })
         servedFromCache = true
+        cacheIsFresh = !!(cached.time && (Date.now() - Number(cached.time)) < CACHE_TTL)
       }
     } catch (e) {}
 
-    if (!servedFromCache) util.showLoading('加载申请列表...')
+    // 只有「新鲜缓存」才不转圈；过期缓存仍渲染占位，但要让用户看到正在刷新
+    if (!cacheIsFresh) util.showLoading('加载申请列表...')
 
     try {
       // 2) 列表（云函数，可能冷启动）+ 分区列表（客户端直连，无冷启动）并行发起，省掉串行耗时
@@ -172,22 +192,33 @@ Page({
 
       if (listOutcome && listOutcome.__err) {
         const err = listOutcome.__err
-        if (!servedFromCache) {
-          util.hideLoading()
-          const msg = (err && err.message) || ''
-          if (msg.indexOf('Unknown action') >= 0) {
-            util.showError('云函数未更新：请在开发者工具右键 manageAdmin → 上传并部署：云端安装依赖')
-          } else if (msg.indexOf('timeout') >= 0) {
-            util.showError('加载超时（可能云函数冷启动），请稍后重试；若持续超时请确认 manageAdmin 已部署')
-          } else {
-            util.showError('加载申请列表失败: ' + msg)
-          }
+        util.hideLoading()
+        const msg = (err && err.message) || ''
+        let text
+        if (msg.indexOf('Unknown action') >= 0) {
+          text = '云函数未更新：请在开发者工具右键 manageAdmin → 上传并部署：云端安装依赖'
+        } else if (msg.indexOf('timeout') >= 0) {
+          text = '加载超时（可能云函数冷启动），请稍后重试；若持续超时请确认 manageAdmin 已部署'
+        } else {
+          text = '加载申请列表失败: ' + msg
+        }
+        // ⚠️ 刷新失败必须让用户看到：否则界面停留在旧缓存，看起来像「申请根本不存在」。
+        //    缓存新鲜(≤TTL)只轻提示；缓存过期/无缓存则弹窗，避免误判为「没有待审条目」。
+        if (cacheIsFresh) {
+          util.showError('列表可能不是最新，请下拉刷新')
+        } else {
+          util.showErrorLong(text + (servedFromCache ? '\n\n当前显示的是本地缓存，可能不是最新，请下拉刷新重试。' : ''))
         }
         return
       }
       if (!listOutcome.result || listOutcome.result.err) {
-        if (!servedFromCache) util.hideLoading()
-        if (listOutcome.result && listOutcome.result.err) util.showError('加载失败: ' + listOutcome.result.err)
+        util.hideLoading()
+        const errText = (listOutcome.result && listOutcome.result.err) || '未知错误'
+        if (cacheIsFresh) {
+          util.showError('列表可能不是最新，请下拉刷新')
+        } else {
+          util.showErrorLong('加载失败: ' + errText + (servedFromCache ? '\n\n当前显示的是本地缓存，可能不是最新，请下拉刷新重试。' : ''))
+        }
         return
       }
 
@@ -377,8 +408,14 @@ Page({
 
     } catch (err) {
       console.error('加载申请列表失败:', err)
-      if (!servedFromCache) util.hideLoading()
-      if (!servedFromCache) util.showError('加载申请列表失败: ' + (err.message || '未知错误'))
+      util.hideLoading()
+      // ⚠️ 同样不能静默：命中缓存时也必须告知，否则旧列表被当成「没有待审条目」
+      const text = '加载申请列表失败: ' + (err.message || '未知错误')
+      if (cacheIsFresh) {
+        util.showError('列表可能不是最新，请下拉刷新')
+      } else {
+        util.showErrorLong(text + (servedFromCache ? '\n\n当前显示的是本地缓存，可能不是最新，请下拉刷新重试。' : ''))
+      }
     }
   },
 
