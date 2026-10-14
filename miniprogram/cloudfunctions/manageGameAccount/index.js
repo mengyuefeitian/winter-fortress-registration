@@ -212,7 +212,17 @@ exports.main = async (event, context) => {
         if (data.id) {
           const owned = accounts.filter(a => a._id === data.id)[0]
           if (!owned) return { success: false, error: '账号不存在' }
-          await db.collection(COLL).doc(data.id).update({ data: payload })
+          try {
+            await db.collection(COLL).doc(data.id).update({ data: payload })
+          } catch (e) {
+            // 单独捕获：把出错的文档 id 与完整错误带回去，
+            // 便于区分「id 不存在 / 格式不对」与「写入被拒绝」两类 502001
+            const em = (e && (e.errMsg || e.message)) || ''
+            const ec = (e && e.errCode) || ''
+            console.error('[manageGameAccount] update 失败', 'docId=' + data.id,
+              'userId=' + userId, 'errCode=' + ec, em, e)
+            return { success: false, error: '保存失败：' + em + (ec ? ' (' + ec + ')' : '') + ' [id=' + data.id + ']' }
+          }
           // 更新的是主账号 → 同步 users.gameNickName
           if (owned.isMain) await syncUserProfile(userId, openid, gameNickName)
           return { success: true, id: data.id }
@@ -378,7 +388,11 @@ exports.main = async (event, context) => {
         return { success: false, error: '未知操作: ' + action }
     }
   } catch (err) {
-    console.error('[manageGameAccount] 失败', action, err)
-    return { success: false, error: (err && err.message) || '操作失败' }
+    // 云数据库错误的完整信息在 errMsg / message 上，errCode 是关键（如 -502001 等），
+    // 统一透出，避免前端只看到一个孤零零的 message
+    const em = (err && (err.errMsg || err.message)) || '操作失败'
+    const ec = (err && err.errCode) || ''
+    console.error('[manageGameAccount] 失败', action, 'errCode=' + ec, em, err)
+    return { success: false, error: em + (ec ? ' (' + ec + ')' : '') + ' [action=' + action + ']' }
   }
 }

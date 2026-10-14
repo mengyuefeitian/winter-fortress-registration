@@ -316,7 +316,11 @@ Page({
     ga.save(payload).then(res => {
       wx.hideLoading()
       if (!res.success) {
-        util.showError(res.error || '保存失败')
+        // 云数据库的错误文本较长（如 document.update:fail-502001 database request fail），
+        // toast 两秒会截断、真机上根本看不清，这里改用弹窗完整展示，并打到 console 便于排查
+        const msg = res.error || '保存失败'
+        console.error('[my-registrations] 保存游戏账号失败:', msg, '| payload:', JSON.stringify(payload))
+        util.showErrorLong(msg)
         return
       }
       ga.clearMainCache()
