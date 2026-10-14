@@ -137,22 +137,35 @@ async function applyMain(userId, openid, accountId, gameNickName) {
   await syncUserProfile(userId, openid, gameNickName)
 }
 
-// 报名默认昵称与联盟活跃登记都读 users.gameNickName，主账号变更必须同步过去
+// 报名默认昵称与联盟活跃登记都读 users.gameNickName，主账号变更必须同步过去。
+//
+// ⚠️ 本函数保证「不抛错」：users.gameNickName 只是账号的派生数据，账号本身已经写成功了，
+//    没理由因为它同步失败就让整个保存失败——历史上正是这一步把主账号的保存拖垮成
+//    document.update:fail-502001（非主账号不触发本函数，所以只有主账号保存会失败）。
+//    失败一律只记日志，日志里带 stage=syncUserProfile 便于定位。
 async function syncUserProfile(userId, openid, gameNickName) {
   const patch = { gameNickName: gameNickName || '' }
   try {
     const byId = await db.collection('users').doc(userId).get().catch(() => null)
     if (byId && byId.data) {
       await db.collection('users').doc(userId).update({ data: patch })
-      return
+      return true
     }
-  } catch (e) { /* 落到 openid 兜底 */ }
+  } catch (e) {
+    console.error('[manageGameAccount] syncUserProfile(按_id) 失败',
+      'stage=syncUserProfile', 'userId=' + userId, (e && (e.errMsg || e.message)) || e)
+  }
   try {
     const res = await db.collection('users').where({ openid }).limit(1).get()
     if (res.data[0]) {
       await db.collection('users').doc(res.data[0]._id).update({ data: patch })
+      return true
     }
-  } catch (e) { /* 忽略：users 里没有记录不影响账号本身 */ }
+  } catch (e) {
+    console.error('[manageGameAccount] syncUserProfile(按openid) 失败',
+      'stage=syncUserProfile', 'openid=' + openid, (e && (e.errMsg || e.message)) || e)
+  }
+  return false
 }
 
 // ============ 入口 ============
@@ -216,12 +229,18 @@ exports.main = async (event, context) => {
             await db.collection(COLL).doc(data.id).update({ data: payload })
           } catch (e) {
             // 单独捕获：把出错的文档 id 与完整错误带回去，
-            // 便于区分「id 不存在 / 格式不对」与「写入被拒绝」两类 502001
+            // 便于区分「id 不存在 / 格式不对」与「写入被拒绝」两类 502001。
+            // payload 一并打出来——若真是字段格式问题，日志里能直接看到是哪个字段。
             const em = (e && (e.errMsg || e.message)) || ''
             const ec = (e && e.errCode) || ''
-            console.error('[manageGameAccount] update 失败', 'docId=' + data.id,
-              'userId=' + userId, 'errCode=' + ec, em, e)
-            return { success: false, error: '保存失败：' + em + (ec ? ' (' + ec + ')' : '') + ' [id=' + data.id + ']' }
+            console.error('[manageGameAccount] update 失败', 'stage=accountUpdate',
+              'docId=' + data.id, 'userId=' + userId, 'errCode=' + ec, em,
+              'payload=' + JSON.stringify(payload), e)
+            return {
+              success: false,
+              error: '保存失败：' + em + (ec ? ' (' + ec + ')' : '') +
+                ' [stage=accountUpdate] [id=' + data.id + ']'
+            }
           }
           // 更新的是主账号 → 同步 users.gameNickName
           if (owned.isMain) await syncUserProfile(userId, openid, gameNickName)

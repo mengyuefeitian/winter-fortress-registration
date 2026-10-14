@@ -230,10 +230,15 @@ Page({
       })
 
       // 回写报名时填的地心等级到该游戏账号（改了等级要重新报名才会重排座位）
+      // ⚠️ 必须一并带上联盟：报名页是选了联盟的，账号里要留下「最近一次报名用的联盟」，
+      //    否则熊坑报出来的账号只有地心等级、没有联盟，我的>游戏账号里联盟一栏是空的
+      //    （国战报名 battle-registration 一直传了 allianceId/allianceName，熊坑此前漏传）
       ga.syncFromRegistration({
         gameNickName: nickName,
-        dixin: this.data.dixin === '' ? null : this.data.dixin
-      }).catch(() => { })
+        dixin: this.data.dixin === '' ? null : this.data.dixin,
+        allianceId: allianceId,
+        allianceName: this.data.selectedAlliance.allianceName || ''
+      }).catch(err => console.warn('[游戏账号] 熊坑报名回写失败(已忽略):', err))
 
       // 顺带登记联盟归属与今日活跃，失败不影响报名结果
       db.joinAllianceByRegistration(allianceId, zoneId, nickName).then(() => {

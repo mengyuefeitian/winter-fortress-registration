@@ -18,6 +18,34 @@
 
 ---
 
+## v1.18.12（熊坑报名创建的游戏账号：补写联盟信息 + 主账号保存不再被资料同步拖垮）
+
+**问题现象**（用户真机反馈，两条）
+1. 「通过熊坑报名新增的账号」在「我的 > 游戏账号」里**没有联盟信息**——报名时明明选了联盟，账号里却是空的。
+2. 编辑这类账号、点保存时报 `document.update:fail-502001...`（toast 截断看不全）；**信息完整的账号保存正常，只有这类账号失败**。
+
+**根因**
+
+| # | 成因 | 位置 |
+|---|---|---|
+| 1 | 熊坑报名回写账号时**只传了 `gameNickName` 和 `dixin`，漏传 `allianceId` / `allianceName`**；云函数 `syncFromRegistration` 里 `mergePatch` 遵循「只写本次真正填了的值」，联盟为空就整个不写 → 熊坑建出来的账号联盟一栏恒为空 | `pages/user/bear-pit-register/bear-pit-register.js:233` |
+| 2 | 熊坑报名末尾会 `applyMain` 把该账号**设为主账号**；而保存主账号时 `save` 分支会额外调 `syncUserProfile()` 同步 `users.gameNickName`。这一步里还有一次 `db.collection('users').doc(...).update()`，**它一抛错就把整个保存拖垮**——非主账号不触发这个函数，所以「只有那一个账号保存失败」 | `cloudfunctions/manageGameAccount/index.js` `syncUserProfile` |
+
+**为什么第 2 条只对这类账号成立**：登录态/账号来源不同，`isMain` 也不同。熊坑报名的账号必然被设为主账号（`syncFromRegistration` 结尾无条件 `applyMain`），因此它是唯一会走到 `syncUserProfile` 的那条；其余非主账号保存路径短，不会触发，故「信息完整的反而没问题」。
+
+**修法**
+- `bear-pit-register.js`：`ga.syncFromRegistration` 补传 `allianceId` / `allianceName`（与国战报名 `battle-registration.js` 对齐）；顺带把原本 `.catch(() => {})` 的静默吞错误改为 `console.warn`，回写失败不再无声无息。
+- `manageGameAccount` 云函数 `syncUserProfile()`：改为**保证不抛错**——`users.gameNickName` 只是派生数据，账号本身已写成功，没理由因同步失败让保存失败。两条兜底路径各自 `try/catch` + `console.error`，日志带 `stage=syncUserProfile`。
+- `save` 分支的账号 update 失败日志补上 `stage=accountUpdate` 与 `payload`，返回给前端的错误串也带该标签，便于区分「账号写入失败」与「users 同步失败」。
+
+**校验**：`node --check` 全量、JSON 全量、`wxml_check`（55 文件 0 问题）、`component_check`（0 告警）全部通过。
+
+**部署注意**：动了 `manageGameAccount` 云函数，需重新「上传并部署：云端安装依赖」。
+
+**存量数据**：已被熊坑建出、缺联盟的账号，下次熊坑报名时会自动回填（`mergePatch` 只写非空值）；也可直接在「我的 > 游戏账号」编辑该账号手动选择联盟并保存。
+
+---
+
 ## v1.18.11（提交顺序回调：先发邮件 → 再写库 → 回读校验 → 失败告警）
 
 **背景（用户明确要求）**：写库这一步出现过「不抛错但没落库」的情况，前端完全无感；

@@ -13,7 +13,7 @@
 基于微信云开发，无需自建服务器。
 
 [![平台](https://img.shields.io/badge/平台-微信小程序-07C160?logo=wechat)](https://mp.weixin.qq.com/)
-[![版本](https://img.shields.io/badge/version-1.18.11-blue)](https://github.com/mengyuefeitian/winter-fortress-registration/releases)
+[![版本](https://img.shields.io/badge/version-1.18.12-blue)](https://github.com/mengyuefeitian/winter-fortress-registration/releases)
 [![后端](https://img.shields.io/badge/后端-微信云开发-4A90D9)](https://cloud.weixin.qq.com/)
 [![更新日志](https://img.shields.io/badge/docs-CHANGELOG-brightgreen)](docs/CHANGELOG.md)
 
@@ -229,6 +229,7 @@
 
 ## 更新日志
 
+- **v1.18.12** — 修复「熊坑报名创建的游戏账号」两个问题：① 熊坑报名回写账号时**漏传联盟信息**（此前只写了地心探险等级，导致这类账号在「我的>游戏账号」里联盟一栏为空，国战报名一直有传，熊坑漏了），现与国战报名对齐一并写入；② 这类账号会被设为主账号，而保存主账号时额外的 `users` 资料同步一旦失败会**把整个保存拖垮**（报 `document.update:fail-502001`），现改为降级不阻断，日志带 `stage=syncUserProfile`
 - **v1.18.11** — 申请提交顺序回调为「**先发邮件 → 再写库 → 回读校验 → 失败告警**」：邮件无条件先到（写库静默失败也能第一时间知晓），写完立即回读校验，校验不到再发一封「入库失败」告警邮件，杜绝「收到邮件却查不到条目」；区管申请同样改为先发邮件再写库
 - **v1.18.10** — 修复「超管收到申请邮件却在审核列表找不到条目」：审核列表缓存新增 60 秒 TTL（旧实现从不校验缓存时间），刷新失败不再被静默吞掉（会明确提示列表非最新），并新增下拉刷新强制重拉入口
 - **v1.18.9** — 修复分区开通申请「邮件已发、库里无记录」的数据丢失：提交改为云端原子操作，新增 `submitZoneCreation` 云函数（注：该版采用的是「先写库后发邮件」，方向有误，**v1.18.11 已改回先发邮件再写库**）
