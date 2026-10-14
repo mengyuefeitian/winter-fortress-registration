@@ -4,7 +4,6 @@ const util = require('../../utils/util')
 const auth = require('../../utils/auth')
 const db = require('../../utils/db')
 const version = require('../../utils/version')
-const { sendApplyEmail } = require('../../utils/notifyEmail')
 const { requestSubscribe } = require('../../utils/notifyConfig')
 
 Page({
@@ -1032,28 +1031,28 @@ Page({
             util.showLoading('正在申请...')
             const userId = app.globalData.openid
             const phone = app.globalData.phone || ''
+            const nickName = app.globalData.userInfo ? app.globalData.userInfo.nickName : ''
 
-            const wxdb = wx.cloud.database()
-            await wxdb.collection('admins').add({
+            // 改为云端原子提交：先写库、写成功后才发邮件（submitZoneCreation 云函数保证），
+            // 彻底避免「邮件发了但库里没记录」的问题
+            const res = await wx.cloud.callFunction({
+              name: 'submitZoneCreation',
               data: {
                 userId: userId,
                 phone: phone,
-                applyType: 'zoneCreation',
                 zoneName: content,
-                status: 'pending',
-                createTime: wxdb.serverDate()
+                nickName: nickName
               }
             })
 
-            // 异步发送邮件通知超管（不阻塞）
-            sendApplyEmail({
-              applyType: 'zoneCreation',
-              nickName: app.globalData.userInfo ? app.globalData.userInfo.nickName : '',
-              phone: phone,
-              zoneName: content
-            })
-
             util.hideLoading()
+
+            if (!res || !res.result || !res.result.success) {
+              const msg = (res && res.result && res.result.error) || '申请提交失败，请稍后重试'
+              util.showError(msg)
+              return
+            }
+
             util.showSuccess('申请已提交，审核通过后您将成为该分区的管理员（区管）')
           } catch (err) {
             util.hideLoading()
