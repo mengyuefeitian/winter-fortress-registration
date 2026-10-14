@@ -18,7 +18,55 @@
 
 ---
 
+## v1.18.13（游戏账号保存 -502001 真正根因：MongoDB 不允许在 null 上创建子字段）
+
+**报错原文（真机）**
+```
+保存失败：document.update:fail -502001 database request fail.
+[FailedOperation] multiple write errors:
+[{write errors: [{Cannot create field 'kind' in element {bow: null}}]}, {<nil>}]
+(-502001) [stage=accountUpdate] [id=74f7e2ce...]
+```
+
+**根因（v1.18.12 的推断被证伪，以此版为准）**
+
+云数据库底层是 MongoDB，**不允许在标量上创建子字段**。账号里的 `furnace` / `barracks.shield|spear|bow` 在未设置时存的是 `null`，一旦要把它们从 `null` 改成 `{kind,value,stage}` 这样的**对象**，就被拒绝：
+
+| 账号里的旧值 | 要写入的新值 | 结果 |
+|---|---|---|
+| `barracks.bow = null` | `{kind:'fire',value:8,stage:'T11'}` | ❌ `Cannot create field 'kind' in element {bow: null}` |
+| `barracks.bow = {…}`（已是对象） | 新的 `{…}` | ✅ 覆盖已有字段，允许 |
+| `barracks.bow = null` | `null` | ✅ 同类型，允许 |
+
+熊坑报名建出的账号 `barracks` 三项全是 `null`、`furnace` 也是 `null`，所以**只有这类账号保存失败**；「信息完整」的账号这些字段本就是对象，从未出问题。
+（同理，熊坑报名的 `syncFromRegistration` 回写 barracks 时也会撞上这个错，而它被 `.catch(() => {})` 静默吞掉——这正是「联盟一直没写进去」的元凶。）
+
+> ⚠️ **勘误**：v1.18.12 曾推断根因是「主账号额外触发 `syncUserProfile`」，该推断**已由上述报错证伪**。v1.18.12 对 `syncUserProfile` 的降级改造本身无害（派生数据同步失败本就不该拖垮保存），予以保留。
+
+**修法**
+- 新增 `scalarToObjectPaths(oldDoc, patch, base)`：递归找出所有「旧值是标量（null）→ 新值是对象」的字段路径。
+- 新增 `safeUpdate(id, oldDoc, patch)`：**先把这些路径整体 `_.remove()` 删除，再写入新对象**，绕过 MongoDB 限制。
+- `save` 分支与 `syncFromRegistration` 分支的 update 全部改用 `safeUpdate`。
+- 熊坑报名页补传联盟（v1.18.12 已做）现在才真正能落库——之前被这个 `-502001` 挡住了。
+
+**验证**（5 个场景，含边界）：
+
+| 场景 | 需先删除的路径 | 判定 |
+|---|---|---|
+| 熊坑账号：`furnace:null` + `barracks` 三项 null → 对象 | `furnace`, `barracks.shield`, `barracks.spear`, `barracks.bow` | ✅ |
+| 部分填写：shield 已对象，spear/bow 仍 null → 对象 | `barracks.spear`, `barracks.bow` | ✅（说明**只填部分兵营也会失败**，不限于熊坑账号） |
+| 对象 → null（降级清空） | 无 | ✅ 无误删 |
+| 字段不存在 → 创建对象 | 无 | ✅ 无误删 |
+| null → null | 无 | ✅ 无误删 |
+
+**校验**：`node --check` 全量、JSON 全量、`wxml_check`（55 文件 0 问题）、`component_check`（0 告警）全部通过。
+
+**部署注意**：必须重新部署 `manageGameAccount`（见下方清单）。
+
+---
+
 ## v1.18.12（熊坑报名创建的游戏账号：补写联盟信息 + 主账号保存不再被资料同步拖垮）
+> ⚠️ 本节的根因推断（"`syncUserProfile` 拖垮保存"）**已被 v1.18.13 证伪**，真正根因见 v1.18.13。本节保留的两项改动（熊坑补传联盟、`syncUserProfile` 失败降级）本身仍然有效、予以保留。
 
 **问题现象**（用户真机反馈，两条）
 1. 「通过熊坑报名新增的账号」在「我的 > 游戏账号」里**没有联盟信息**——报名时明明选了联盟，账号里却是空的。

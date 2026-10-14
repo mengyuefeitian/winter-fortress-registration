@@ -63,6 +63,48 @@ function normalizeBarracks(raw) {
   }
 }
 
+/**
+ * 找出「旧值是标量、新值是对象」的字段路径（点记号），供 safeUpdate 先删后写。
+ *
+ * 云数据库（MongoDB）不允许在标量上创建子字段，典型报错：
+ *   Cannot create field 'kind' in element {bow: null}      ← -502001
+ * 熊坑报名建出的账号 barracks 三项全是 null、furnace 也是 null，
+ * 一旦要把它们改成 {kind,value,stage} 就会撞上这条限制；
+ * 而「信息完整」的账号这些字段本来就是对象，覆盖已有字段是允许的 ——
+ * 这就是「只有熊坑建的账号保存失败」的真正原因。
+ *
+ * 例：old={barracks:{bow:null}} new={barracks:{bow:{kind:'fire'}}}
+ *     → ['barracks.bow']
+ */
+function scalarToObjectPaths(oldVal, newVal, base) {
+  const out = []
+  if (!newVal || typeof newVal !== 'object' || Array.isArray(newVal)) return out
+  if (oldVal === undefined) return out   // 字段本就不存在，直接创建对象没问题
+  if (oldVal === null || typeof oldVal !== 'object' || Array.isArray(oldVal)) {
+    out.push(base)                       // 标量 → 对象：必须先把这个标量删掉
+    return out
+  }
+  Object.keys(newVal).forEach(k => {
+    out.push.apply(out, scalarToObjectPaths(oldVal[k], newVal[k], base ? base + '.' + k : k))
+  })
+  return out
+}
+
+/**
+ * 安全更新：先把「标量 → 对象」的路径整体删除，再写入新值。
+ * 绕过 MongoDB「不能在 null 上创建子字段」的限制，从而修复 -502001。
+ */
+async function safeUpdate(id, oldDoc, patch) {
+  const paths = scalarToObjectPaths(oldDoc || {}, patch, '')
+  if (paths.length > 0) {
+    const clear = {}
+    paths.forEach(p => { clear[p] = _.remove() })
+    console.log('[manageGameAccount] 先清除标量字段再写入', 'docId=' + id, paths.join(','))
+    await db.collection(COLL).doc(id).update({ data: clear })
+  }
+  return await db.collection(COLL).doc(id).update({ data: patch })
+}
+
 // 地心探险：纯自然数
 function normalizeDixin(raw) {
   if (raw === '' || raw === null || raw === undefined) return null
@@ -226,7 +268,9 @@ exports.main = async (event, context) => {
           const owned = accounts.filter(a => a._id === data.id)[0]
           if (!owned) return { success: false, error: '账号不存在' }
           try {
-            await db.collection(COLL).doc(data.id).update({ data: payload })
+            // ⚠️ 必须走 safeUpdate：账号里 furnace / barracks.* 可能是 null（熊坑报名建出的
+            //    账号就是全 null），直接 update 成对象会被 MongoDB 拒绝（-502001）。
+            await safeUpdate(data.id, owned, payload)
           } catch (e) {
             // 单独捕获：把出错的文档 id 与完整错误带回去，
             // 便于区分「id 不存在 / 格式不对」与「写入被拒绝」两类 502001。
@@ -372,7 +416,9 @@ exports.main = async (event, context) => {
           if (target._id) {
             const patch = mergePatch(target)
             patch.gameNickName = gameNickName
-            await db.collection(COLL).doc(target._id).update({ data: patch })
+            // 同样走 safeUpdate：这里会把 barracks 的 null 项写成对象，
+            // 正是「熊坑报名后联盟没写进去」那个静默失败的元凶（此前 .catch 吞掉了）
+            await safeUpdate(target._id, target, patch)
           }
           await applyMain(userId, openid, target._id, gameNickName)
         }
