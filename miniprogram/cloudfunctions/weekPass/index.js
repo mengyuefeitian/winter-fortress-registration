@@ -12,9 +12,10 @@
 //    直接 update 成对象会报 -502001。所以旧值为 null 时先 _.remove() 再写。
 //
 // action:
-//   query  查询本周（服务器时间所在自然周）是否已持有通行证
-//   grant  发放本周通行证
-//   config 读取远程开关（集合 appConfig），供客户端决定要不要拦某一类操作
+//   query      查询本周（服务器时间所在自然周）是否已持有通行证
+//   grant      发放本周通行证
+//   config     读取远程开关（集合 appConfig），供客户端决定要不要拦某一类操作
+//   setConfig  修改远程开关，**仅超管**（超管控制台的「广告开关」页面用）
 //
 // ⚠️ 开关为什么不依赖固定 _id（实测踩到）：
 //    云开发控制台的「添加记录」界面**不提供 _id 输入框**，_id 由系统自动生成。
@@ -67,6 +68,95 @@ function pickGates(doc) {
     }
   })
   return hit ? out : null
+}
+
+/**
+ * 校验调用者是不是超管
+ * 沿用 manageAdmin 的口径：`users.role === 'superAdmin'`
+ * （先按 _openid 查，查不到再按业务 openid 字段回落一次，兼容两种存法的用户文档）
+ * @param {string} openid
+ * @returns {Promise<{ok:boolean, reason?:string}>>}
+ */
+async function requireSuperAdmin(openid) {
+  if (!openid) return { ok: false, reason: 'noOpenid' }
+
+  let user = await findUser(openid)
+  if (!user) {
+    try {
+      const r = await db.collection('users').where({ openid: openid }).limit(1).get()
+      user = (r && r.data && r.data[0]) || null
+    } catch (e) {
+      user = null
+    }
+  }
+  if (!user) return { ok: false, reason: 'noUser' }
+  if (user.role !== 'superAdmin') return { ok: false, reason: 'permissionDenied' }
+  return { ok: true }
+}
+
+/**
+ * 只接受布尔值与 0/1，且必须至少有一个有效字段
+ * @param {Object} data
+ * @returns {Object|null}
+ */
+function normalizePatch(data) {
+  const patch = {}
+  const keys = GATE_KEYS
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i]
+    const v = data[k]
+    if (typeof v === 'boolean') patch[k] = v
+    else if (v === 1 || v === 0) patch[k] = v === 1
+  }
+  return Object.keys(patch).length ? patch : null
+}
+
+/**
+ * 写入开关字段：优先更新约定文档，不存在就建，再不行更新集合第一条
+ * @param {Object} patch
+ * @returns {Promise<{ok:boolean, reason?:string}>}
+ */
+async function writeGates(patch) {
+  const coll = db.collection(CONFIG_COLLECTION)
+
+  // ① 更新约定文档（超管页面改的就是它）
+  try {
+    const r = await coll.doc(CONFIG_DOC_ID).update({ data: patch })
+    if (r && r.stats && r.stats.updated > 0) return { ok: true, target: CONFIG_DOC_ID }
+  } catch (e) {
+    // 文档不存在（update 对不存在的 doc 会抛错）→ 走创建
+  }
+
+  // ② 建集合 + 建文档
+  try {
+    if (typeof db.createCollection === 'function') {
+      try {
+        await db.createCollection(CONFIG_COLLECTION)
+      } catch (e) {
+        // 已存在会报错，忽略
+      }
+    }
+    const res = await coll.add({
+      data: Object.assign({ _id: CONFIG_DOC_ID }, GATE_FALLBACK, patch)
+    })
+    if (res && res._id) return { ok: true, target: res._id, created: true }
+  } catch (e) {
+    console.warn('[weekPass] 写入开关文档失败', String((e && e.message) || e))
+  }
+
+  // ③ 兜底：更新集合第一条（例如只有用户手工建的随机 _id 记录）
+  try {
+    const r = await coll.limit(1).get()
+    const first = (r && r.data && r.data[0]) || null
+    if (first) {
+      await coll.doc(first._id).update({ data: patch })
+      return { ok: true, target: first._id }
+    }
+  } catch (e) {
+    // 彻底写不进去
+  }
+
+  return { ok: false, reason: 'writeFailed' }
 }
 
 /**
@@ -216,6 +306,27 @@ exports.main = async (event) => {
       // 兜底：读配置本身出异常也不能让云函数 500
       console.error('[weekPass] 读开关异常', e)
       return { ok: true, config: GATE_FALLBACK, source: 'cloudfunction' }
+    }
+  }
+
+  // 修改开关：必须超管。鉴权放云函数里，客户端改不了也绕不过
+  if (action === 'setConfig') {
+    try {
+      const guard = await requireSuperAdmin(cloud.getWXContext().OPENID)
+      if (!guard.ok) return { ok: false, reason: guard.reason }
+
+      const patch = normalizePatch(data)
+      if (!patch) return { ok: false, reason: 'noValidField' }
+
+      const w = await writeGates(patch)
+      if (!w.ok) return { ok: false, reason: w.reason }
+
+      // 回读一次，把真正生效的值返回给前端（避免前端以为是改了其实没写进去）
+      const r = await readGateConfig()
+      return { ok: true, saved: true, config: r.config, source: r.source }
+    } catch (e) {
+      console.error('[weekPass] setConfig 异常', e)
+      return { ok: false, reason: 'exception', message: String((e && e.message) || e) }
     }
   }
 

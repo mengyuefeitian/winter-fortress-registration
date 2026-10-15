@@ -97,6 +97,12 @@ Page({
     })
   },
 
+  goToAdGate: function () {
+    wx.navigateTo({
+      url: '/pages/superAdmin/ad-gate/ad-gate'
+    })
+  },
+
   goToAdminReview: function () {
     wx.navigateTo({
       url: '/pages/superAdmin/admin-review/admin-review?applyType=zoneManager'

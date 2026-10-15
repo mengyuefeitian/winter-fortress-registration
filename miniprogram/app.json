@@ -47,7 +47,8 @@
     "pages/superAdmin/user-identity/user-identity",
     "pages/admin/alliance-activity/alliance-activity",
     "pages/admin/arsenal-config/arsenal-config",
-    "pages/superAdmin/arsenal-config/arsenal-config"
+    "pages/superAdmin/arsenal-config/arsenal-config",
+    "pages/superAdmin/ad-gate/ad-gate"
   ],
   "window": {
     "navigationBarBackgroundColor": "#1a1a2e",

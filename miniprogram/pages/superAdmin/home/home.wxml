@@ -29,6 +29,12 @@
         <text class="function-desc">管理所有联盟</text>
       </view>
     </view>
+    <view class="function-card-compact" bindtap="goToAdGate">
+      <view class="function-content">
+        <text class="function-name">广告开关</text>
+        <text class="function-desc">切换看广告解锁本周</text>
+      </view>
+    </view>
   </view>
 
   <!-- 权限审核 -->

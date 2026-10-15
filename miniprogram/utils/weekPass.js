@@ -234,6 +234,52 @@ function getGateConfig() {
 }
 
 /**
+ * 清掉开关缓存：超管改完配置后立刻生效，不用等 5 分钟 TTL
+ */
+function clearConfigCache() {
+  configCache = null
+  try {
+    wx.removeStorageSync(CONFIG_KEY)
+  } catch (e) {
+    // 清不掉也无所谓，最多等 TTL 自然过期
+  }
+}
+
+/**
+ * 修改远程开关（**仅超管**，鉴权在云函数里做，客户端绕不过）
+ *
+ * @param {Object} patch 如 { registerGate: false }，只传需要改的字段
+ * @returns {Promise<Object>} 云函数回读到的最新配置
+ */
+function setGates(patch) {
+  const body = {}
+  if (patch && typeof patch.registerGate === 'boolean') body.registerGate = patch.registerGate
+  if (patch && typeof patch.valueGate === 'boolean') body.valueGate = patch.valueGate
+  if (Object.keys(body).length === 0) {
+    return Promise.reject(new Error('没有需要保存的改动'))
+  }
+
+  return callCloud('setConfig', body).then(function (r) {
+    if (!r || !r.ok) {
+      const reason = (r && r.reason) || 'unknown'
+      const msg =
+        reason === 'permissionDenied'
+          ? '权限不足：仅超级管理员可修改'
+          : reason === 'noValidField'
+          ? '参数无效，未做任何修改'
+          : reason === 'writeFailed'
+          ? '写入数据库失败，请稍后重试'
+          : reason === 'noOpenid'
+          ? '登录状态失效，请重新进入'
+          : '保存失败，请稍后重试'
+      return Promise.reject(new Error(msg))
+    }
+    clearConfigCache()
+    return r.config || {}
+  })
+}
+
+/**
  * 某一类拦截是否开启（开启 = 会要求看广告）
  * @param {string} gate 'register' → registerGate，'value' → valueGate
  * @returns {Promise<boolean>}
@@ -327,6 +373,8 @@ module.exports = {
   ensurePass: ensurePass,
   grantPass: grantPass,
   getGateConfig: getGateConfig,
+  clearConfigCache: clearConfigCache,
+  setGates: setGates,
   isGateOn: isGateOn,
   requirePass: requirePass
 }
