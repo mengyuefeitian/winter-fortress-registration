@@ -28,7 +28,8 @@ Page({
     dirty: false,
     diag: null,
     diagRunning: false,
-    diagConclusion: ''
+    diagConclusion: '',
+    resetting: false
   },
 
   onLoad: function () {
@@ -131,6 +132,33 @@ Page({
       this.setData({ saving: false })
       util.showErrorLong((err && err.message) || '保存失败，请稍后重试')
     }
+  },
+
+  // 清除本机解锁状态：让下一轮操作重新走一遍解锁流程
+  resetForTest: function () {
+    if (this.data.resetting) return
+    this.setData({ resetting: true })
+    util.showLoading('清除中...')
+
+    weekPass
+      .resetForTest()
+      .then(r => {
+        util.hideLoading()
+        this.setData({ resetting: false, diag: null, diagConclusion: '' })
+        if (r.local && r.cloud) {
+          util.showSuccess('已清除，可重新测试')
+        } else if (r.local) {
+          // 本地清了云端没清：下一轮 query 仍会判定已持有 → 弹窗还是不出来
+          util.showErrorLong('本地已清除，但云端清除失败：' + (r.cloudErr || '未知') + '。请确认 weekPass 云函数已重新部署（reset action）')
+        } else {
+          util.showErrorLong('清除失败：' + (r.cloudErr || '本地存储不可用'))
+        }
+      })
+      .catch(err => {
+        util.hideLoading()
+        this.setData({ resetting: false })
+        util.showErrorLong('清除失败：' + ((err && err.message) || err))
+      })
   },
 
   // ==================== 链路自检 ====================

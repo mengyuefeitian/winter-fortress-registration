@@ -14,6 +14,7 @@
 // action:
 //   query      查询本周（服务器时间所在自然周）是否已持有通行证
 //   grant      发放本周通行证
+//   reset      清空自己的本周通行证（**仅供联调测试**，只能清自己）
 //   config     读取远程开关（集合 appConfig），供客户端决定要不要拦某一类操作
 //   setConfig  修改远程开关，**仅超管**（超管控制台的「广告开关」页面用）
 //
@@ -365,6 +366,15 @@ exports.main = async (event) => {
         clientWeekKey: data.weekKey || null
       })
       return { ok: true, weekKey: weekKey }
+    }
+
+    // 清空「自己」的本周通行证，仅供联调测试重新走一遍解锁流程。
+    // 只能清自己的（openid 来自微信上下文，客户端伪造不了），不影响其他用户。
+    // 用 _.remove() 而不是写 null —— 字段不存在 → 对象 是允许的，
+    // 而 null → 对象 会撞 -502001（v1.18.13 的血泪）。
+    if (action === 'reset') {
+      await db.collection('users').doc(user._id).update({ data: { weekPass: _.remove() } })
+      return { ok: true, reset: true, weekKey: weekKey }
     }
 
     return { ok: false, reason: 'unknownAction' }

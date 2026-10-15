@@ -168,6 +168,19 @@
   background-color: #C8C9CC;
 }
 
+.diag-btn-plain {
+  background-color: #FFFFFF;
+  color: #576B95;
+  border: 1px solid #D6DEEA;
+  margin-top: 10px;
+}
+
+.diag-btn-plain[disabled] {
+  background-color: #F5F5F5;
+  color: #C8C9CC;
+  border-color: #EBEBEB;
+}
+
 .diag-list {
   margin-top: 12px;
   border-top: 1px solid #F0F0F0;

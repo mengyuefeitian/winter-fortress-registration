@@ -564,6 +564,48 @@ function runGateFlow(o, feature, gate, onModalShown) {
 }
 
 /**
+ * 清除本机的解锁状态，**仅供联调测试**
+ *
+ * ⚠️ 为什么必须做这个工具：兜底逻辑会在多处「顺手」写本地通行证
+ * （云端查不到、弹窗失败、广告拉不到都会放行并写本地），
+ * 于是一旦失败过一次，**本周之内就再也弹不出解锁弹窗了** —— 想复测只能等下周一。
+ * 测试态被这种兜底污染，是排查过程中最耽误事的一环。
+ *
+ * 三处都得清，清一处都不够：
+ *   ① 本地 storage 通行证（weekPassLocal）
+ *   ② 云端 users.weekPass（服务端权威记录，不清它下一轮 query 又判定已持有）
+ *   ③ 广告的「不可用」冷却（内存变量，10 分钟内会直接跳过唤起）
+ *
+ * @returns {Promise<{local:boolean, cloud:boolean, cloudErr:string}>}
+ */
+function resetForTest() {
+  let local = false
+  try {
+    wx.removeStorageSync(LOCAL_KEY)
+    local = true
+  } catch (e) {
+    console.warn('[weekPass] 清除本地通行证失败', e)
+  }
+
+  // 开关缓存一并清掉，保证重新拉到最新的远程配置
+  clearConfigCache()
+
+  if (typeof ad.resetUnavailable === 'function') ad.resetUnavailable()
+
+  return callCloud('reset')
+    .then(function (r) {
+      return { local: local, cloud: !!(r && r.ok), cloudErr: r && r.ok ? '' : (r && r.reason) || 'unknown' }
+    })
+    .catch(function (e) {
+      return {
+        local: local,
+        cloud: false,
+        cloudErr: (e && (e.errMsg || e.message)) || String(e)
+      }
+    })
+}
+
+/**
  * 自检：把「点了没反应」拆成能一眼定位的几段
  *
  * 真机上看不到控制台，光加日志解决不了问题 —— 所以把链路每段的耗时与结论
@@ -628,6 +670,7 @@ function diagnose(pageCtx) {
 
 module.exports = {
   diagnose: diagnose,
+  resetForTest: resetForTest,
   getWeekStart: getWeekStart,
   getWeekEnd: getWeekEnd,
   getWeekKey: getWeekKey,

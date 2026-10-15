@@ -64,6 +64,15 @@
         {{diagRunning ? '检测中...' : '开始自检'}}
       </button>
 
+      <!-- 测试用：兜底逻辑一旦触发过，本周就不会再弹窗，不复测就得等下周一 -->
+      <button class="diag-btn diag-btn-plain" disabled="{{resetting}}" bindtap="resetForTest">
+        {{resetting ? '清除中...' : '清除本机解锁状态（重新测试用）'}}
+      </button>
+      <view class="diag-desc">
+        兜底放行（云端查不到 / 弹窗失败 / 广告拉不到）会顺手写本地通行证，
+        导致本周之内再也弹不出解锁弹窗。点这里一次清掉：本地通行证 + 云端记录 + 广告冷却。
+      </view>
+
       <block wx:if="{{diag}}">
         <view class="diag-list">
           <view class="diag-row">

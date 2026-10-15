@@ -37,6 +37,16 @@ function isUnavailable() {
   return Date.now() < unavailableUntil
 }
 
+/**
+ * 清除「广告不可用」冷却（仅供联调测试）
+ *
+ * 一旦确认过拉不到广告，10 分钟内不再尝试唤起。测试时想重新走一遍完整流程，
+ * 就得把这个冷却清掉，否则会直接走「不可用」分支，看不到真实行为。
+ */
+function resetUnavailable() {
+  unavailableUntil = 0
+}
+
 function enabled() {
   return adConfig.ENABLED === true
 }
@@ -282,5 +292,6 @@ module.exports = {
   enabled: enabled,
   showRewarded: showRewarded,
   getRewardedAd: getRewardedAd,
-  probeAd: probeAd
+  probeAd: probeAd,
+  resetUnavailable: resetUnavailable
 }
