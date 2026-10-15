@@ -4,6 +4,7 @@ const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const shareEntry = require('../../../utils/shareEntry')
 const ga = require('../../../utils/gameAccount')
+const weekPass = require('../../../utils/weekPass')
 
 function normalizeTimeToHHMM(t) {
   if (!t) return t
@@ -344,6 +345,15 @@ Page({
     const nickName = inputNickName.trim()
     const remark = inputRemark.trim()
 
+    // 报名类拦截：昵称校验通过后才提示，避免用户白填一遍才发现要看广告
+    // 通行证是「一次观看、本周全免」，所以本周改报名、报熊坑/国战都不会再弹
+    const pass = await weekPass.requirePass({
+      pageCtx: this,
+      gate: 'register',
+      feature: '官职报名'
+    })
+    if (!pass) return
+
     try {
       util.showLoading('正在提交...')
 
@@ -443,6 +453,14 @@ Page({
 
     const nickName = editNickName.trim()
     const remark = editRemark.trim()
+
+    // 修改自己的报名同样算提交类操作；本周已解锁的话这里会直接放行，不会重复弹
+    const pass = await weekPass.requirePass({
+      pageCtx: this,
+      gate: 'register',
+      feature: '修改官职报名'
+    })
+    if (!pass) return
 
     try {
       util.showLoading('正在保存...')

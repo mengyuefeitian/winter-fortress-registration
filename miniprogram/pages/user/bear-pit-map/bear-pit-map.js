@@ -4,6 +4,7 @@ const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const draw = require('../../../utils/bearPitDraw')
 const layout = require('../../../utils/bearPitLayout')
+const weekPass = require('../../../utils/weekPass')
 
 const MIN_SCALE = 1
 const MAX_SCALE = 6
@@ -184,11 +185,26 @@ Page({
   },
 
   // ── 保存到相册：离屏画布按 1440px 重绘一份高清图 ──
+  // 属增值操作：需持有「本周通行证」，未持有时引导观看一次激励视频
+  // （广告拉不到时 requirePass 会自动放行，不会把用户卡在这里）
   saveAlbum: function () {
     if (this.data.loading) {
       util.showInfo('还在加载中，稍后再试')
       return
     }
+    weekPass
+      .requirePass({ pageCtx: this, feature: '熊坑地图保存' })
+      .then((ok) => {
+        if (ok) this.doSaveAlbum()
+      })
+      .catch((e) => {
+        // 校验链路本身出异常时按放行处理：宁可少收广告钱，也不能卡住用户
+        console.warn('[bear-pit-map] 通行证校验异常，按放行处理', e)
+        this.doSaveAlbum()
+      })
+  },
+
+  doSaveAlbum: function () {
     util.showLoading('正在生成图片…')
     try {
       const canvas = wx.createOffscreenCanvas({ type: '2d', width: EXPORT_SIZE, height: EXPORT_SIZE })

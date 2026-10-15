@@ -6,6 +6,7 @@ const util = require('../../../utils/util')
 const version = require('../../../utils/version')
 const db = require('../../../utils/db')
 const ga = require('../../../utils/gameAccount')
+const weekPass = require('../../../utils/weekPass')
 
 // 标题与国战报名保持一致（components/level-picker 弹窗头部直接用这里的文案）
 const TARGET_TITLES = {
@@ -208,6 +209,18 @@ Page({
       util.showError('最多只能保存 20 个游戏账号')
       return
     }
+    // 第 1 个账号始终免费；第 2 个及以后属增值功能，需本周通行证
+    if (this.data.gameAccounts.length >= 1) {
+      weekPass
+        .requirePass({ pageCtx: this, feature: '添加第 2 个及以上的游戏账号' })
+        .then((ok) => { if (ok) this.doAddAccount() })
+        .catch(() => this.doAddAccount())
+      return
+    }
+    this.doAddAccount()
+  },
+
+  doAddAccount: function () {
     // 确保联盟列表已加载（编辑账号时下拉用）
     this.ensureAlliances()
     this.setData({
@@ -221,6 +234,18 @@ Page({
     const id = e.currentTarget.dataset.id
     const target = this.data.gameAccounts.filter(a => a._id === id)[0]
     if (!target) return
+    // 主账号免费编辑；第 2 个及以后（非主账号）属增值功能，需本周通行证
+    if (!target.isMain) {
+      weekPass
+        .requirePass({ pageCtx: this, feature: '编辑非主游戏账号' })
+        .then((ok) => { if (ok) this.doEditAccount(target) })
+        .catch(() => this.doEditAccount(target))
+      return
+    }
+    this.doEditAccount(target)
+  },
+
+  doEditAccount: function (target) {
     const self = this
     const boundAllianceId = target.allianceId || ''
     this.setData({
@@ -367,6 +392,14 @@ Page({
     const id = e.currentTarget.dataset.id
     const target = this.data.gameAccounts.filter(a => a._id === id)[0]
     if (!target || target.isMain) return
+    // 多账号切换属增值功能（只有 1 个账号时不存在切换，不受影响）
+    weekPass
+      .requirePass({ pageCtx: this, feature: '切换游戏账号' })
+      .then((ok) => { if (ok) this.doSetMain(id) })
+      .catch(() => this.doSetMain(id))
+  },
+
+  doSetMain: function (id) {
     wx.showLoading({ title: '设置中...', mask: true })
     ga.setMain(id).then(r => {
       wx.hideLoading()

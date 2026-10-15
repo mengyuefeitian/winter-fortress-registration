@@ -3,6 +3,7 @@ const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const ga = require('../../../utils/gameAccount')
+const weekPass = require('../../../utils/weekPass')
 
 // 截图尺寸：加宽到 980，避免车身行「钻石(万)」与「兵种实力(万)」挤在一起
 const SHOT_W = 980
@@ -203,12 +204,25 @@ Page({
     return { height: topArea + headH + sectionGap + bodyH + bottomMargin }
   },
 
+  // 保存截图：属增值操作，需持有「本周通行证」
+  // 广告拉不到时 requirePass 会自动放行，不会把用户卡在截图这一步
   onSaveScreenshot: async function () {
     if (this.data.headRegistrations.length === 0 && this.data.bodyRegistrations.length === 0) {
       util.showInfo('暂无数据可截图')
       return
     }
+    let ok = false
+    try {
+      ok = await weekPass.requirePass({ pageCtx: this, feature: '国战统计截图' })
+    } catch (e) {
+      console.warn('[battle-statistics] 通行证校验异常，按放行处理', e)
+      ok = true
+    }
+    if (!ok) return
+    await this.doSaveScreenshot()
+  },
 
+  doSaveScreenshot: async function () {
     try {
       util.showLoading('正在生成截图...')
 

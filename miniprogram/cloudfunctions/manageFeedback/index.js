@@ -24,6 +24,9 @@ exports.main = async (event, context) => {
       case 'replyFeedback':
         await verifySuperAdmin(OPENID)
         return await replyFeedback(data)
+      case 'purgeContactInfo':
+        await verifySuperAdmin(OPENID)
+        return await purgeContactInfo()
       default:
         return { success: false, error: 'Unknown action' }
     }
@@ -197,4 +200,25 @@ async function replyFeedback(data) {
   if (updateRes.stats.updated === 0) throw new Error('反馈不存在')
 
   return { success: true }
+}
+
+// 一次性清理：删除历史反馈里已收集的联系方式（手机号 / 微信号 / QQ / 邮箱等）
+//
+// 背景：微信运营规范 5.12.14 禁止收集这类信息，5.12.6 / 5.12.7 禁止向他人展示与使用。
+// 前端已停止收集，但**库里的存量数据仍在**，同样属于违规留存，必须清掉
+// （5.12.4：用户要求时应删除其数据）。
+//
+// 用法：部署后在云开发控制台「云端测试」，入参 {"action":"purgeContactInfo"}。
+// 幂等，可重复执行；没有存量时 updated 为 0，属正常。
+async function purgeContactInfo() {
+  const res = await db
+    .collection('feedbacks')
+    .where({ contactInfo: _.exists(true) })
+    .update({ data: { contactInfo: _.remove() } })
+
+  return {
+    success: true,
+    // stats.updated 即被清掉联系方式的记录数
+    updated: res && res.stats ? res.stats.updated : 0
+  }
 }

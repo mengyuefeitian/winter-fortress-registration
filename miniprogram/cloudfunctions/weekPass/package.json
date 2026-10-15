@@ -1,0 +1,9 @@
+{
+  "name": "weekPass",
+  "version": "1.0.0",
+  "description": "本周通行证：按服务器时间（北京时间）校验与发放自然周权限",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

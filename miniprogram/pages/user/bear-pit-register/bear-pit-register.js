@@ -8,6 +8,7 @@ const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const ga = require('../../../utils/gameAccount')
 const layout = require('../../../utils/bearPitLayout')
+const weekPass = require('../../../utils/weekPass')
 
 Page({
   data: {
@@ -213,6 +214,15 @@ Page({
       util.showInfo('请选择一位邻居，或改选「按地心排」')
       return
     }
+
+    // 报名类拦截：表单校验通过后才提示，避免用户白填一遍才发现要看广告
+    // 通行证是「一次观看、本周全免」，所以本周后续报名（含国战/官职）都不会再弹
+    const pass = await weekPass.requirePass({
+      pageCtx: this,
+      gate: 'register',
+      feature: '熊坑报名'
+    })
+    if (!pass) return
 
     this.setData({ submitting: true })
     util.showLoading('正在报名…')

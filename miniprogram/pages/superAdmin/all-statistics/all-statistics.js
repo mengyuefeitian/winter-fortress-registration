@@ -4,6 +4,7 @@ const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const auth = require('../../../utils/auth')
 const ga = require('../../../utils/gameAccount')
+const weekPass = require('../../../utils/weekPass')
 
 // 取报名记录的熔炉等级规格：优先 decorate() 写好的 furnaceSpec，其次原始字段兜底
 function specOf(rec) {
@@ -474,8 +475,21 @@ Page({
     }
   },
 
-  // 保存截图
+  // 保存截图：属增值操作，需持有「本周通行证」
+  // 广告拉不到时 requirePass 会自动放行，不会把用户卡在截图这一步
   saveScreenshot: async function () {
+    let ok = false
+    try {
+      ok = await weekPass.requirePass({ pageCtx: this, feature: '统计截图' })
+    } catch (e) {
+      console.warn('[all-statistics] 通行证校验异常，按放行处理', e)
+      ok = true
+    }
+    if (!ok) return
+    await this.doSaveScreenshot()
+  },
+
+  doSaveScreenshot: async function () {
     try {
       util.showLoading('正在生成截图...')
 

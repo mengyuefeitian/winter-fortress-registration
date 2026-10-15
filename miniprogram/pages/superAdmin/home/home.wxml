@@ -29,6 +29,12 @@
         <text class="function-desc">管理所有联盟</text>
       </view>
     </view>
+    <view class="function-card-compact" bindtap="goToAdGate">
+      <view class="function-content">
+        <text class="function-name">激励开关</text>
+        <text class="function-desc">赞助解锁，全功能免费</text>
+      </view>
+    </view>
   </view>
 
   <!-- 权限审核 -->

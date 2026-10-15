@@ -13,7 +13,6 @@ Page({
     feedbackTypes: FEEDBACK_TYPES,
     selectedType: '',
     content: '',
-    contactInfo: '',
     imagePaths: [],
     maxImages: 3,
     submitting: false,
@@ -31,10 +30,6 @@ Page({
       content: content,
       charCount: content.length
     })
-  },
-
-  onContactInput: function (e) {
-    this.setData({ contactInfo: e.detail.value })
   },
 
   // 选择图片
@@ -124,7 +119,6 @@ Page({
         app.globalData.userInfo?.nickName || '',
         this.data.selectedType,
         this.data.content,
-        this.data.contactInfo,
         imageUrls
       )
 
@@ -136,7 +130,6 @@ Page({
             feedbackId: result._id,
             type: this.data.selectedType,
             content: this.data.content,
-            contactInfo: this.data.contactInfo,
             nickName: app.globalData.userInfo?.nickName || '',
             imageUrls: imageUrls
           },

@@ -1,0 +1,127 @@
+<view class="ad-gate-container">
+  <!-- 机制说明 -->
+  <view class="info-section">
+    <view class="info-title">赞助开发者，全功能免费</view>
+    <view class="info-content">
+      本产品免费使用，靠激励任务维持运营。用户完成一次激励任务（约 30 秒），
+      即可免费赞助开发者，并获得本周（{{weekRange}}）全部功能的免费使用权，本周内无需重复。
+    </view>
+    <view class="info-tip">
+      开关只需配置一次、长期有效，不会每周失效；上方日期是按当前时间自动计算的。用户的赞助状态每周一 00:00 自动重置，需重新完成一次。
+    </view>
+    <view class="info-warning">
+      ⚠️ 报名属高频核心操作，开启后请留意用户反馈与平台合规要求，必要时及时关闭。
+    </view>
+    <view class="info-warning">
+      修改后本机立即生效；其他用户端最长 5 分钟后生效，无需发版。
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-section">
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <block wx:else>
+    <!-- 开关 -->
+    <view class="switch-section">
+      <view class="switch-row">
+        <view class="switch-main">
+          <text class="switch-label">报名类</text>
+          <text class="switch-desc">熊坑 / 国战 / 官职报名</text>
+        </view>
+        <switch checked="{{registerGate}}" bindchange="onRegisterGateChange" color="#07C160" />
+      </view>
+      <view class="switch-row switch-row-bordered">
+        <view class="switch-main">
+          <text class="switch-label">增值类</text>
+          <text class="switch-desc">保存截图、第 2 个以上游戏账号</text>
+        </view>
+        <switch checked="{{valueGate}}" bindchange="onValueGateChange" color="#07C160" />
+      </view>
+    </view>
+
+    <!-- 当前状态 -->
+    <view class="preview-section">
+      <view class="preview-title">当前状态</view>
+      <view class="preview-content">报名类：{{registerGate ? '完成赞助后可用' : '直接开放'}}</view>
+      <view class="preview-content">增值类：{{valueGate ? '完成赞助后可用' : '直接开放'}}</view>
+      <view class="preview-content">生效周期：{{weekRange}}</view>
+    </view>
+
+    <!-- 保存 -->
+    <view class="save-section">
+      <button class="save-btn" disabled="{{saving || !dirty}}" bindtap="save">
+        {{saving ? '保存中...' : '保存配置'}}
+      </button>
+    </view>
+
+    <!-- 自检：真机上看不到控制台，「点了没反应」只能靠这个面板定位 -->
+    <view class="diag-section">
+      <view class="diag-title">链路自检</view>
+      <view class="diag-desc">
+        遇到「点了没反应 / 不弹窗」时先点这里：逐段探测并给出结论，结果可直接截图反馈。
+      </view>
+      <button class="diag-btn" disabled="{{diagRunning}}" bindtap="runDiagnose">
+        {{diagRunning ? '检测中...' : '开始自检'}}
+      </button>
+
+      <!-- 测试用：兜底逻辑一旦触发过，本周就不会再弹窗，不复测就得等下周一 -->
+      <button class="diag-btn diag-btn-plain" disabled="{{resetting}}" bindtap="resetForTest">
+        {{resetting ? '清除中...' : '清除本机赞助状态（重新测试用）'}}
+      </button>
+      <view class="diag-desc">
+        兜底放行（云端查不到 / 弹窗失败 / 广告拉不到）会顺手写本地通行证，
+        导致本周之内再也弹不出赞助弹窗。点这里一次清掉：本地通行证 + 云端记录 + 广告冷却。
+      </view>
+
+      <block wx:if="{{diag}}">
+        <view class="diag-list">
+          <view class="diag-row">
+            <text class="diag-k">总开关</text>
+            <text class="diag-v {{diag.enabled ? 'ok' : 'bad'}}">{{diag.enabled ? '开启' : '已关闭（全部直接放行）'}}</text>
+          </view>
+          <view class="diag-row">
+            <text class="diag-k">本周周期</text>
+            <text class="diag-v">{{diag.weekRange}}（{{diag.weekKey}}）</text>
+          </view>
+          <view class="diag-row">
+            <text class="diag-k">本机本周</text>
+            <text class="diag-v {{diag.localPass ? 'ok' : ''}}">{{diag.localPass ? '已赞助' : '未赞助'}}</text>
+          </view>
+          <view class="diag-row">
+            <text class="diag-k">远程开关</text>
+            <text class="diag-v {{diag.configErr ? 'bad' : 'ok'}}">
+              {{diag.configErr ? '失败：' + diag.configErr : '报名类 ' + (diag.config.registerGate ? '开' : '关') + ' · 增值类 ' + (diag.config.valueGate ? '开' : '关') + '（' + diag.configMs + 'ms）'}}
+            </text>
+          </view>
+          <view class="diag-row">
+            <text class="diag-k">云端记录</text>
+            <text class="diag-v {{diag.queryErr ? 'bad' : 'ok'}}">
+              {{diag.queryErr ? '失败：' + diag.queryErr : (diag.cloudValid ? '已赞助' : '未赞助') + '（' + diag.queryMs + 'ms）'}}
+            </text>
+          </view>
+
+          <block wx:if="{{diag.ad}}">
+            <view class="diag-row">
+              <text class="diag-k">广告位</text>
+              <text class="diag-v {{diag.ad.adUnitOk ? 'ok' : 'bad'}}">{{diag.ad.adUnit || '未配置'}}</text>
+            </view>
+            <view class="diag-row">
+              <text class="diag-k">实例创建</text>
+              <text class="diag-v {{diag.ad.created ? 'ok' : 'bad'}}">{{diag.ad.created ? '成功' : '失败'}}</text>
+            </view>
+            <view class="diag-row">
+              <text class="diag-k">素材加载</text>
+              <text class="diag-v {{diag.ad.loaded ? 'ok' : 'bad'}}">
+                {{diag.ad.loaded ? '成功' : '失败'}}（{{diag.ad.ms}}ms）{{diag.ad.cooling ? ' · 冷却中' : ''}}
+              </text>
+            </view>
+            <view wx:if="{{diag.ad.err}}" class="diag-err">{{diag.ad.err}}</view>
+          </block>
+        </view>
+
+        <view class="diag-conclusion">{{diagConclusion}}</view>
+      </block>
+    </view>
+  </block>
+</view>
