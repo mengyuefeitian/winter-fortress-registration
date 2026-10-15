@@ -1,15 +1,15 @@
 <view class="ad-gate-container">
   <!-- 机制说明 -->
   <view class="info-section">
-    <view class="info-title">本周通行证</view>
+    <view class="info-title">高级功能解锁</view>
     <view class="info-content">
-      用户观看一次约 30 秒的激励视频，即可解锁本周（{{weekRange}}）全部权限，本周内不再重复观看。
+      用户完成一次激励任务，即可解锁本周（{{weekRange}}）全部高级功能权限，本周内无需重复。
     </view>
     <view class="info-tip">
-      开关只需配置一次、长期有效，不会每周失效；上方日期是按当前时间自动计算的。用户的通行证每周一 00:00 自动重置，需重新观看一次。
+      开关只需配置一次、长期有效，不会每周失效；上方日期是按当前时间自动计算的。用户的解锁状态每周一 00:00 自动重置，需重新完成一次。
     </view>
     <view class="info-warning">
-      ⚠️ 提审前建议关闭「报名类」：报名属核心功能，强制看广告才能报名可能被判定为广告阻断基础功能。
+      ⚠️ 报名属高频核心操作，开启后请留意用户反馈与平台合规要求，必要时及时关闭。
     </view>
     <view class="info-warning">
       修改后本机立即生效；其他用户端最长 5 分钟后生效，无需发版。
@@ -42,8 +42,8 @@
     <!-- 当前状态 -->
     <view class="preview-section">
       <view class="preview-title">当前状态</view>
-      <view class="preview-content">报名类：{{registerGate ? '需观看广告' : '全部免费'}}</view>
-      <view class="preview-content">增值类：{{valueGate ? '需观看广告' : '全部免费'}}</view>
+      <view class="preview-content">报名类：{{registerGate ? '激励解锁后可用' : '直接开放'}}</view>
+      <view class="preview-content">增值类：{{valueGate ? '激励解锁后可用' : '直接开放'}}</view>
       <view class="preview-content">生效周期：{{weekRange}}</view>
     </view>
 

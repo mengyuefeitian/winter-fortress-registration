@@ -31,8 +31,8 @@
     </view>
     <view class="function-card-compact" bindtap="goToAdGate">
       <view class="function-content">
-        <text class="function-name">广告开关</text>
-        <text class="function-desc">切换看广告解锁本周</text>
+        <text class="function-name">激励开关</text>
+        <text class="function-desc">解锁高级功能权限</text>
       </view>
     </view>
   </view>

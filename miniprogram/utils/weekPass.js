@@ -319,14 +319,17 @@ function requirePass(opts) {
       if (valid) return true
       return new Promise(function (resolve) {
         const rangeText = getWeekRangeText()
+        // 文案口径：说成「解锁高级功能」而不是「要看广告」，避免变相强迫的观感；
+        // 但**必须提前说清奖励是什么**（解锁本周全部高级功能、本周内不再重复），
+        // 这是平台对激励类的硬性要求 —— 不能含糊其辞把用户骗进去。
         const content =
           o.content ||
-          `「${feature}」需要本周通行证。观看一次约 30 秒的视频广告，即可解锁本周（${rangeText}）全部功能，本周内不再重复观看。`
+          `「${feature}」为高级功能。完成一次激励任务（约 30 秒）即可解锁本周（${rangeText}）全部高级功能，本周内无需重复。`
         wx.showModal({
-          title: '需要本周通行证',
+          title: '解锁高级功能',
           content: content,
-          confirmText: '看广告解锁',
-          cancelText: '以后再说',
+          confirmText: '看视频解锁',
+          cancelText: '暂不使用',
           success: function (res) {
             if (!res.confirm) {
               resolve(false)
@@ -343,14 +346,15 @@ function requirePass(opts) {
               onFail: function (reason) {
                 if (reason === 'notFinished') {
                   // 用户自己中途退出：不给权限，也不打扰
-                  wx.showToast({ title: '需看完视频才能解锁', icon: 'none' })
+                  wx.showToast({ title: '未完成解锁，本次暂不可用', icon: 'none' })
                   resolve(false)
                   return
                 }
-                // 广告拉不到 / 创建失败 / 绑定失败：一律临时放行，只写本地不写云端
-                console.warn('[weekPass] 广告不可用，临时放行', reason)
+                // 拉取不到 / 创建失败 / 绑定失败：一律临时放行，只写本地不写云端
+                // 绝不能让用户卡在「解锁不了 = 功能用不了」的死路上
+                console.warn('[weekPass] 激励任务不可用，临时放行', reason)
                 writeLocal(getWeekKey())
-                wx.showToast({ title: '广告加载失败，本次已放行', icon: 'none' })
+                wx.showToast({ title: '加载失败，本次已为您开放', icon: 'none' })
                 resolve(true)
               }
             })
