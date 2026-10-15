@@ -1,9 +1,13 @@
 // utils/ad.js
-// 广告封装：激励式视频 / 插屏
+// 广告封装：激励式视频
+//
+// 只有一种广告形态：看完整视频 → 换「本周通行证」。
+// 插屏由流量主后台自带能力覆盖，代码里不接入，避免重复打扰用户。
 //
 // 三条必须遵守的纪律（改这个文件前先读）：
 //   1) 小程序端激励视频是「页面内单例，不允许跨页面使用」——官方文档明确写了，
 //      小游戏端才是全局单例。所以实例必须挂在页面 this 上，不要做全局单例复用。
+//      同一个 adUnitId 可以在多个页面复用，但每个页面要各自创建实例。
 //   2) 奖励只能在 onClose 且 res.isEnded === true 时发放。用户中途退出不发奖，
 //      这是平台合规强制项，不是可选项；反过来，看完了不发奖也不行。
 //   3) 广告会拉不到（无填充 / 弱网 / 广告位未生效）。所有失败都要回调出去，
@@ -13,8 +17,6 @@ const adConfig = require('./adConfig.js')
 
 // 挂在页面实例上的 key（保证页面内单例）
 const REWARDED_KEY = '__rewardedAd'
-const INTERSTITIAL_KEY = '__interstitialAd'
-const LAST_INTERSTITIAL_KEY = '__lastInterstitialAt'
 
 function enabled() {
   return adConfig.ENABLED === true
@@ -132,50 +134,10 @@ function showRewarded(opts) {
   }
 }
 
-/**
- * 展示插屏广告（浏览类页面的曝光位）
- *
- * 插屏是「低价值、可失败」的：拉不到就算了，绝不影响用户正常使用，
- * 所以这里不抛错、不回调，只打日志。
- *
- * @param {Object} pageCtx 页面 this
- * @param {boolean} force 是否跳过本地间隔限制
- * @returns {boolean} 是否真的触发了展示
- */
-function showInterstitial(pageCtx, force) {
-  if (!enabled()) return false
-  if (!hasAdUnit(adConfig.INTERSTITIAL_AD_UNIT)) return false
-  if (!pageCtx) return false
-
-  // 本地频控：官方是 30 秒，这里按配置放宽，避免连续刷屏
-  const now = Date.now()
-  const last = pageCtx[LAST_INTERSTITIAL_KEY] || 0
-  if (!force && now - last < adConfig.INTERSTITIAL_MIN_INTERVAL) return false
-  pageCtx[LAST_INTERSTITIAL_KEY] = now
-
-  try {
-    if (!pageCtx[INTERSTITIAL_KEY]) {
-      pageCtx[INTERSTITIAL_KEY] = wx.createInterstitialAd({
-        adUnitId: adConfig.INTERSTITIAL_AD_UNIT
-      })
-    }
-    const ad = pageCtx[INTERSTITIAL_KEY]
-    const p = ad.show()
-    if (p && typeof p.catch === 'function') {
-      p.catch(function (err) {
-        console.warn('[ad] 插屏广告展示失败', err)
-      })
-    }
-    return true
-  } catch (e) {
-    console.warn('[ad] createInterstitialAd 失败', e)
-    return false
-  }
-}
+// （插屏广告已移除：由流量主后台自带能力覆盖，代码不再接入）
 
 module.exports = {
   enabled: enabled,
   showRewarded: showRewarded,
-  showInterstitial: showInterstitial,
   getRewardedAd: getRewardedAd
 }

@@ -4,6 +4,7 @@ const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const ga = require('../../../utils/gameAccount')
+const weekPass = require('../../../utils/weekPass')
 
 // 给成员补上「熔炉等级」展示字段（火晶图 / 圆环数字 / 是否展示）
 // 三级兜底（交给 ga.decorate）：成员自带 furnace → 老数据文本 furnaceLevel → 按 userId 查该用户主账号。
@@ -281,12 +282,25 @@ Page({
     return { height: Math.max(height, 300) }
   },
 
+  // 保存截图：属增值操作，需持有「本周通行证」
+  // 广告拉不到时 requirePass 会自动放行，不会把用户卡在截图这一步
   onSaveScreenshot: async function () {
     if (!this.data.members || this.data.members.length === 0) {
       util.showInfo('暂无数据可截图')
       return
     }
+    let ok = false
+    try {
+      ok = await weekPass.requirePass({ pageCtx: this, feature: '联盟活跃截图' })
+    } catch (e) {
+      console.warn('[alliance-activity] 通行证校验异常，按放行处理', e)
+      ok = true
+    }
+    if (!ok) return
+    await this.doSaveScreenshot()
+  },
 
+  doSaveScreenshot: async function () {
     try {
       util.showLoading('正在生成截图...')
 

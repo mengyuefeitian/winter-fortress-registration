@@ -2,6 +2,7 @@
 const app = getApp()
 const util = require('../../../utils/util')
 const db = require('../../../utils/db')
+const weekPass = require('../../../utils/weekPass')
 
 Page({
   data: {
@@ -85,12 +86,25 @@ Page({
     }
   },
 
+  // 保存截图：属增值操作，需持有「本周通行证」
+  // 广告拉不到时 requirePass 会自动放行，不会把用户卡在截图这一步
   onSaveScreenshot: async function () {
     if (this.data.rows.length === 0) {
       util.showInfo('暂无数据可截图')
       return
     }
+    let ok = false
+    try {
+      ok = await weekPass.requirePass({ pageCtx: this, feature: '国战分配截图' })
+    } catch (e) {
+      console.warn('[battle-allocation] 通行证校验异常，按放行处理', e)
+      ok = true
+    }
+    if (!ok) return
+    await this.doSaveScreenshot()
+  },
 
+  doSaveScreenshot: async function () {
     try {
       util.showLoading('正在生成截图...')
 
