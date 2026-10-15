@@ -154,17 +154,27 @@ async function safeWriteWeekPass(docId, oldVal, newVal) {
 exports.main = async (event) => {
   const data = event.data || event
   const action = data.action
+
+  // ⚠️ 远程开关必须放在 openid 校验**之前**：
+  //    ① 它纯读配置，与用户身份无关（未入库用户也要能取到）；
+  //    ② 云开发控制台的「云端测试」不携带 openid，放在后面会被 noOpenid 直接拦掉，
+  //       导致用来生成默认开关文档的测试调用永远返回 {"ok":false,"reason":"noOpenid"}。
+  if (action === 'config') {
+    try {
+      const r = await readGateConfig()
+      return { ok: true, config: r.config, source: r.source }
+    } catch (e) {
+      // 兜底：读配置本身出异常也不能让云函数 500
+      console.error('[weekPass] 读开关异常', e)
+      return { ok: true, config: GATE_FALLBACK, source: 'cloudfunction' }
+    }
+  }
+
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
 
   if (!openid) {
     return { ok: false, reason: 'noOpenid' }
-  }
-
-  // 远程开关：与用户无关，未入库的用户也要能取到，所以放在 findUser 之前
-  if (action === 'config') {
-    const r = await readGateConfig()
-    return { ok: true, config: r.config, source: r.source }
   }
 
   const weekKey = serverWeekKey()
