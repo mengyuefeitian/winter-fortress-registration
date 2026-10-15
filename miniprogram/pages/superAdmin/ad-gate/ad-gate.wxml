@@ -1,12 +1,13 @@
 <view class="ad-gate-container">
   <!-- 机制说明 -->
   <view class="info-section">
-    <view class="info-title">高级功能解锁</view>
+    <view class="info-title">赞助开发者，全功能免费</view>
     <view class="info-content">
-      用户完成一次激励任务，即可解锁本周（{{weekRange}}）全部高级功能权限，本周内无需重复。
+      本产品免费使用，靠激励任务维持运营。用户完成一次激励任务（约 30 秒），
+      即可免费赞助开发者，并获得本周（{{weekRange}}）全部功能的免费使用权，本周内无需重复。
     </view>
     <view class="info-tip">
-      开关只需配置一次、长期有效，不会每周失效；上方日期是按当前时间自动计算的。用户的解锁状态每周一 00:00 自动重置，需重新完成一次。
+      开关只需配置一次、长期有效，不会每周失效；上方日期是按当前时间自动计算的。用户的赞助状态每周一 00:00 自动重置，需重新完成一次。
     </view>
     <view class="info-warning">
       ⚠️ 报名属高频核心操作，开启后请留意用户反馈与平台合规要求，必要时及时关闭。
@@ -42,8 +43,8 @@
     <!-- 当前状态 -->
     <view class="preview-section">
       <view class="preview-title">当前状态</view>
-      <view class="preview-content">报名类：{{registerGate ? '激励解锁后可用' : '直接开放'}}</view>
-      <view class="preview-content">增值类：{{valueGate ? '激励解锁后可用' : '直接开放'}}</view>
+      <view class="preview-content">报名类：{{registerGate ? '完成赞助后可用' : '直接开放'}}</view>
+      <view class="preview-content">增值类：{{valueGate ? '完成赞助后可用' : '直接开放'}}</view>
       <view class="preview-content">生效周期：{{weekRange}}</view>
     </view>
 
@@ -66,11 +67,11 @@
 
       <!-- 测试用：兜底逻辑一旦触发过，本周就不会再弹窗，不复测就得等下周一 -->
       <button class="diag-btn diag-btn-plain" disabled="{{resetting}}" bindtap="resetForTest">
-        {{resetting ? '清除中...' : '清除本机解锁状态（重新测试用）'}}
+        {{resetting ? '清除中...' : '清除本机赞助状态（重新测试用）'}}
       </button>
       <view class="diag-desc">
         兜底放行（云端查不到 / 弹窗失败 / 广告拉不到）会顺手写本地通行证，
-        导致本周之内再也弹不出解锁弹窗。点这里一次清掉：本地通行证 + 云端记录 + 广告冷却。
+        导致本周之内再也弹不出赞助弹窗。点这里一次清掉：本地通行证 + 云端记录 + 广告冷却。
       </view>
 
       <block wx:if="{{diag}}">
@@ -84,8 +85,8 @@
             <text class="diag-v">{{diag.weekRange}}（{{diag.weekKey}}）</text>
           </view>
           <view class="diag-row">
-            <text class="diag-k">本机通行证</text>
-            <text class="diag-v {{diag.localPass ? 'ok' : ''}}">{{diag.localPass ? '已持有' : '未持有'}}</text>
+            <text class="diag-k">本机本周</text>
+            <text class="diag-v {{diag.localPass ? 'ok' : ''}}">{{diag.localPass ? '已赞助' : '未赞助'}}</text>
           </view>
           <view class="diag-row">
             <text class="diag-k">远程开关</text>
@@ -94,9 +95,9 @@
             </text>
           </view>
           <view class="diag-row">
-            <text class="diag-k">云端通行证</text>
+            <text class="diag-k">云端记录</text>
             <text class="diag-v {{diag.queryErr ? 'bad' : 'ok'}}">
-              {{diag.queryErr ? '失败：' + diag.queryErr : (diag.cloudValid ? '已持有' : '未持有') + '（' + diag.queryMs + 'ms）'}}
+              {{diag.queryErr ? '失败：' + diag.queryErr : (diag.cloudValid ? '已赞助' : '未赞助') + '（' + diag.queryMs + 'ms）'}}
             </text>
           </view>
 

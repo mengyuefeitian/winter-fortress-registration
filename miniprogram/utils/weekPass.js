@@ -113,7 +113,7 @@ function hasPassSync() {
 // 绝不让用户卡在一次网络请求上。
 const CLOUD_TIMEOUT = 8000
 
-// 广告唤起后的兜底超时（毫秒）。只在用户点了「看视频解锁」之后才开始计时，
+// 广告唤起后的兜底超时（毫秒）。只在用户点了「看视频」之后才开始计时，
 // 所以不会影响正常观看（激励视频一般 15–30 秒，90 秒足够）。
 const AD_GUARD_TIMEOUT = 90000
 
@@ -460,12 +460,14 @@ function runGateFlow(o, feature, gate, onModalShown) {
       trace('准备弹窗', feature)
       return new Promise(function (resolve) {
         const rangeText = getWeekRangeText()
-        // 文案口径：说成「解锁高级功能」而不是「要看广告」，避免变相强迫的观感；
-        // 但**必须提前说清奖励是什么**（解锁本周全部高级功能、本周内不再重复），
-        // 这是平台对激励类的硬性要求 —— 不能含糊其辞把用户骗进去。
+        // ⚠️ 文案口径（用户 2026-10-15 定，改之前先读）：
+        //   说成「免费赞助开发者」，**不要**说「高级功能 / 付费 / 会员」——
+        //   本产品本来就免费，激励任务是对开发者的赞助，不是买权限。
+        //   同时仍必须满足平台对激励类的硬性要求：**奖励在触发前说清楚**
+        //   （本周全部功能免费使用、本周内不再重复），不能含糊其辞把用户骗进去。
         const content =
           o.content ||
-          `「${feature}」为高级功能。完成一次激励任务（约 30 秒）即可解锁本周（${rangeText}）全部高级功能，本周内无需重复。`
+          `本产品免费使用，靠激励任务维持运营。\n完成一次激励任务（约 30 秒）即可免费赞助开发者，并获得本周（${rangeText}）全部功能的免费使用权，本周内无需重复。`
 
         // 一次性结算 + 超时兜底：广告唤起后若长时间没有任何回调
         // （平台侧偶发「show 成功但既不播也不报错」），不能让用户永远等下去
@@ -494,9 +496,9 @@ function runGateFlow(o, feature, gate, onModalShown) {
         // 表现为「点了没反应 + 不弹窗」，是本项目最难定位的一次故障。
         // 改这两个文案时**必须数一下字数**，别再写长。
         wx.showModal({
-          title: '解锁高级功能',
+          title: '赞助开发者',
           content: content,
-          confirmText: '去解锁',
+          confirmText: '看视频',
           cancelText: '暂不用',
           success: function (res) {
             if (!res.confirm) {
@@ -518,14 +520,14 @@ function runGateFlow(o, feature, gate, onModalShown) {
                 pageCtx: o.pageCtx,
                 onGranted: function () {
                   grantPass().then(function () {
-                    wx.showToast({ title: '本周已解锁', icon: 'none' })
+                    wx.showToast({ title: '感谢赞助，本周已开放', icon: 'none' })
                     settle(true)
                   })
                 },
                 onFail: function (reason) {
                   if (reason === 'notFinished') {
                     // 用户自己中途退出：不给权限，也不打扰
-                    wx.showToast({ title: '未完成解锁，本次暂不可用', icon: 'none' })
+                    wx.showToast({ title: '未完成赞助，本次暂不可用', icon: 'none' })
                     settle(false)
                     return
                   }
@@ -533,7 +535,7 @@ function runGateFlow(o, feature, gate, onModalShown) {
                   // 绝不能让用户卡在「解锁不了 = 功能用不了」的死路上
                   console.warn('[weekPass] 激励任务不可用，临时放行', reason)
                   writeLocal(getWeekKey())
-                  wx.showToast({ title: '加载失败，本次已为您开放', icon: 'none' })
+                  wx.showToast({ title: '加载失败，本次已开放', icon: 'none' })
                   settle(true)
                 }
               })
