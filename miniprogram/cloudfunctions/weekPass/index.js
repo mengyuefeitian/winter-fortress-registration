@@ -14,7 +14,15 @@
 // action:
 //   query  查询本周（服务器时间所在自然周）是否已持有通行证
 //   grant  发放本周通行证
-//   config 读取远程开关（appConfig/adGate），供客户端决定要不要拦某一类操作
+//   config 读取远程开关（集合 appConfig），供客户端决定要不要拦某一类操作
+//
+// ⚠️ 开关为什么不依赖固定 _id（实测踩到）：
+//    云开发控制台的「添加记录」界面**不提供 _id 输入框**，_id 由系统自动生成。
+//    只有走 API（云函数 add 时传 _id）才能指定 _id。所以这里的读法是：
+//      ① 先按约定 _id = 'adGate' 取（云函数自己建的、或将来能指定时）
+//      ② 取不到 → 读集合第一条（兼容用户在控制台手工建的记录）
+//      ③ 都没有 → 云函数**自动建一条**默认开关，用户直接去控制台改值即可
+//    这样用户连集合都不用手建，也不需要考虑 _id 怎么写。
 
 const cloud = require('wx-server-sdk')
 
@@ -25,6 +33,63 @@ const _ = db.command
 
 // 北京时间偏移（云函数默认 UTC+0）
 const BJ_OFFSET = 8 * 60 * 60 * 1000
+
+// 远程开关所在集合与约定文档 ID
+const CONFIG_COLLECTION = 'appConfig'
+const CONFIG_DOC_ID = 'adGate'
+
+// 云函数内置兜底值：集合读不到、也写不进去时用它
+// （想让开关在「集合完全不可用」时也生效，改这里并重新部署本云函数即可，不用发版小程序）
+const GATE_FALLBACK = { registerGate: true, valueGate: true }
+
+/**
+ * 读取远程开关，读不到就地建一份默认的
+ * @returns {Promise<{config:Object, source:string}>}
+ */
+async function readGateConfig() {
+  const coll = db.collection(CONFIG_COLLECTION)
+
+  // ① 约定 _id
+  try {
+    const r = await coll.doc(CONFIG_DOC_ID).get()
+    const doc = (r && r.data) || null
+    if (doc) return { config: doc, source: 'remote' }
+  } catch (e) {
+    // 集合不存在 / 文档不存在，继续往下试
+  }
+
+  // ② 用户在控制台手工建的记录（_id 是系统生成的随机串）
+  try {
+    const r = await coll.limit(1).get()
+    const list = (r && r.data) || []
+    if (list.length) return { config: list[0], source: 'remote' }
+  } catch (e) {
+    // 集合不存在，继续往下走自动创建
+  }
+
+  // ③ 集合为空 → 自动建集合 + 建一条默认开关，之后用户直接在控制台改值
+  //    官方文档：新建集合「仅支持通过云函数端 SDK 及控制台」→ 这里显式建，不赌 add 的隐式行为
+  try {
+    if (typeof db.createCollection === 'function') {
+      try {
+        await db.createCollection(CONFIG_COLLECTION)
+      } catch (e) {
+        // 集合已存在会报错，忽略
+      }
+    }
+    const res = await coll.add({
+      data: Object.assign({ _id: CONFIG_DOC_ID }, GATE_FALLBACK)
+    })
+    if (res && res._id) {
+      return { config: Object.assign({ _id: CONFIG_DOC_ID }, GATE_FALLBACK), source: 'created' }
+    }
+  } catch (e) {
+    // 建不了（配额 / 权限异常）→ 用云函数内置值，不影响用户使用
+    console.warn('[weekPass] 自动创建开关文档失败', String((e && e.message) || e))
+  }
+
+  return { config: GATE_FALLBACK, source: 'cloudfunction' }
+}
 
 function pad2(n) {
   return String(n).padStart(2, '0')
@@ -98,15 +163,8 @@ exports.main = async (event) => {
 
   // 远程开关：与用户无关，未入库的用户也要能取到，所以放在 findUser 之前
   if (action === 'config') {
-    try {
-      const res = await db.collection('appConfig').doc('adGate').get()
-      const doc = (res && res.data) || null
-      return { ok: true, config: doc, source: doc ? 'remote' : 'default' }
-    } catch (e) {
-      // 集合不存在 / 文档不存在 → 客户端回落到代码里的默认开关（默认打开）
-      console.warn('[weekPass] 未读到远程开关，回落默认值', String((e && e.message) || e))
-      return { ok: true, config: null, source: 'default' }
-    }
+    const r = await readGateConfig()
+    return { ok: true, config: r.config, source: r.source }
   }
 
   const weekKey = serverWeekKey()
