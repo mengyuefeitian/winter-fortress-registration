@@ -27,6 +27,15 @@ Page({
     this.waitForRoleReady()
   },
 
+  // 周期文案是「打开时按当前时间算」的，若小程序挂在后台跨过周一再回来会显示陈旧，
+  // 所以每次显示都重算一遍（纯本地计算，无网络开销）。
+  // 注意开关值本身与周无关，不需要重新拉取云端配置。
+  onShow: function () {
+    if (!this.data.loading) {
+      this.setData({ weekRange: weekPass.getWeekRangeText() })
+    }
+  },
+
   // 角色就绪前 app.globalData.role 不可信，与 superAdmin/home 同样的等待方式
   waitForRoleReady: function () {
     if (app.globalData.roleReady) {
