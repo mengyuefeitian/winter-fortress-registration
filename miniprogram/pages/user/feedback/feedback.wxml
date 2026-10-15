@@ -61,15 +61,12 @@
       </view>
     </view>
 
-    <!-- 联系方式 -->
+    <!-- 回复方式说明 -->
     <view class="form-section">
-      <text class="section-label">联系方式（可选）</text>
-      <input
-        class="contact-input"
-        placeholder="手机号/微信/QQ等，方便我们回复"
-        bindinput="onContactInput"
-        value="{{contactInfo}}"
-      />
+      <text class="section-label">回复方式</text>
+      <view class="reply-tip">
+        <text class="reply-tip-text">我们会在小程序内直接回复您，可在右上角「反馈回信」查看，无需留下联系方式。</text>
+      </view>
     </view>
   </view>
 

@@ -162,16 +162,19 @@
   color: #ccc;
 }
 
-/* 联系方式 */
-.contact-input {
+/* 回复方式说明（替代原「联系方式」输入框） */
+.reply-tip {
   width: 100%;
   padding: 20rpx;
   background: #f5f5f5;
   border-radius: 8rpx;
-  font-size: 28rpx;
   box-sizing: border-box;
-  height: 80rpx;
-  line-height: 40rpx;
+}
+
+.reply-tip-text {
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.6;
 }
 
 /* 提交按钮 */

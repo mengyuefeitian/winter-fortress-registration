@@ -27,7 +27,9 @@ function createTransporter() {
 }
 
 exports.main = async (event, context) => {
-  const { feedbackId, type, content, contactInfo, nickName, imageUrls } = event
+  // ⚠️ 不再接收 contactInfo：微信运营规范 5.12.6 禁止向他人展示用户手机号 / 微信号 / QQ / 邮箱，
+  //    邮件里也不该出现。回复统一走小程序内的「反馈回信」。
+  const { feedbackId, type, content, nickName, imageUrls } = event
 
   try {
     if (!EMAIL_CONFIG.pass || EMAIL_CONFIG.pass === '请填写授权码') {
@@ -64,7 +66,6 @@ exports.main = async (event, context) => {
       <h2>意见反馈</h2>
       <p><strong>类型：</strong>${type}</p>
       <p><strong>用户：</strong>${nickName || '匿名'}</p>
-      <p><strong>联系方式：</strong>${contactInfo || '未提供'}</p>
       <h3>反馈内容：</h3>
       <p>${content.replace(/\n/g, '<br>')}</p>
       ${imageHtml}

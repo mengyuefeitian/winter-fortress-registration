@@ -2037,8 +2037,13 @@ async function bearPitRemove(payload) {
 
 /**
  * 意见反馈
+ *
+ * ⚠️ 不再收集联系方式（手机号 / 微信号 / QQ / 邮箱等）。
+ *    微信运营规范 5.12.14 明确禁止收集这类信息，5.12.6 / 5.12.7 也禁止向他人展示与使用，
+ *    即便标注「可选」同样违规（曾因此被判 5.12 违规）。
+ *    回复改走小程序内的「反馈回信」，用户无需留任何联系方式。
  */
-async function createFeedback(userId, nickName, type, content, contactInfo, imageUrls) {
+async function createFeedback(userId, nickName, type, content, imageUrls) {
   const db = getDb()
   return await db.collection('feedbacks').add({
     data: {
@@ -2046,7 +2051,6 @@ async function createFeedback(userId, nickName, type, content, contactInfo, imag
       nickName,
       type,
       content,
-      contactInfo: contactInfo || null,
       imageUrls: imageUrls || [],
       status: 'pending',
       createTime: db.serverDate()
