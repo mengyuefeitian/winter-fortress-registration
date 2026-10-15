@@ -18,6 +18,46 @@
 
 ---
 
+## v1.18.23（修复区管无法删除自己创建的国战报名表）
+
+**现象**：区管点「删除」删不掉自己刚创建的国战报名表，只提示「删除失败」，没有任何原因。
+
+**根因：分区归属只认一条绑定来源，而区管有两条独立的上岗路径**
+
+删国战配置走 `clearRegistrations` 云函数的 `deleteBattleConfig`，原校验只查 `admins` 集合：
+
+```js
+admins.where({ userId: openid, status: 'approved', zoneId })
+```
+
+但项目里「谁是某分区的区管」分散在**两处、且存的标识还不一样**：
+
+| 来源 | 字段 | 存的值 |
+|---|---|---|
+| `admins` 区管/分区开通申请 | `userId` | **openid** |
+| `zones` 分区本身 | `adminIds` / `creatorId` | **users 的 MongoDB `_id`** |
+
+超管「添加区管」、批准区管时的 `updateZoneCreator` 只写 `zones.adminIds`；
+只有走「区管申请」进来的才在 `admins` 里留记录。于是**只通过「添加区管」或
+「分区开通」上岗的区管，在 `admins` 里查不到任何东西** → 判成「无权删除其他分区」。
+
+**修法：四条来源任一命中即放行**（`canManageZoneFor`）
+
+1. `admins` 已通过申请且 `zoneId` 匹配（`userId` 同时认 openid 与 Mongo `_id`）
+2. `zones` 该分区的 `adminIds` / `creatorId` 含本人
+3. `admins` 历史记录只有 `zoneName` 没有 `zoneId`（早期分区开通申请落库不完整）→ 按分区名兜底
+4. 这张表就是本人创建的（`battleConfigs.creatorId` 存 openid）
+
+同时**不再吞掉失败原因**：页面原来固定弹「删除失败」三个字，云端给的权限原因全部丢弃，
+用户无从自助排查；现在用弹窗展示云端原文（例如提示去找超管确认分区绑定）。
+
+**新增测试**：`.workbuddy/tools/battle_config_delete_test.js`，mock 云环境跑 8 个场景 ——
+四种上岗路径均应放行、区管删别分区与普通用户必须拒绝、级联清理要删干净。
+
+⚠️ **需重新上传部署 `clearRegistrations` 云函数**，否则修复不生效。
+
+---
+
 ## v1.18.22（激励文案改为「免费赞助开发者」，不再称「高级功能」）
 
 弹窗已能正常出现，本版只改**对外文案口径**，逻辑与开关不变。

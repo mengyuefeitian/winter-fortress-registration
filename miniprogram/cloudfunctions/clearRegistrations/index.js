@@ -179,6 +179,14 @@ async function adminDeleteBattleRegistration(data, context) {
 }
 
 // 删除国战配置及其所有报名（校验调用者必须管理该分区）
+//
+// ⚠️ 分区归属必须「多来源」判定，只查 admins 会把大量正常区管判成无权（2026-10-15 实修）：
+//   · admins.userId 存的是 **openid**（区管申请 / 分区开通申请的记录）
+//   · zones.adminIds / zones.creatorId 存的是 **users 的 MongoDB _id**（超管「添加区管」、
+//     批准区管时 updateZoneCreator 写进去的）
+//   两条链路独立存在：只走「添加区管」或只走「分区开通」进来的区管，另一边根本没有记录。
+//   只认其中一条 → 区管删自己创建的报名表也报「无权」。所以四处来源任一命中即放行，
+//   另外本人创建的配置也允许删（creatorId 存的是 openid）。
 async function deleteBattleConfig(data, context) {
   const { configId } = data || {}
   if (!configId) {
@@ -187,34 +195,35 @@ async function deleteBattleConfig(data, context) {
 
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID
+  if (!openid) {
+    throw new Error('登录状态失效，请重新进入小程序后再试')
+  }
 
   // 读取配置，获取所属分区
   const configRes = await db.collection('battleConfigs').doc(configId).get()
   if (!configRes.data) {
-    throw new Error('国战配置不存在')
+    throw new Error('该国战报名表不存在或已被删除')
   }
-  const zoneId = configRes.data.zoneId
+  const config = configRes.data
+  const zoneId = config.zoneId
 
-  // 校验调用者是否为超管，或是该分区的区管
   const userRes = await db.collection('users').where({ openid }).get()
-  if (!userRes.data.length) throw new Error('用户不存在')
+  if (!userRes.data.length) {
+    throw new Error('未找到当前账号记录，请重新登录后再试')
+  }
   const user = userRes.data[0]
   const role = user.role || 'user'
 
-  if (role === 'superAdmin') {
-    // 超管直接放行
-  } else if (role === 'admin') {
-    // 区管需校验分区归属
-    const adminRes = await db.collection('admins').where({
-      userId: openid,
-      status: 'approved',
-      zoneId: zoneId
-    }).get()
-    if (!adminRes.data.length) {
-      throw new Error('无权删除其他分区的国战配置')
+  if (role !== 'admin' && role !== 'superAdmin') {
+    throw new Error('权限不足：仅区管和超级管理员可删除')
+  }
+
+  // 超管直接放行；区管必须能证明「这张表所属分区归我管」
+  if (role !== 'superAdmin') {
+    const allowed = await canManageZoneFor(openid, user._id, zoneId, config.zoneName, config.creatorId)
+    if (!allowed) {
+      throw new Error('无权删除：该报名表所属分区不在你管理的范围内（分区绑定记录缺失，请联系超级管理员在「分区管理」中确认你已被添加为该分区区管）')
     }
-  } else {
-    throw new Error('权限不足')
   }
 
   // 先删报名记录，再删配置
@@ -222,6 +231,56 @@ async function deleteBattleConfig(data, context) {
   await db.collection('battleConfigs').doc(configId).remove()
 
   return { success: true }
+}
+
+// 判断某人是否管理某个分区：并行不悖的四条来源，任一命中即算有权限
+async function canManageZoneFor(openid, userMongoId, zoneId, zoneName, configCreatorId) {
+  const ids = [openid, userMongoId].filter(Boolean)
+
+  // ① admins：已通过的区管 / 分区开通申请（userId 存 openid，个别历史数据存 mongoId）
+  try {
+    const res = await db.collection('admins').where({
+      userId: _.in(ids),
+      status: 'approved',
+      zoneId: zoneId
+    }).get()
+    if (res.data.length) return true
+  } catch (err) {
+    console.error('[deleteBattleConfig] 查询 admins 失败', err)
+  }
+
+  // ② zones：分区自身登记的创建者 / 区管列表（存的是 users._id）
+  if (zoneId) {
+    try {
+      const zRes = await db.collection('zones').doc(zoneId).get()
+      const zone = zRes.data
+      if (zone) {
+        const owners = [].concat(zone.adminIds || [], zone.creatorId ? [zone.creatorId] : [])
+        if (owners.some(function (v) { return ids.indexOf(v) !== -1 })) return true
+      }
+    } catch (err) {
+      console.error('[deleteBattleConfig] 查询 zones 失败', err)
+    }
+  }
+
+  // ③ admins 的历史记录只有 zoneName 没有 zoneId（早期「分区开通申请」落库不完整）
+  if (zoneName) {
+    try {
+      const nRes = await db.collection('admins').where({
+        userId: _.in(ids),
+        status: 'approved',
+        zoneName: zoneName
+      }).get()
+      if (nRes.data.length) return true
+    } catch (err) {
+      console.error('[deleteBattleConfig] 按分区名查询 admins 失败', err)
+    }
+  }
+
+  // ④ 这张表就是自己建的（creatorId 存 openid）
+  if (configCreatorId && configCreatorId === openid) return true
+
+  return false
 }
 
 // 解析各种格式的日期字符串为 Date 对象

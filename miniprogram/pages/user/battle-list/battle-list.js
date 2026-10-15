@@ -126,8 +126,16 @@ Page({
       this.loadConfigs()
     } catch (err) {
       util.hideLoading()
-      console.error('删除失败:', err)
-      util.showError('删除失败')
+      // ⚠️ 别再只弹「删除失败」三个字：云端给出的原因（权限 / 分区绑定 / 记录不存在）
+      // 是用户能自我修复的唯一线索，吞掉就只能靠猜。文案可能较长，用弹窗展示。
+      const reason = (err && err.message) || '未知错误'
+      console.error('删除国战配置失败:', reason, err)
+      wx.showModal({
+        title: '删除失败',
+        content: reason,
+        showCancel: false,
+        confirmText: '我知道了'
+      })
     }
   },
 
