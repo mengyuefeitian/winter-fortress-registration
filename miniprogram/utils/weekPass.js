@@ -16,6 +16,10 @@ const ad = require('./ad.js')
 
 const CLOUD_NAME = 'weekPass'
 const LOCAL_KEY = 'weekPassLocal'
+const CONFIG_KEY = 'adGateConfig'
+
+// 内存级配置缓存（同一次会话内只读一次云函数）
+let configCache = null
 
 function pad2(n) {
   return String(n).padStart(2, '0')
@@ -154,62 +158,154 @@ function grantPass() {
     })
 }
 
+// ============ 远程开关 ============
+//
+// 报名类拦截是「收益 vs 流失」的赌注，所以开关必须能不停机调整：
+// 运营在云开发控制台改 appConfig/adGate 文档的布尔值即可，最长 5 分钟全量生效。
+// 拉不到配置（集合没建 / 文档不存在 / 网络问题）→ 回落 adConfig.GATE_DEFAULT。
+
+function defaultGates() {
+  const out = {}
+  const def = adConfig.GATE_DEFAULT || {}
+  Object.keys(def).forEach(function (k) {
+    out[k] = def[k] !== false
+  })
+  return out
+}
+
+function readConfigCache() {
+  const now = Date.now()
+  if (configCache && now - configCache.at < adConfig.CONFIG_CACHE_TTL) {
+    return configCache.data
+  }
+  try {
+    const raw = wx.getStorageSync(CONFIG_KEY)
+    if (raw && raw.at && now - raw.at < adConfig.CONFIG_CACHE_TTL) {
+      configCache = raw
+      return raw.data
+    }
+  } catch (e) {
+    // storage 不可用：走网络
+  }
+  return null
+}
+
+function writeConfigCache(data) {
+  configCache = { at: Date.now(), data: data }
+  try {
+    wx.setStorageSync(CONFIG_KEY, configCache)
+  } catch (e) {
+    console.warn('[weekPass] 开关缓存写入失败（仅影响性能）', e)
+  }
+}
+
+/**
+ * 取当前生效的分场景开关（已与代码默认值合并）
+ * @returns {Promise<Object>} 如 { registerGate: true, valueGate: true }
+ */
+function getGateConfig() {
+  const cached = readConfigCache()
+  if (cached) return Promise.resolve(cached)
+
+  return callCloud('config')
+    .then(function (r) {
+      const remote = r && r.ok && r.config ? r.config : null
+      const def = adConfig.GATE_DEFAULT || {}
+      const merged = {}
+      Object.keys(def).forEach(function (k) {
+        const v = remote ? remote[k] : undefined
+        // 只认布尔值：云端字段写错类型时不生效，避免误拦截
+        merged[k] = typeof v === 'boolean' ? v : def[k] !== false
+      })
+      writeConfigCache(merged)
+      return merged
+    })
+    .catch(function (e) {
+      console.warn('[weekPass] 远程开关拉取失败，回落默认值', e)
+      return defaultGates()
+    })
+}
+
+/**
+ * 某一类拦截是否开启（开启 = 会要求看广告）
+ * @param {string} gate 'register' → registerGate，'value' → valueGate
+ * @returns {Promise<boolean>}
+ */
+function isGateOn(gate) {
+  if (!adConfig.ENABLED) return Promise.resolve(false)
+  const key = gate === 'register' ? 'registerGate' : 'valueGate'
+  return getGateConfig().then(function (c) {
+    return c[key] !== false
+  })
+}
+
 // ============ 统一拦截入口 ============
 
 /**
- * 增值操作前的权限校验：没有通行证就引导看一次激励视频
+ * 操作前的权限校验：没有通行证就引导看一次激励视频
  *
  * @param {Object} opts
  * @param {Object} opts.pageCtx 页面 this（激励视频实例是页面内单例，必须传）
- * @param {string} opts.feature 功能名，用于弹窗文案，如「统计截图」
+ * @param {string} opts.feature 功能名，用于弹窗文案，如「熊坑报名」「统计截图」
+ * @param {string} [opts.gate] 'value'（默认，增值类）| 'register'（报名类）
+ * @param {string} [opts.content] 自定义弹窗正文，不传则用默认文案
  * @returns {Promise<boolean>} true 表示放行，false 表示用户放弃
  */
 function requirePass(opts) {
   const o = opts || {}
   const feature = o.feature || '该功能'
+  const gate = o.gate === 'register' ? 'register' : 'value'
 
   if (!adConfig.ENABLED) return Promise.resolve(true)
 
-  return ensurePass().then(function (valid) {
-    if (valid) return true
-    return new Promise(function (resolve) {
-      const rangeText = getWeekRangeText()
-      wx.showModal({
-        title: '需要本周通行证',
-        content: `「${feature}」是增值功能。观看一次约 30 秒的视频广告，即可解锁本周（${rangeText}）全部增值功能，本周内不再重复观看。`,
-        confirmText: '看广告解锁',
-        cancelText: '以后再说',
-        success: function (res) {
-          if (!res.confirm) {
-            resolve(false)
-            return
-          }
-          ad.showRewarded({
-            pageCtx: o.pageCtx,
-            onGranted: function () {
-              grantPass().then(function () {
-                wx.showToast({ title: '本周已解锁', icon: 'none' })
-                resolve(true)
-              })
-            },
-            onFail: function (reason) {
-              if (reason === 'notFinished') {
-                // 用户自己中途退出：不给权限，也不打扰
-                wx.showToast({ title: '需看完视频才能解锁', icon: 'none' })
-                resolve(false)
-                return
-              }
-              // 广告拉不到 / 创建失败 / 绑定失败：一律临时放行，只写本地不写云端
-              console.warn('[weekPass] 广告不可用，临时放行', reason)
-              writeLocal(getWeekKey())
-              wx.showToast({ title: '广告加载失败，本次已放行', icon: 'none' })
-              resolve(true)
+  return isGateOn(gate).then(function (on) {
+    // 该类拦截已被远程关闭 → 直接放行
+    if (!on) return true
+
+    return ensurePass().then(function (valid) {
+      if (valid) return true
+      return new Promise(function (resolve) {
+        const rangeText = getWeekRangeText()
+        const content =
+          o.content ||
+          `「${feature}」需要本周通行证。观看一次约 30 秒的视频广告，即可解锁本周（${rangeText}）全部功能，本周内不再重复观看。`
+        wx.showModal({
+          title: '需要本周通行证',
+          content: content,
+          confirmText: '看广告解锁',
+          cancelText: '以后再说',
+          success: function (res) {
+            if (!res.confirm) {
+              resolve(false)
+              return
             }
-          })
-        },
-        fail: function () {
-          resolve(false)
-        }
+            ad.showRewarded({
+              pageCtx: o.pageCtx,
+              onGranted: function () {
+                grantPass().then(function () {
+                  wx.showToast({ title: '本周已解锁', icon: 'none' })
+                  resolve(true)
+                })
+              },
+              onFail: function (reason) {
+                if (reason === 'notFinished') {
+                  // 用户自己中途退出：不给权限，也不打扰
+                  wx.showToast({ title: '需看完视频才能解锁', icon: 'none' })
+                  resolve(false)
+                  return
+                }
+                // 广告拉不到 / 创建失败 / 绑定失败：一律临时放行，只写本地不写云端
+                console.warn('[weekPass] 广告不可用，临时放行', reason)
+                writeLocal(getWeekKey())
+                wx.showToast({ title: '广告加载失败，本次已放行', icon: 'none' })
+                resolve(true)
+              }
+            })
+          },
+          fail: function () {
+            resolve(false)
+          }
+        })
       })
     })
   })
@@ -223,5 +319,7 @@ module.exports = {
   hasPassSync: hasPassSync,
   ensurePass: ensurePass,
   grantPass: grantPass,
+  getGateConfig: getGateConfig,
+  isGateOn: isGateOn,
   requirePass: requirePass
 }

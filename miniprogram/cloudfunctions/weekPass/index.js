@@ -14,6 +14,7 @@
 // action:
 //   query  查询本周（服务器时间所在自然周）是否已持有通行证
 //   grant  发放本周通行证
+//   config 读取远程开关（appConfig/adGate），供客户端决定要不要拦某一类操作
 
 const cloud = require('wx-server-sdk')
 
@@ -93,6 +94,19 @@ exports.main = async (event) => {
 
   if (!openid) {
     return { ok: false, reason: 'noOpenid' }
+  }
+
+  // 远程开关：与用户无关，未入库的用户也要能取到，所以放在 findUser 之前
+  if (action === 'config') {
+    try {
+      const res = await db.collection('appConfig').doc('adGate').get()
+      const doc = (res && res.data) || null
+      return { ok: true, config: doc, source: doc ? 'remote' : 'default' }
+    } catch (e) {
+      // 集合不存在 / 文档不存在 → 客户端回落到代码里的默认开关（默认打开）
+      console.warn('[weekPass] 未读到远程开关，回落默认值', String((e && e.message) || e))
+      return { ok: true, config: null, source: 'default' }
+    }
   }
 
   const weekKey = serverWeekKey()

@@ -4,6 +4,7 @@ const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const shareEntry = require('../../../utils/shareEntry')
 const ga = require('../../../utils/gameAccount')
+const weekPass = require('../../../utils/weekPass')
 
 // 熔炉 / 三兵营 的标题与图标
 // ⚠️ 这里的 key 必须等于页面数据字段去掉 Spec 的部分（furnaceSpec / shieldSpec / spearSpec / archerSpec），
@@ -352,6 +353,15 @@ Page({
 
   onSubmit: async function () {
     if (!this.validate()) return
+
+    // 报名类拦截：validate 通过后才提示，避免用户白填一遍才发现要看广告
+    // 通行证是「一次观看、本周全免」，所以本周后续报名（含熊坑/官职）都不会再弹
+    const pass = await weekPass.requirePass({
+      pageCtx: this,
+      gate: 'register',
+      feature: '国战报名'
+    })
+    if (!pass) return
 
     const {
       configId, alliances, allianceIndex, inputNickName,
