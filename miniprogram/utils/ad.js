@@ -18,6 +18,25 @@ const adConfig = require('./adConfig.js')
 // 挂在页面实例上的 key（保证页面内单例）
 const REWARDED_KEY = '__rewardedAd'
 
+// 唤起超时（毫秒）：show() / load() 若长时间既没 resolve 也没 reject，
+// 就按「拉不到广告」处理。开发者工具、广告位刚建未生效、无填充都可能出现这种静默无响应，
+// 不设这个超时用户就会永远卡在「点了没反应」。
+const AD_SHOW_TIMEOUT = 10000
+
+// 确认拉不到之后的冷却期（毫秒）：这段时间内不再尝试唤起，直接按「不可用」回调。
+// 否则广告位故障期间用户每做一次操作都要白等 10 秒，等于反复折腾用户。
+const UNAVAILABLE_COOLDOWN = 10 * 60 * 1000
+
+let unavailableUntil = 0
+
+function markUnavailable() {
+  unavailableUntil = Date.now() + UNAVAILABLE_COOLDOWN
+}
+
+function isUnavailable() {
+  return Date.now() < unavailableUntil
+}
+
 function enabled() {
   return adConfig.ENABLED === true
 }
@@ -65,9 +84,21 @@ function showRewarded(opts) {
   const onGranted = typeof o.onGranted === 'function' ? o.onGranted : function () {}
   const onFail = typeof o.onFail === 'function' ? o.onFail : function () {}
 
+  // 失败统一出口：除「用户自己没看完」外，都认定为广告不可用，进入冷却
+  const failWith = function (reason) {
+    if (reason !== 'notFinished') markUnavailable()
+    onFail(reason)
+  }
+
   if (!enabled()) {
     // 总开关关闭：直接视为已授权，保持功能可用
     onGranted('adDisabled')
+    return
+  }
+
+  // 刚确认过拉不到：别再反复唤起，直接告诉调用方不可用（调用方会兜底放行）
+  if (isUnavailable()) {
+    onFail('recentlyFailed')
     return
   }
 
@@ -100,7 +131,7 @@ function showRewarded(opts) {
     if (settled) return
     settled = true
     console.warn('[ad] 激励视频错误', err)
-    onFail('error')
+    failWith('error')
   }
 
   ad.__closeHandler = closeHandler
@@ -111,27 +142,60 @@ function showRewarded(opts) {
     ad.onError(errorHandler)
   } catch (e) {
     console.error('[ad] 绑定广告回调失败', e)
-    onFail('bindFailed')
+    failWith('bindFailed')
     return
   }
 
-  // 官方推荐写法：先 show，失败再 load 后重试一次
-  const showPromise = ad.show()
-  if (showPromise && typeof showPromise.catch === 'function') {
-    showPromise.catch(function () {
-      return ad
-        .load()
-        .then(function () {
-          return ad.show()
-        })
-        .catch(function (err) {
-          if (settled) return
-          settled = true
-          console.warn('[ad] 激励视频加载失败', err)
-          onFail('loadFailed')
-        })
-    })
+  // 唤起超时兜底：只要广告真的播起来了就撤掉，否则到点按失败处理
+  let showTimer = setTimeout(function () {
+    if (settled) return
+    settled = true
+    console.warn('[ad] 激励视频唤起超时（无响应）')
+    failWith('showTimeout')
+  }, AD_SHOW_TIMEOUT)
+  const clearShowTimer = function () {
+    if (showTimer) clearTimeout(showTimer)
   }
+
+  // 官方推荐写法：先 show，失败再 load 后重试一次
+  let showPromise
+  try {
+    showPromise = ad.show()
+  } catch (e) {
+    // show() 同步抛错（基础库差异 / 广告位异常）
+    if (settled) return
+    settled = true
+    clearShowTimer()
+    console.error('[ad] show 同步异常', e)
+    failWith('showException')
+    return
+  }
+
+  if (showPromise && typeof showPromise.then === 'function') {
+    showPromise
+      .then(function () {
+        // 成功展示：广告在播，交给 onClose 判定，撤掉唤起超时
+        clearShowTimer()
+      })
+      .catch(function () {
+        return ad
+          .load()
+          .then(function () {
+            return ad.show()
+          })
+          .then(function () {
+            clearShowTimer()
+          })
+          .catch(function (err) {
+            if (settled) return
+            settled = true
+            clearShowTimer()
+            console.warn('[ad] 激励视频加载失败', err)
+            failWith('loadFailed')
+          })
+      })
+  }
+  // 低版本基础库 show() 无返回值：无法判定，交给唤起超时与外层兜底
 }
 
 // （插屏广告已移除：由流量主后台自带能力覆盖，代码不再接入）
