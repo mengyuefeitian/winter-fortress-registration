@@ -109,10 +109,52 @@ function hasPassSync() {
 
 // ============ 云端 ============
 
+// 云端调用超时（毫秒）。超时或任何异常都按「查不到」处理，由调用方兜底放行，
+// 绝不让用户卡在一次网络请求上。
+const CLOUD_TIMEOUT = 8000
+
+// 广告唤起后的兜底超时（毫秒）。只在用户点了「看视频解锁」之后才开始计时，
+// 所以不会影响正常观看（激励视频一般 15–30 秒，90 秒足够）。
+const AD_GUARD_TIMEOUT = 90000
+
+/**
+ * 调用 weekPass 云函数
+ *
+ * ⚠️ 必须同时防两件事，缺一个就会把用户堵死：
+ *   1) **同步抛错**（wx.cloud 未就绪 / 未 init）→ 转成 reject，否则调用方
+ *      的 .catch 根本挂不上，异常会一路冒泡，表现为「点了没反应」。
+ *   2) **永不回调**（网络异常、云函数不存在且框架沉默）→ 超时兜底。
+ *
+ * @param {string} action
+ * @param {Object} [extra]
+ * @returns {Promise<Object>}
+ */
 function callCloud(action, extra) {
   const data = Object.assign({ action: action }, extra || {})
-  return wx.cloud.callFunction({ name: CLOUD_NAME, data: data }).then(function (res) {
-    return (res && res.result) || {}
+  return new Promise(function (resolve, reject) {
+    let settled = false
+    const finish = function (fn, arg) {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      fn(arg)
+    }
+    const timer = setTimeout(function () {
+      finish(reject, new Error('cloudTimeout'))
+    }, CLOUD_TIMEOUT)
+
+    try {
+      wx.cloud.callFunction({ name: CLOUD_NAME, data: data }).then(
+        function (res) {
+          finish(resolve, (res && res.result) || {})
+        },
+        function (e) {
+          finish(reject, e)
+        }
+      )
+    } catch (e) {
+      finish(reject, e)
+    }
   })
 }
 
@@ -135,9 +177,13 @@ function ensurePass() {
       return false
     })
     .catch(function (e) {
-      // 云端查不到：不视为有权限，也不阻断——交给 requirePass 走引导流程
-      console.warn('[weekPass] 云端查询失败', e)
-      return false
+      // 云端查不到 / 超时 / 同步异常：这是「判不了」，不是「确定没有」。
+      // 返回 'unknown'，由 requirePass 直接放行 —— 云函数挂了就让全体用户去点广告，
+      // 那是把基础设施故障转嫁给用户，绝不能这么做。
+      console.warn('[weekPass] 云端查询失败，视为不可判定', e)
+      // 顺手写本地：下次 hasPassSync 直接命中，不用每个操作都白等一次超时
+      writeLocal(getWeekKey())
+      return 'unknown'
     })
 }
 
@@ -311,11 +357,28 @@ function requirePass(opts) {
 
   if (!adConfig.ENABLED) return Promise.resolve(true)
 
+  // ⚠️ 整条链路必须保证「一定 resolve」：调用方有的是 await（报名提交），
+  // 有的是 .then/.catch（账号编辑）。一旦这里同步抛错或永不回调，用户就是
+  // 「点了完全没反应」，比弹广告糟糕得多。所以外面再包一层兜底。
+  try {
+    return runGateFlow(o, feature, gate).catch(function (e) {
+      console.warn('[weekPass] 校验链路异常，兜底放行', e)
+      return true
+    })
+  } catch (e) {
+    console.warn('[weekPass] 校验链路同步异常，兜底放行', e)
+    return Promise.resolve(true)
+  }
+}
+
+function runGateFlow(o, feature, gate) {
   return isGateOn(gate).then(function (on) {
     // 该类拦截已被远程关闭 → 直接放行
     if (!on) return true
 
     return ensurePass().then(function (valid) {
+      // 云端不可判定（超时 / 异常 / 云函数没部署）→ 放行，不拿基础设施故障为难用户
+      if (valid === 'unknown') return true
       if (valid) return true
       return new Promise(function (resolve) {
         const rangeText = getWeekRangeText()
@@ -325,6 +388,18 @@ function requirePass(opts) {
         const content =
           o.content ||
           `「${feature}」为高级功能。完成一次激励任务（约 30 秒）即可解锁本周（${rangeText}）全部高级功能，本周内无需重复。`
+
+        // 一次性结算 + 超时兜底：广告唤起后若长时间没有任何回调
+        // （平台侧偶发「show 成功但既不播也不报错」），不能让用户永远等下去
+        let settled = false
+        let guardTimer = null
+        const settle = function (value) {
+          if (settled) return
+          settled = true
+          if (guardTimer) clearTimeout(guardTimer)
+          resolve(value)
+        }
+
         wx.showModal({
           title: '解锁高级功能',
           content: content,
@@ -332,35 +407,50 @@ function requirePass(opts) {
           cancelText: '暂不使用',
           success: function (res) {
             if (!res.confirm) {
-              resolve(false)
+              settle(false)
               return
             }
-            ad.showRewarded({
-              pageCtx: o.pageCtx,
-              onGranted: function () {
-                grantPass().then(function () {
-                  wx.showToast({ title: '本周已解锁', icon: 'none' })
-                  resolve(true)
-                })
-              },
-              onFail: function (reason) {
-                if (reason === 'notFinished') {
-                  // 用户自己中途退出：不给权限，也不打扰
-                  wx.showToast({ title: '未完成解锁，本次暂不可用', icon: 'none' })
-                  resolve(false)
-                  return
+
+            // 用户已确认，开始等广告结果；超时无响应就放行
+            guardTimer = setTimeout(function () {
+              console.warn('[weekPass] 激励任务超时无响应，临时放行')
+              writeLocal(getWeekKey())
+              settle(true)
+            }, AD_GUARD_TIMEOUT)
+
+            try {
+              ad.showRewarded({
+                pageCtx: o.pageCtx,
+                onGranted: function () {
+                  grantPass().then(function () {
+                    wx.showToast({ title: '本周已解锁', icon: 'none' })
+                    settle(true)
+                  })
+                },
+                onFail: function (reason) {
+                  if (reason === 'notFinished') {
+                    // 用户自己中途退出：不给权限，也不打扰
+                    wx.showToast({ title: '未完成解锁，本次暂不可用', icon: 'none' })
+                    settle(false)
+                    return
+                  }
+                  // 拉取不到 / 创建失败 / 绑定失败：一律临时放行，只写本地不写云端
+                  // 绝不能让用户卡在「解锁不了 = 功能用不了」的死路上
+                  console.warn('[weekPass] 激励任务不可用，临时放行', reason)
+                  writeLocal(getWeekKey())
+                  wx.showToast({ title: '加载失败，本次已为您开放', icon: 'none' })
+                  settle(true)
                 }
-                // 拉取不到 / 创建失败 / 绑定失败：一律临时放行，只写本地不写云端
-                // 绝不能让用户卡在「解锁不了 = 功能用不了」的死路上
-                console.warn('[weekPass] 激励任务不可用，临时放行', reason)
-                writeLocal(getWeekKey())
-                wx.showToast({ title: '加载失败，本次已为您开放', icon: 'none' })
-                resolve(true)
-              }
-            })
+              })
+            } catch (e) {
+              // showRewarded 同步抛错（基础库差异 / 广告位异常）也必须放行
+              console.warn('[weekPass] 唤起激励任务异常，临时放行', e)
+              writeLocal(getWeekKey())
+              settle(true)
+            }
           },
           fail: function () {
-            resolve(false)
+            settle(false)
           }
         })
       })
