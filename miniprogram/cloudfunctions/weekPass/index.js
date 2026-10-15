@@ -42,32 +42,74 @@ const CONFIG_DOC_ID = 'adGate'
 // （想让开关在「集合完全不可用」时也生效，改这里并重新部署本云函数即可，不用发版小程序）
 const GATE_FALLBACK = { registerGate: true, valueGate: true }
 
+// 开关字段名。归一化后只吐出这几个 key，_id 之类的元字段不带出去
+const GATE_KEYS = ['registerGate', 'valueGate']
+
 /**
- * 读取远程开关，读不到就地建一份默认的
+ * 从一条文档里抽出开关字段，一条都没有则返回 null
+ * 兼容 boolean 与 0/1 数字：控制台手工填值很容易填成数字，
+ * 但**字符串一律不认**（"false" 是最危险的误配置，会被当成真值用）
+ * @param {Object} doc
+ * @returns {Object|null}
+ */
+function pickGates(doc) {
+  if (!doc) return null
+  const out = {}
+  let hit = false
+  GATE_KEYS.forEach(function (k) {
+    const v = doc[k]
+    if (typeof v === 'boolean') {
+      out[k] = v
+      hit = true
+    } else if (v === 1 || v === 0) {
+      out[k] = v === 1
+      hit = true
+    }
+  })
+  return hit ? out : null
+}
+
+/**
+ * 读取远程开关，读不到就地建/修一份默认的
+ *
+ * 关键点：**不能盲目相信 _id = adGate 那条**。控制台手工添加记录时很容易只填了 _id
+ * 就保存，留下一条「空壳」记录；如果直接返回它，开关就永远读不到值。
+ * 所以每一级都要求「确实含开关字段」，空壳只记下来、最后用来补字段。
+ *
  * @returns {Promise<{config:Object, source:string}>}
  */
 async function readGateConfig() {
   const coll = db.collection(CONFIG_COLLECTION)
+  let shell = null // 只填了 _id 的空壳文档
 
-  // ① 约定 _id
+  // ① 约定 _id（云函数自动建的就是它），但必须含开关字段才算数
   try {
     const r = await coll.doc(CONFIG_DOC_ID).get()
     const doc = (r && r.data) || null
-    if (doc) return { config: doc, source: 'remote' }
+    const g = pickGates(doc)
+    if (g) {
+      return { config: Object.assign({ _id: CONFIG_DOC_ID }, g), source: 'remote' }
+    }
+    if (doc) shell = doc
   } catch (e) {
     // 集合不存在 / 文档不存在，继续往下试
   }
 
-  // ② 用户在控制台手工建的记录（_id 是系统生成的随机串）
+  // ② 集合里任意一条含开关字段的记录（兼容控制台手工建的随机 _id）
   try {
-    const r = await coll.limit(1).get()
+    const r = await coll.limit(50).get()
     const list = (r && r.data) || []
-    if (list.length) return { config: list[0], source: 'remote' }
+    for (let i = 0; i < list.length; i++) {
+      const g = pickGates(list[i])
+      if (g) {
+        return { config: Object.assign({ _id: list[i]._id }, g), source: 'remote' }
+      }
+    }
   } catch (e) {
     // 集合不存在，继续往下走自动创建
   }
 
-  // ③ 集合为空 → 自动建集合 + 建一条默认开关，之后用户直接在控制台改值
+  // ③ 没有任何一条带开关字段的记录 → 新建或修补
   //    官方文档：新建集合「仅支持通过云函数端 SDK 及控制台」→ 这里显式建，不赌 add 的隐式行为
   try {
     if (typeof db.createCollection === 'function') {
@@ -77,6 +119,13 @@ async function readGateConfig() {
         // 集合已存在会报错，忽略
       }
     }
+
+    // 空壳 → 补字段（再 add 一条同 _id 会报重复，必须走 update）
+    if (shell) {
+      await coll.doc(CONFIG_DOC_ID).update({ data: Object.assign({}, GATE_FALLBACK) })
+      return { config: Object.assign({ _id: CONFIG_DOC_ID }, GATE_FALLBACK), source: 'repaired' }
+    }
+
     const res = await coll.add({
       data: Object.assign({ _id: CONFIG_DOC_ID }, GATE_FALLBACK)
     })

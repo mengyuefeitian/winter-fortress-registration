@@ -214,8 +214,15 @@ function getGateConfig() {
       const merged = {}
       Object.keys(def).forEach(function (k) {
         const v = remote ? remote[k] : undefined
-        // 只认布尔值：云端字段写错类型时不生效，避免误拦截
-        merged[k] = typeof v === 'boolean' ? v : def[k] !== false
+        // 认布尔值与 0/1（控制台手工填值很容易填成数字）；
+        // 字符串一律不认 —— "false" 会被当成真值用，是最危险的误配置
+        if (typeof v === 'boolean') {
+          merged[k] = v
+        } else if (v === 1 || v === 0) {
+          merged[k] = v === 1
+        } else {
+          merged[k] = def[k] !== false
+        }
       })
       writeConfigCache(merged)
       return merged
