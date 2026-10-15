@@ -200,8 +200,87 @@ function showRewarded(opts) {
 
 // （插屏广告已移除：由流量主后台自带能力覆盖，代码不再接入）
 
+/**
+ * 自检：这套广告链路到底哪一步不通
+ *
+ * 「点了没反应」最常见的三类根因，肉眼在真机上看不出来，只能靠这一步步探出来：
+ *   ① 广告位没配 / 格式不对 → adUnitOk = false
+ *   ② 小程序未开通流量主、广告位刚建未生效 → created 成功但 loaded = false
+ *   ③ 刚失败过还在冷却期内 → cooling = true（这是设计内的行为，不是故障）
+ *
+ * ⚠️ 只 load 不 show：不打扰用户，也不产生曝光。
+ *
+ * @param {Object} pageCtx 页面 this
+ * @returns {Promise<Object>}
+ */
+function probeAd(pageCtx) {
+  const r = {
+    enabled: enabled(),
+    adUnit: adConfig.REWARDED_AD_UNIT || '',
+    adUnitOk: hasAdUnit(adConfig.REWARDED_AD_UNIT),
+    cooling: isUnavailable(),
+    created: false,
+    loaded: false,
+    ms: 0,
+    err: ''
+  }
+  const t0 = Date.now()
+
+  if (!r.adUnitOk) {
+    r.err = '广告位 ID 未配置或格式不对（应以 adunit- 开头）'
+    return Promise.resolve(r)
+  }
+
+  const ad = getRewardedAd(pageCtx)
+  r.created = !!ad
+  if (!ad) {
+    r.err = '广告实例创建失败'
+    r.ms = Date.now() - t0
+    return Promise.resolve(r)
+  }
+
+  return new Promise(function (resolve) {
+    let settled = false
+    const done = function () {
+      if (settled) return
+      settled = true
+      r.ms = Date.now() - t0
+      resolve(r)
+    }
+    // load 也可能静默无响应，必须有超时
+    const timer = setTimeout(function () {
+      r.err = 'load 超时（8 秒无响应）'
+      done()
+    }, 8000)
+
+    try {
+      const p = ad.load()
+      if (p && typeof p.then === 'function') {
+        p.then(function () {
+          clearTimeout(timer)
+          r.loaded = true
+          done()
+        }).catch(function (e) {
+          clearTimeout(timer)
+          r.err = 'load 失败：' + ((e && (e.errMsg || e.errCode || e.message)) || '未知')
+          done()
+        })
+      } else {
+        clearTimeout(timer)
+        r.err = '基础库过低，load 无返回值'
+        done()
+      }
+    } catch (e) {
+      clearTimeout(timer)
+      r.err = 'load 抛异常：' + ((e && e.message) || e)
+      done()
+    }
+  })
+}
+
 module.exports = {
   enabled: enabled,
   showRewarded: showRewarded,
-  getRewardedAd: getRewardedAd
+  getRewardedAd: getRewardedAd,
+  probeAd: probeAd
 }

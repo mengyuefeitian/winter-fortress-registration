@@ -25,7 +25,10 @@ Page({
     weekRange: '',
     loading: true,
     saving: false,
-    dirty: false
+    dirty: false,
+    diag: null,
+    diagRunning: false,
+    diagConclusion: ''
   },
 
   onLoad: function () {
@@ -128,5 +131,50 @@ Page({
       this.setData({ saving: false })
       util.showErrorLong((err && err.message) || '保存失败，请稍后重试')
     }
+  },
+
+  // ==================== 链路自检 ====================
+  //
+  // 真机没有控制台，「用户点了没反应」这类问题靠猜是猜不出来的。
+  // 这里把链路逐段探测一遍直接显示出来：远程开关 → 云端通行证 → 广告实例与素材。
+  runDiagnose: function () {
+    if (this.data.diagRunning) return
+    this.setData({ diagRunning: true, diag: null, diagConclusion: '' })
+    util.showLoading('检测中...')
+
+    weekPass
+      .diagnose(this)
+      .then(res => {
+        util.hideLoading()
+        this.setData({
+          diag: res,
+          diagRunning: false,
+          diagConclusion: this.conclude(res)
+        })
+      })
+      .catch(err => {
+        util.hideLoading()
+        this.setData({ diagRunning: false })
+        util.showErrorLong('自检失败：' + ((err && err.message) || err))
+      })
+  },
+
+  // 把检测结果翻译成一句人话：先报会阻断的硬错误，再报降级行为，最后才是正常
+  conclude: function (d) {
+    if (!d.enabled) return '结论：总开关已关闭，所有高级功能直接放行，不会出现弹窗。'
+    if (d.configErr) return '结论：远程开关拉取失败（' + d.configErr + '），已回落代码默认值（默认开启），不影响功能。'
+    if (d.queryErr) return '结论：云端通行证查询失败（' + d.queryErr + '），按设计会直接放行，所以用户看不到弹窗 —— 优先排查 weekPass 云函数与网络。'
+
+    const ad = d.ad || {}
+    if (!ad.adUnitOk) return '结论：广告位未配置或格式不对，用户点确认后无法播放，会临时放行。请核对 adConfig.js 的 REWARDED_AD_UNIT。'
+    if (!ad.created) return '结论：广告实例创建失败，用户点确认后无法播放，会临时放行。'
+    if (!ad.loaded) {
+      return (
+        '结论：素材加载失败（' + (ad.err || '未知') + '）→ 用户点「看视频解锁」后会临时放行，不会卡住。' +
+        '常见原因：未开通流量主、广告位刚建未生效、当前无广告填充、开发者工具不支持真实广告。'
+      )
+    }
+    if (d.localPass) return '结论：链路正常；本机本周已解锁，所以本机不会再弹窗（换一台未解锁的机器测才会看到弹窗）。'
+    return '结论：链路正常；未持通行证的用户会看到解锁弹窗。'
   }
 })

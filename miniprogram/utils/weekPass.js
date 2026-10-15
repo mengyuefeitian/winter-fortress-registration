@@ -117,6 +117,31 @@ const CLOUD_TIMEOUT = 8000
 // 所以不会影响正常观看（激励视频一般 15–30 秒，90 秒足够）。
 const AD_GUARD_TIMEOUT = 90000
 
+// 弹窗出现「之前」的总闸（毫秒）。
+//
+// 这一段能卡住的环节太多：云函数、storage、Promise 链、showModal 本身……
+// 逐个加超时既啰嗦又必然漏掉某个分支，而漏掉的那个分支表现就是
+// 「点了完全没反应、控制台还不报错」—— 用户根本没法反馈有用信息。
+// 所以统一用总闸：只要弹窗还没交到用户手上，到点一定放行。
+//
+// 弹窗一旦弹出就撤掉总闸，改由广告自己的超时负责 —— 否则用户正在看广告时
+// 被强行放行，广告就白看了。
+const PRE_MODAL_TIMEOUT = 12000
+
+// 弹窗自身的兜底（毫秒）：极端情况下 showModal 既不显示也不回调，
+// 整条链会永久挂起且控制台无任何报错。3 分钟足够用户读完并做决定。
+const MODAL_TIMEOUT = 180000
+
+// 链路日志：排查「点了没反应」的唯一有效线索（真机上只能靠 vConsole 看）。
+// 定位完问题可以把函数体改成 return 关掉噪音，别删 —— 下次还会用到。
+function trace() {
+  try {
+    console.log.apply(console, ['[weekPass]'].concat(Array.prototype.slice.call(arguments)))
+  } catch (e) {
+    // 控制台不可用（极老基础库）也不能影响主流程
+  }
+}
+
 /**
  * 调用 weekPass 云函数
  *
@@ -355,31 +380,84 @@ function requirePass(opts) {
   const feature = o.feature || '该功能'
   const gate = o.gate === 'register' ? 'register' : 'value'
 
-  if (!adConfig.ENABLED) return Promise.resolve(true)
+  if (!adConfig.ENABLED) {
+    trace('总开关关闭，直接放行', feature)
+    return Promise.resolve(true)
+  }
 
   // ⚠️ 整条链路必须保证「一定 resolve」：调用方有的是 await（报名提交），
   // 有的是 .then/.catch（账号编辑）。一旦这里同步抛错或永不回调，用户就是
-  // 「点了完全没反应」，比弹广告糟糕得多。所以外面再包一层兜底。
-  try {
-    return runGateFlow(o, feature, gate).catch(function (e) {
-      console.warn('[weekPass] 校验链路异常，兜底放行', e)
-      return true
-    })
-  } catch (e) {
-    console.warn('[weekPass] 校验链路同步异常，兜底放行', e)
-    return Promise.resolve(true)
-  }
+  // 「点了完全没反应」，比弹广告糟糕得多。
+  //
+  // 所以这里不直接返回 runGateFlow 的 Promise，而是自己 new 一个：
+  // 内部流程只负责「汇报结论」，真正的结算统一走 settle —— 这样无论流程
+  // 是跑通、抛错还是永远卡住，总闸都能在 PRE_MODAL_TIMEOUT 后终结它。
+  return new Promise(function (resolve) {
+    let settled = false
+    let hardTimer = null
+    let modalTimer = null
+
+    const settle = function (value, why) {
+      if (settled) {
+        trace('重复结算已忽略', why)
+        return
+      }
+      settled = true
+      if (hardTimer) clearTimeout(hardTimer)
+      if (modalTimer) clearTimeout(modalTimer)
+      trace('结论', value ? '放行' : '拒绝', why)
+      resolve(value)
+    }
+
+    hardTimer = setTimeout(function () {
+      console.warn('[weekPass] 弹窗前链路超时，兜底放行', feature)
+      settle(true, 'preModalTimeout')
+    }, PRE_MODAL_TIMEOUT)
+
+    // 弹窗已交给用户：撤掉总闸，换成更长的弹窗超时
+    const onModalShown = function () {
+      if (hardTimer) {
+        clearTimeout(hardTimer)
+        hardTimer = null
+      }
+      modalTimer = setTimeout(function () {
+        console.warn('[weekPass] 弹窗长时间未响应，兜底放行', feature)
+        settle(true, 'modalTimeout')
+      }, MODAL_TIMEOUT)
+    }
+
+    let flow
+    try {
+      flow = runGateFlow(o, feature, gate, onModalShown)
+    } catch (e) {
+      console.warn('[weekPass] 校验链路同步异常，兜底放行', e)
+      settle(true, 'syncThrow')
+      return
+    }
+
+    flow
+      .then(function (v) {
+        settle(v, 'flow:' + v)
+      })
+      .catch(function (e) {
+        console.warn('[weekPass] 校验链路异常，兜底放行', e)
+        settle(true, 'flowError')
+      })
+  })
 }
 
-function runGateFlow(o, feature, gate) {
+function runGateFlow(o, feature, gate, onModalShown) {
   return isGateOn(gate).then(function (on) {
+    trace('开关判定', gate, on ? '开启' : '关闭', feature)
     // 该类拦截已被远程关闭 → 直接放行
     if (!on) return true
 
     return ensurePass().then(function (valid) {
+      trace('云端校验', valid === true ? '已持有' : valid === 'unknown' ? '不可判定' : '未持有')
       // 云端不可判定（超时 / 异常 / 云函数没部署）→ 放行，不拿基础设施故障为难用户
       if (valid === 'unknown') return true
       if (valid) return true
+      trace('准备弹窗', feature)
       return new Promise(function (resolve) {
         const rangeText = getWeekRangeText()
         // 文案口径：说成「解锁高级功能」而不是「要看广告」，避免变相强迫的观感；
@@ -400,13 +478,30 @@ function runGateFlow(o, feature, gate) {
           resolve(value)
         }
 
+        // 弹窗前顺手关掉可能存在的 loading：全局层互斥时 showModal 会走 fail。
+        // （本次的 fail 实测是 confirmText 超长引起的，与 loading 无关；
+        //  这行只是顺手去掉一个同类隐患，不是本次修复点。）
+        try {
+          wx.hideLoading()
+        } catch (e) {
+          // hideLoading 无内容时不会抛错，兜着以防基础库差异
+        }
+
+        // ⚠️⚠️ confirmText / cancelText 最多 4 个中文字符（或 8 个英文字母），
+        // 超了 wx.showModal **整个调用直接 fail**，弹窗根本不显示、控制台默认也不报错。
+        // 实测踩到：'看视频解锁' 5 个字 →
+        //   showModal:fail confirmText length should not larger than 4 Chinese characters
+        // 表现为「点了没反应 + 不弹窗」，是本项目最难定位的一次故障。
+        // 改这两个文案时**必须数一下字数**，别再写长。
         wx.showModal({
           title: '解锁高级功能',
           content: content,
-          confirmText: '看视频解锁',
-          cancelText: '暂不使用',
+          confirmText: '去解锁',
+          cancelText: '暂不用',
           success: function (res) {
             if (!res.confirm) {
+              // 用户主动放弃：明确告诉他这次操作没生效，别让他以为「点了没反应」
+              wx.showToast({ title: '已取消，本次操作未生效', icon: 'none' })
               settle(false)
               return
             }
@@ -449,16 +544,90 @@ function runGateFlow(o, feature, gate) {
               settle(true)
             }
           },
-          fail: function () {
-            settle(false)
+          fail: function (err) {
+            // 弹窗调用失败：参数非法（confirmText 超 4 个中文字符等）或全局层冲突。
+            // 用户什么都没看到，这时候拒绝他就是「点了没反应」，比放行糟糕得多。
+            // ⚠️ 旧代码这里 settle(false)，正是「不弹窗 + 无法提交 + 无报错」的根因。
+            // ⚠️ 这行 warn 是定位这类问题的唯一线索，别删。
+            console.warn('[weekPass] 弹窗调用失败，本次放行', err)
+            writeLocal(getWeekKey())
+            wx.showToast({ title: '本次已为您开放', icon: 'none' })
+            settle(true)
           }
         })
+
+        // 弹窗已交到用户手上：撤掉 12 秒总闸，改用更长的弹窗超时
+        if (typeof onModalShown === 'function') onModalShown()
       })
     })
   })
 }
 
+/**
+ * 自检：把「点了没反应」拆成能一眼定位的几段
+ *
+ * 真机上看不到控制台，光加日志解决不了问题 —— 所以把链路每段的耗时与结论
+ * 直接返回给调用方（超管「激励开关」页的自检面板），用数据说话而不是猜：
+ *   总开关 → 远程开关读取 → 云端通行证查询 → 广告实例创建与加载
+ *
+ * ⚠️ 全程直连云函数、不走缓存，否则看到的可能是 5 分钟前的旧值。
+ *
+ * @param {Object} pageCtx 页面 this
+ * @returns {Promise<Object>}
+ */
+function diagnose(pageCtx) {
+  const out = {
+    enabled: adConfig.ENABLED === true,
+    weekKey: getWeekKey(),
+    weekRange: getWeekRangeText(),
+    localPass: hasPassSync(),
+    configMs: -1,
+    config: null,
+    configErr: '',
+    queryMs: -1,
+    cloudValid: null,
+    queryErr: '',
+    ad: null
+  }
+
+  const t0 = Date.now()
+  return callCloud('config')
+    .then(
+      function (r) {
+        out.configMs = Date.now() - t0
+        out.config = (r && r.config) || null
+        if (!r || !r.ok) out.configErr = (r && r.reason) || '云函数返回 ok=false'
+      },
+      function (e) {
+        out.configMs = Date.now() - t0
+        out.configErr = (e && (e.errMsg || e.message)) || String(e)
+      }
+    )
+    .then(function () {
+      const t1 = Date.now()
+      return callCloud('query').then(
+        function (r) {
+          out.queryMs = Date.now() - t1
+          out.cloudValid = !!(r && r.ok && r.valid)
+          if (!r || !r.ok) out.queryErr = (r && r.reason) || 'ok=false'
+        },
+        function (e) {
+          out.queryMs = Date.now() - t1
+          out.queryErr = (e && (e.errMsg || e.message)) || String(e)
+        }
+      )
+    })
+    .then(function () {
+      return ad.probeAd(pageCtx)
+    })
+    .then(function (adResult) {
+      out.ad = adResult
+      return out
+    })
+}
+
 module.exports = {
+  diagnose: diagnose,
   getWeekStart: getWeekStart,
   getWeekEnd: getWeekEnd,
   getWeekKey: getWeekKey,

@@ -130,3 +130,99 @@
   background-color: #C8C9CC;
   color: #FFFFFF;
 }
+
+/* ===== 链路自检 ===== */
+
+.diag-section {
+  background-color: #FFFFFF;
+  border-radius: 10px;
+  padding: 14px;
+  margin-top: 20px;
+}
+
+.diag-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333333;
+}
+
+.diag-desc {
+  font-size: 12px;
+  color: #999999;
+  line-height: 1.6;
+  margin-top: 6px;
+}
+
+.diag-btn {
+  margin-top: 12px;
+  background-color: #576B95;
+  color: #FFFFFF;
+  font-size: 14px;
+  height: 36px;
+  line-height: 36px;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.diag-btn[disabled] {
+  background-color: #C8C9CC;
+}
+
+.diag-list {
+  margin-top: 12px;
+  border-top: 1px solid #F0F0F0;
+}
+
+.diag-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 10px 0;
+  border-bottom: 1px solid #F7F7F7;
+}
+
+.diag-k {
+  font-size: 13px;
+  color: #666666;
+  flex-shrink: 0;
+  width: 84px;
+}
+
+.diag-v {
+  font-size: 13px;
+  color: #333333;
+  text-align: right;
+  flex: 1;
+  padding-left: 10px;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.diag-v.ok {
+  color: #07C160;
+}
+
+.diag-v.bad {
+  color: #FA5151;
+}
+
+.diag-err {
+  font-size: 12px;
+  color: #FA5151;
+  line-height: 1.6;
+  padding: 8px 10px;
+  background-color: #FFF1F0;
+  border-radius: 6px;
+  margin-top: 8px;
+  word-break: break-all;
+}
+
+.diag-conclusion {
+  font-size: 13px;
+  color: #333333;
+  line-height: 1.6;
+  padding: 10px 12px;
+  background-color: #F2F6FC;
+  border-radius: 6px;
+  margin-top: 12px;
+}

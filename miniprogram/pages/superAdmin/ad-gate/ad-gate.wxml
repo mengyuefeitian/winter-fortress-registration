@@ -53,5 +53,65 @@
         {{saving ? '保存中...' : '保存配置'}}
       </button>
     </view>
+
+    <!-- 自检：真机上看不到控制台，「点了没反应」只能靠这个面板定位 -->
+    <view class="diag-section">
+      <view class="diag-title">链路自检</view>
+      <view class="diag-desc">
+        遇到「点了没反应 / 不弹窗」时先点这里：逐段探测并给出结论，结果可直接截图反馈。
+      </view>
+      <button class="diag-btn" disabled="{{diagRunning}}" bindtap="runDiagnose">
+        {{diagRunning ? '检测中...' : '开始自检'}}
+      </button>
+
+      <block wx:if="{{diag}}">
+        <view class="diag-list">
+          <view class="diag-row">
+            <text class="diag-k">总开关</text>
+            <text class="diag-v {{diag.enabled ? 'ok' : 'bad'}}">{{diag.enabled ? '开启' : '已关闭（全部直接放行）'}}</text>
+          </view>
+          <view class="diag-row">
+            <text class="diag-k">本周周期</text>
+            <text class="diag-v">{{diag.weekRange}}（{{diag.weekKey}}）</text>
+          </view>
+          <view class="diag-row">
+            <text class="diag-k">本机通行证</text>
+            <text class="diag-v {{diag.localPass ? 'ok' : ''}}">{{diag.localPass ? '已持有' : '未持有'}}</text>
+          </view>
+          <view class="diag-row">
+            <text class="diag-k">远程开关</text>
+            <text class="diag-v {{diag.configErr ? 'bad' : 'ok'}}">
+              {{diag.configErr ? '失败：' + diag.configErr : '报名类 ' + (diag.config.registerGate ? '开' : '关') + ' · 增值类 ' + (diag.config.valueGate ? '开' : '关') + '（' + diag.configMs + 'ms）'}}
+            </text>
+          </view>
+          <view class="diag-row">
+            <text class="diag-k">云端通行证</text>
+            <text class="diag-v {{diag.queryErr ? 'bad' : 'ok'}}">
+              {{diag.queryErr ? '失败：' + diag.queryErr : (diag.cloudValid ? '已持有' : '未持有') + '（' + diag.queryMs + 'ms）'}}
+            </text>
+          </view>
+
+          <block wx:if="{{diag.ad}}">
+            <view class="diag-row">
+              <text class="diag-k">广告位</text>
+              <text class="diag-v {{diag.ad.adUnitOk ? 'ok' : 'bad'}}">{{diag.ad.adUnit || '未配置'}}</text>
+            </view>
+            <view class="diag-row">
+              <text class="diag-k">实例创建</text>
+              <text class="diag-v {{diag.ad.created ? 'ok' : 'bad'}}">{{diag.ad.created ? '成功' : '失败'}}</text>
+            </view>
+            <view class="diag-row">
+              <text class="diag-k">素材加载</text>
+              <text class="diag-v {{diag.ad.loaded ? 'ok' : 'bad'}}">
+                {{diag.ad.loaded ? '成功' : '失败'}}（{{diag.ad.ms}}ms）{{diag.ad.cooling ? ' · 冷却中' : ''}}
+              </text>
+            </view>
+            <view wx:if="{{diag.ad.err}}" class="diag-err">{{diag.ad.err}}</view>
+          </block>
+        </view>
+
+        <view class="diag-conclusion">{{diagConclusion}}</view>
+      </block>
+    </view>
   </block>
 </view>
