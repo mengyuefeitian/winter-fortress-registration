@@ -13,7 +13,7 @@
 基于微信云开发，无需自建服务器。
 
 [![平台](https://img.shields.io/badge/平台-微信小程序-07C160?logo=wechat)](https://mp.weixin.qq.com/)
-[![版本](https://img.shields.io/badge/version-1.18.13-blue)](https://github.com/mengyuefeitian/winter-fortress-registration/releases)
+[![版本](https://img.shields.io/badge/version-1.19.0-blue)](https://github.com/mengyuefeitian/winter-fortress-registration/releases)
 [![后端](https://img.shields.io/badge/后端-微信云开发-4A90D9)](https://cloud.weixin.qq.com/)
 [![更新日志](https://img.shields.io/badge/docs-CHANGELOG-brightgreen)](docs/CHANGELOG.md)
 
@@ -229,6 +229,7 @@
 
 ## 更新日志
 
+- **v1.19.0** — 新增「**本周通行证**」变现：观看一次约 30 秒的激励视频，解锁**本周（周一 00:00 – 周日 23:59:59，按自然周而非 7 天）**的增值功能权限。首批纳入「保存截图到相册」（区管/审计统计页、超管全局统计页）与「熊坑分布图保存高清图」；**报名与管理类操作一律免费不受影响**，避免核心流程被广告打断。广告拉不到时自动临时放行，不会卡住用户。需在 `utils/adConfig.js` 填入后台创建的激励视频广告位 ID，并新建部署 `weekPass` 云函数
 - **v1.18.13** — 修复游戏账号保存报 `document.update:fail -502001`（`Cannot create field 'kind' in element {bow: null}`）：底层 MongoDB **不允许把 `null` 改成对象**，而熊坑报名建出的账号 `furnace`/`barracks` 各项全是 `null`，一填等级就被拒。新增 `safeUpdate`：先把这些「标量→对象」的路径删除再写入；同时修复「只填部分兵营也会保存失败」。（注：v1.18.12 推断的「主账号资料同步拖垮保存」已证伪，真正的根因在本版）
 - **v1.18.12** — 修复「熊坑报名创建的游戏账号」两个问题：① 熊坑报名回写账号时**漏传联盟信息**（此前只写了地心探险等级，导致这类账号在「我的>游戏账号」里联盟一栏为空，国战报名一直有传，熊坑漏了），现与国战报名对齐一并写入；② 这类账号会被设为主账号，而保存主账号时额外的 `users` 资料同步一旦失败会**把整个保存拖垮**（报 `document.update:fail-502001`），现改为降级不阻断，日志带 `stage=syncUserProfile`
 - **v1.18.11** — 申请提交顺序回调为「**先发邮件 → 再写库 → 回读校验 → 失败告警**」：邮件无条件先到（写库静默失败也能第一时间知晓），写完立即回读校验，校验不到再发一封「入库失败」告警邮件，杜绝「收到邮件却查不到条目」；区管申请同样改为先发邮件再写库
