@@ -764,8 +764,9 @@ Page({
           if (stat.registrations.length > 0) {
             const subs = stat.registrations.filter(r => r.position === 'substitute')
             const combats = stat.registrations.filter(r => r.position === 'combat')
-            if (subs.length > 0) totalHeight += 30 + Math.ceil(subs.length / 3) * 35
+            // 与绘制顺序保持一致：参战先、替补后
             if (combats.length > 0) totalHeight += 30 + Math.ceil(combats.length / 3) * 35
+            if (subs.length > 0) totalHeight += 30 + Math.ceil(subs.length / 3) * 35
           }
           totalHeight += 25
         }
@@ -822,24 +823,8 @@ Page({
             const colMaxW = colW - 10
             const colXs = [nameStartX, nameStartX + colW, nameStartX + colW * 2]
 
-            if (substitutes.length > 0) {
-              ctx.fillStyle = '#07C160'
-              ctx.font = 'bold 24px sans-serif'
-              ctx.fillText(`替补(${substitutes.length}):`, margin + 20, y)
-              y += 30
-
-              ctx.fillStyle = '#666666'
-              ctx.font = '24px sans-serif'
-              const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
-              for (let i = 0; i < subNames.length; i += 3) {
-                subNames.slice(i, i + 3).forEach((name, col) => {
-                  const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(substitutes[i + col]), badgeImgs)
-                  ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
-                })
-                y += 35
-              }
-            }
-
+            // ⚠️ 顺序：参战在上、替补在下（2026-10-16 用户要求）。
+            // 高度累加顺序也要跟着换，保证「算高度的公式」与「绘制步进」依然是同一套口径。
             if (combats.length > 0) {
               ctx.fillStyle = '#FA5151'
               ctx.font = 'bold 24px sans-serif'
@@ -852,6 +837,24 @@ Page({
               for (let i = 0; i < combatNames.length; i += 3) {
                 combatNames.slice(i, i + 3).forEach((name, col) => {
                   const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(combats[i + col]), badgeImgs)
+                  ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
+                })
+                y += 35
+              }
+            }
+
+            if (substitutes.length > 0) {
+              ctx.fillStyle = '#07C160'
+              ctx.font = 'bold 24px sans-serif'
+              ctx.fillText(`替补(${substitutes.length}):`, margin + 20, y)
+              y += 30
+
+              ctx.fillStyle = '#666666'
+              ctx.font = '24px sans-serif'
+              const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
+              for (let i = 0; i < subNames.length; i += 3) {
+                subNames.slice(i, i + 3).forEach((name, col) => {
+                  const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(substitutes[i + col]), badgeImgs)
                   ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
                 })
                 y += 35
@@ -926,8 +929,9 @@ Page({
           if (stat.registrations.length > 0) {
             const subs = stat.registrations.filter(r => r.position === 'substitute')
             const combats = stat.registrations.filter(r => r.position === 'combat')
-            if (subs.length > 0) totalHeight += 30 + Math.ceil(subs.length / 3) * 35
+            // 与绘制顺序保持一致：参战先、替补后
             if (combats.length > 0) totalHeight += 30 + Math.ceil(combats.length / 3) * 35
+            if (subs.length > 0) totalHeight += 30 + Math.ceil(subs.length / 3) * 35
           }
           totalHeight += 25
         }
@@ -984,24 +988,8 @@ Page({
             const colMaxW = colW - 10
             const colXs = [nameStartX, nameStartX + colW, nameStartX + colW * 2]
 
-            if (substitutes.length > 0) {
-              ctx.fillStyle = '#07C160'
-              ctx.font = 'bold 24px sans-serif'
-              ctx.fillText(`替补(${substitutes.length}):`, margin + 20, y)
-              y += 30
-
-              ctx.fillStyle = '#666666'
-              ctx.font = '24px sans-serif'
-              const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
-              for (let i = 0; i < subNames.length; i += 3) {
-                subNames.slice(i, i + 3).forEach((name, col) => {
-                  const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(substitutes[i + col]), badgeImgs)
-                  ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
-                })
-                y += 35
-              }
-            }
-
+            // ⚠️ 顺序：参战在上、替补在下（2026-10-16 用户要求）。
+            // 高度累加顺序也要跟着换，保证「算高度的公式」与「绘制步进」依然是同一套口径。
             if (combats.length > 0) {
               ctx.fillStyle = '#FA5151'
               ctx.font = 'bold 24px sans-serif'
@@ -1014,6 +1002,24 @@ Page({
               for (let i = 0; i < combatNames.length; i += 3) {
                 combatNames.slice(i, i + 3).forEach((name, col) => {
                   const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(combats[i + col]), badgeImgs)
+                  ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
+                })
+                y += 35
+              }
+            }
+
+            if (substitutes.length > 0) {
+              ctx.fillStyle = '#07C160'
+              ctx.font = 'bold 24px sans-serif'
+              ctx.fillText(`替补(${substitutes.length}):`, margin + 20, y)
+              y += 30
+
+              ctx.fillStyle = '#666666'
+              ctx.font = '24px sans-serif'
+              const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
+              for (let i = 0; i < subNames.length; i += 3) {
+                subNames.slice(i, i + 3).forEach((name, col) => {
+                  const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(substitutes[i + col]), badgeImgs)
                   ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
                 })
                 y += 35

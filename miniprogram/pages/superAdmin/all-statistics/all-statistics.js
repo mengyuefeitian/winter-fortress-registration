@@ -40,7 +40,7 @@ function truncateText(ctx, text, maxW) {
 
 // 兵工厂/峡谷截图所需高度 —— 必须与下方绘制步进**一一对应**：
 //   绘制起点 y = 195；每个配置：标题 40 → 日期 40 →
-//   （替补标签 30 + 行数×35）→（参战标签 30 + 行数×35）→ 配置间距 25；末尾留 35 底边。
+//   （参战标签 30 + 行数×35）→（替补标签 30 + 行数×35）→ 配置间距 25；末尾留 35 底边。
 // ⚠️ 这里曾经用的是另一套近似公式（固定 50/60 + ceil(总人数/3)×40），与绘制步进对不上：
 //    用户那两张坏图的「12 人 + 35 人、两个配置」按旧公式算出 1050，实际要 1120+，
 //    于是画布比内容矮 ≈70px，最后两行报名人员被生生裁掉。
@@ -51,8 +51,9 @@ function measureActivityHeight(stats) {
     const subs = regs.filter(r => r.position === 'substitute').length
     const combats = regs.filter(r => r.position === 'combat').length
     h += 80                                    // 标题行 + 日期行
-    if (subs > 0) h += 30 + Math.ceil(subs / 3) * 35
+    // 与绘制顺序保持一致：参战先、替补后
     if (combats > 0) h += 30 + Math.ceil(combats / 3) * 35
+    if (subs > 0) h += 30 + Math.ceil(subs / 3) * 35
     h += 25                                    // 配置间距
   }
   return Math.max(h + 35, 400)                 // 底边留白 + 最小高度
@@ -710,28 +711,7 @@ Page({
             const substitutes = stat.registrations.filter(r => r.position === 'substitute')
             const combats = stat.registrations.filter(r => r.position === 'combat')
 
-            if (substitutes.length > 0) {
-              ctx.fillStyle = '#07C160'
-              ctx.font = 'bold 24px sans-serif'
-              ctx.fillText(`替补(${substitutes.length}):`, margin + 20, y)
-              y += 30
-
-              ctx.fillStyle = '#666666'
-              ctx.font = '24px sans-serif'
-              const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
-              const nameStartX = margin + 20
-              const colW = Math.floor((canvasWidth - nameStartX - margin) / 3)
-              const colMaxW = colW - 10
-              const colXs = [nameStartX, nameStartX + colW, nameStartX + colW * 2]
-              for (let i = 0; i < subNames.length; i += 3) {
-                subNames.slice(i, i + 3).forEach((name, col) => {
-                  const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(substitutes[i + col]), badgeImgs)
-                  ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
-                })
-                y += 35
-              }
-            }
-
+            // ⚠️ 顺序：参战在上、替补在下（2026-10-16 用户要求）
             if (combats.length > 0) {
               ctx.fillStyle = '#FA5151'
               ctx.font = 'bold 24px sans-serif'
@@ -748,6 +728,28 @@ Page({
               for (let i = 0; i < combatNames.length; i += 3) {
                 combatNames.slice(i, i + 3).forEach((name, col) => {
                   const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(combats[i + col]), badgeImgs)
+                  ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
+                })
+                y += 35
+              }
+            }
+
+            if (substitutes.length > 0) {
+              ctx.fillStyle = '#07C160'
+              ctx.font = 'bold 24px sans-serif'
+              ctx.fillText(`替补(${substitutes.length}):`, margin + 20, y)
+              y += 30
+
+              ctx.fillStyle = '#666666'
+              ctx.font = '24px sans-serif'
+              const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
+              const nameStartX = margin + 20
+              const colW = Math.floor((canvasWidth - nameStartX - margin) / 3)
+              const colMaxW = colW - 10
+              const colXs = [nameStartX, nameStartX + colW, nameStartX + colW * 2]
+              for (let i = 0; i < subNames.length; i += 3) {
+                subNames.slice(i, i + 3).forEach((name, col) => {
+                  const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(substitutes[i + col]), badgeImgs)
                   ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
                 })
                 y += 35
@@ -814,28 +816,7 @@ Page({
             const substitutes = stat.registrations.filter(r => r.position === 'substitute')
             const combats = stat.registrations.filter(r => r.position === 'combat')
 
-            if (substitutes.length > 0) {
-              ctx.fillStyle = '#07C160'
-              ctx.font = 'bold 24px sans-serif'
-              ctx.fillText(`替补(${substitutes.length}):`, margin + 20, y)
-              y += 30
-
-              ctx.fillStyle = '#666666'
-              ctx.font = '24px sans-serif'
-              const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
-              const nameStartX = margin + 20
-              const colW = Math.floor((canvasWidth - nameStartX - margin) / 3)
-              const colMaxW = colW - 10
-              const colXs = [nameStartX, nameStartX + colW, nameStartX + colW * 2]
-              for (let i = 0; i < subNames.length; i += 3) {
-                subNames.slice(i, i + 3).forEach((name, col) => {
-                  const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(substitutes[i + col]), badgeImgs)
-                  ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
-                })
-                y += 35
-              }
-            }
-
+            // ⚠️ 顺序：参战在上、替补在下（2026-10-16 用户要求）
             if (combats.length > 0) {
               ctx.fillStyle = '#FA5151'
               ctx.font = 'bold 24px sans-serif'
@@ -852,6 +833,28 @@ Page({
               for (let i = 0; i < combatNames.length; i += 3) {
                 combatNames.slice(i, i + 3).forEach((name, col) => {
                   const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(combats[i + col]), badgeImgs)
+                  ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
+                })
+                y += 35
+              }
+            }
+
+            if (substitutes.length > 0) {
+              ctx.fillStyle = '#07C160'
+              ctx.font = 'bold 24px sans-serif'
+              ctx.fillText(`替补(${substitutes.length}):`, margin + 20, y)
+              y += 30
+
+              ctx.fillStyle = '#666666'
+              ctx.font = '24px sans-serif'
+              const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
+              const nameStartX = margin + 20
+              const colW = Math.floor((canvasWidth - nameStartX - margin) / 3)
+              const colMaxW = colW - 10
+              const colXs = [nameStartX, nameStartX + colW, nameStartX + colW * 2]
+              for (let i = 0; i < subNames.length; i += 3) {
+                subNames.slice(i, i + 3).forEach((name, col) => {
+                  const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(substitutes[i + col]), badgeImgs)
                   ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
                 })
                 y += 35
