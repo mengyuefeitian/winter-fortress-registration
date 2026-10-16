@@ -6,6 +6,15 @@ const auth = require('../../../utils/auth')
 const ga = require('../../../utils/gameAccount')
 const weekPass = require('../../../utils/weekPass')
 
+// 「全部联盟」伪选项的哨兵 _id。
+// 不能用空串：alliance-picker 内部是 wx:for wx:key="_id"，空 key 会退化/告警。
+const ALL_ALLIANCE_ID = '__all__'
+const ALL_ALLIANCE_OPTION = { _id: ALL_ALLIANCE_ID, allianceName: '全部联盟' }
+// 是否「不限联盟」：伪选项、未选、或历史遗留的空 _id 都算
+function isAllAlliance(alliance) {
+  return !alliance || !alliance._id || alliance._id === ALL_ALLIANCE_ID
+}
+
 // 取报名记录的熔炉等级规格：优先 decorate() 写好的 furnaceSpec，其次原始字段兜底
 function specOf(rec) {
   if (!rec) return null
@@ -29,6 +38,26 @@ function truncateText(ctx, text, maxW) {
   return t.length > 0 ? t + '…' : ''
 }
 
+// 兵工厂/峡谷截图所需高度 —— 必须与下方绘制步进**一一对应**：
+//   绘制起点 y = 195；每个配置：标题 40 → 日期 40 →
+//   （替补标签 30 + 行数×35）→（参战标签 30 + 行数×35）→ 配置间距 25；末尾留 35 底边。
+// ⚠️ 这里曾经用的是另一套近似公式（固定 50/60 + ceil(总人数/3)×40），与绘制步进对不上：
+//    用户那两张坏图的「12 人 + 35 人、两个配置」按旧公式算出 1050，实际要 1120+，
+//    于是画布比内容矮 ≈70px，最后两行报名人员被生生裁掉。
+function measureActivityHeight(stats) {
+  let h = 195
+  for (const stat of stats || []) {
+    const regs = stat.registrations || []
+    const subs = regs.filter(r => r.position === 'substitute').length
+    const combats = regs.filter(r => r.position === 'combat').length
+    h += 80                                    // 标题行 + 日期行
+    if (subs > 0) h += 30 + Math.ceil(subs / 3) * 35
+    if (combats > 0) h += 30 + Math.ceil(combats / 3) * 35
+    h += 25                                    // 配置间距
+  }
+  return Math.max(h + 35, 400)                 // 底边留白 + 最小高度
+}
+
 Page({
   data: {
     // 报名类型选择
@@ -40,6 +69,8 @@ Page({
     selectedZone: null,
 
     alliances: [],
+    // 联盟选择器实际渲染的列表：兵工厂/峡谷 会在头部多一个「全部联盟」
+    allianceOptions: [],
     allianceIndex: 0,
     selectedAlliance: null,
 
@@ -105,6 +136,8 @@ Page({
       regTypeIndex: index,
       selectedRegType: this.data.registrationTypes[index]
     })
+    // 类型变了，可选联盟列表也要跟着变（兵工厂/峡谷 才有「全部联盟」）
+    this.applyAllianceOptions()
     this.loadStatistics()
   },
 
@@ -163,11 +196,10 @@ Page({
       this.setData({
         alliances: alliances
       })
+      // 重建选择器可选项并选中默认项（必须在 loadStatistics 之前）
+      this.applyAllianceOptions()
 
-      if (alliances.length > 0) {
-        this.setData({
-          selectedAlliance: alliances[0]
-        })
+      if (this.data.allianceOptions.length > 0) {
         this.loadStatistics()
       } else {
         util.hideLoading()
@@ -177,6 +209,22 @@ Page({
       util.hideLoading()
       util.showError('加载联盟失败')
     }
+  },
+
+  // 联盟选择器的可选项与默认选中项。
+  // 堡垒报名必须落到具体联盟（统计按联盟维度算）；兵工厂/峡谷 的配置虽然也带联盟，
+  // 但超管经常要看整个分区 → 头部补一个「全部联盟」，默认就停在它上面
+  //（这样也保住了此前「全局统计看整区」的默认视图，不会因为加了选择器反而变窄）。
+  applyAllianceOptions: function () {
+    const type = this.data.selectedRegType
+    const list = type === '堡垒报名'
+      ? this.data.alliances.slice()
+      : [Object.assign({}, ALL_ALLIANCE_OPTION)].concat(this.data.alliances)
+    this.setData({
+      allianceOptions: list,
+      allianceIndex: 0,
+      selectedAlliance: list[0] || null
+    })
   },
 
   // 加载统计数据
@@ -231,7 +279,10 @@ Page({
           return
         }
 
-        const configs = await db.getArsenalConfigs({ zoneId: this.data.selectedZone._id })
+        // 「全部联盟」时不加联盟条件 → 看整个分区（与加选择器之前的行为一致）
+        const arsenalFilter = { zoneId: this.data.selectedZone._id }
+        if (!isAllAlliance(this.data.selectedAlliance)) arsenalFilter.allianceId = this.data.selectedAlliance._id
+        const configs = await db.getArsenalConfigs(arsenalFilter)
 
         const arsenalStats = []
         let arsenalTotal = 0
@@ -272,7 +323,10 @@ Page({
           return
         }
 
-        const configs = await db.getCanyonConfigs({ zoneId: this.data.selectedZone._id })
+        // 「全部联盟」时不加联盟条件 → 看整个分区（与加选择器之前的行为一致）
+        const canyonFilter = { zoneId: this.data.selectedZone._id }
+        if (!isAllAlliance(this.data.selectedAlliance)) canyonFilter.allianceId = this.data.selectedAlliance._id
+        const configs = await db.getCanyonConfigs(canyonFilter)
 
         const canyonStats = []
         let canyonTotal = 0
@@ -413,7 +467,7 @@ Page({
   // 联盟选择变化
   onAllianceChange: function (e) {
     const index = e.detail.value
-    const alliance = this.data.alliances[index]
+    const alliance = this.data.allianceOptions[index]
 
     this.setData({
       allianceIndex: index,
@@ -495,12 +549,19 @@ Page({
 
       const screenshotData = this.buildScreenshotData()
 
-      const canvas = wx.createOffscreenCanvas({
+      // ⚠️ exportHeight 必须**恒等于画布高度**。canvasToTempFilePath 会按 destHeight
+      //    把整幅画布纵向拉伸/压缩：destHeight 偏小 → 整幅图被压扁（字糊成一团），
+      //    偏大 → 被拉长。这里保存它、最后统一导出。
+      //    历史事故：一次性画布按 buildScreenshotData 的高度创建（兵工厂/峡谷 会落到
+      //    官职分支的 300），分支里又改 canvas.height、还各自导出一次，尾部再导出一次
+      //    → 点一次「保存截图」往相册写两张图，一张被裁、一张被压扁 3.5 倍。
+      let canvas = wx.createOffscreenCanvas({
         type: '2d',
         width: 750,
         height: screenshotData.height
       })
-      const ctx = canvas.getContext('2d')
+      let ctx = canvas.getContext('2d')
+      let exportHeight = screenshotData.height
 
       ctx.fillStyle = '#FFFFFF'
       ctx.fillRect(0, 0, 750, screenshotData.height)
@@ -601,17 +662,13 @@ Page({
 
         const margin = 40
         const canvasWidth = 750
-        let totalHeight = 220
-        for (const stat of this.data.arsenalStats) {
-          totalHeight += 50
-          if (stat.registrations.length > 0) {
-            totalHeight += Math.ceil(stat.registrations.length / 3) * 40 + 20
-          }
-          totalHeight += 25
-        }
+        const totalHeight = measureActivityHeight(this.data.arsenalStats)
 
-        canvas.width = canvasWidth
-        canvas.height = totalHeight
+        // 按真实内容高度重建画布：给已创建的离屏画布赋 width/height 不会重新分配
+        // 绘图缓冲，内容照样按老尺寸被裁掉（这正是「内容被截断」的成因）。
+        canvas = wx.createOffscreenCanvas({ type: '2d', width: canvasWidth, height: totalHeight })
+        ctx = canvas.getContext('2d')
+        exportHeight = totalHeight
 
         ctx.fillStyle = '#FFFFFF'
         ctx.fillRect(0, 0, canvasWidth, totalHeight)
@@ -701,33 +758,6 @@ Page({
           y += 25
         }
 
-        wx.canvasToTempFilePath({
-          canvas: canvas,
-          destWidth: canvasWidth,
-          destHeight: totalHeight,
-          success: (res) => {
-            wx.saveImageToPhotosAlbum({
-              filePath: res.tempFilePath,
-              success: () => {
-                util.hideLoading()
-                util.showSuccess('截图已保存到相册')
-              },
-              fail: (err) => {
-                util.hideLoading()
-                if (err.errMsg.indexOf('auth deny') !== -1) {
-                  wx.showModal({ title: '提示', content: '需要您授权保存图片权限', confirmText: '去授权', success: (modalRes) => { if (modalRes.confirm) { wx.openSetting() } } })
-                } else {
-                  util.showError('保存失败')
-                }
-              }
-            })
-          },
-          fail: () => {
-            util.hideLoading()
-            util.showError('生成图片失败')
-          }
-        })
-
       } else if (this.data.selectedRegType === '峡谷报名') {
         if (!this.data.selectedZone || this.data.canyonStats.length === 0) {
           util.hideLoading()
@@ -737,17 +767,12 @@ Page({
 
         const margin = 40
         const canvasWidth = 750
-        let totalHeight = 220
-        for (const stat of this.data.canyonStats) {
-          totalHeight += 50
-          if (stat.registrations.length > 0) {
-            totalHeight += 60 + Math.ceil(stat.registrations.length / 3) * 40
-          }
-          totalHeight += 25
-        }
+        const totalHeight = measureActivityHeight(this.data.canyonStats)
 
-        canvas.width = canvasWidth
-        canvas.height = totalHeight
+        // 同兵工厂：必须重建画布，且导出高度 = 画布高度
+        canvas = wx.createOffscreenCanvas({ type: '2d', width: canvasWidth, height: totalHeight })
+        ctx = canvas.getContext('2d')
+        exportHeight = totalHeight
 
         ctx.fillStyle = '#FFFFFF'
         ctx.fillRect(0, 0, canvasWidth, totalHeight)
@@ -836,34 +861,6 @@ Page({
 
           y += 25
         }
-
-        wx.canvasToTempFilePath({
-          canvas: canvas,
-          destWidth: canvasWidth,
-          destHeight: totalHeight,
-          success: (res) => {
-            wx.saveImageToPhotosAlbum({
-              filePath: res.tempFilePath,
-              success: () => {
-                util.hideLoading()
-                util.showSuccess('截图已保存到相册')
-              },
-              fail: (err) => {
-                util.hideLoading()
-                if (err.errMsg.indexOf('auth deny') !== -1) {
-                  wx.showModal({ title: '提示', content: '需要您授权保存图片权限', confirmText: '去授权', success: (modalRes) => { if (modalRes.confirm) { wx.openSetting() } } })
-                } else {
-                  util.showError('保存失败')
-                }
-              }
-            })
-          },
-          fail: () => {
-            util.hideLoading()
-            util.showError('生成图片失败')
-          }
-        })
-
       } else {
         // 官职报名截图
         if (!this.data.selectedZone) {
@@ -926,10 +923,13 @@ Page({
         }
       }
 
+      // 唯一的导出出口：各分支只负责「把画布画好 + 设置 exportHeight」，
+      // 导出与保存统一在这里发生一次。曾经兵工厂/峡谷 分支内部也各导出一次，
+      // 叠加这次就成了「点一次保存 → 相册多出两张图」，且两张的高度都不是画布高度。
       wx.canvasToTempFilePath({
         canvas: canvas,
         destWidth: 750,
-        destHeight: screenshotData.height,
+        destHeight: exportHeight,
         success: (res) => {
           wx.saveImageToPhotosAlbum({
             filePath: res.tempFilePath,
