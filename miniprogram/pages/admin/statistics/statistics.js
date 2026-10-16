@@ -6,16 +6,6 @@ const db = require('../../../utils/db')
 const ga = require('../../../utils/gameAccount')
 const weekPass = require('../../../utils/weekPass')
 
-// 「全部联盟」伪选项的哨兵 _id。
-// 不能用空串：alliance-picker 内部是 wx:for wx:key="_id"，空 key 会退化/告警。
-// 也不能用真实联盟 id 的形态，避免万一撞车。
-const ALL_ALLIANCE_ID = '__all__'
-const ALL_ALLIANCE_OPTION = { _id: ALL_ALLIANCE_ID, allianceName: '全部联盟' }
-// 是否「不限联盟」：伪选项、未选、或历史遗留的空 _id 都算
-function isAllAlliance(alliance) {
-  return !alliance || !alliance._id || alliance._id === ALL_ALLIANCE_ID
-}
-
 // 取报名记录的熔炉等级规格：优先 decorate() 写好的 furnaceSpec，其次原始字段兜底
 function specOf(rec) {
   if (!rec) return null
@@ -63,7 +53,7 @@ Page({
     selectedZone: null,
 
     alliances: [],
-    // 联盟选择器实际渲染的列表：兵工厂/峡谷 会在头部多一个「全部联盟」
+    // 联盟选择器实际渲染的列表：区管按联盟逐个查看（无「全部联盟」），可在列表里切换
     allianceOptions: [],
     allianceIndex: 0,
     selectedAlliance: null,
@@ -208,22 +198,53 @@ Page({
   },
 
   // 联盟选择器的可选项与默认选中项。
-  // 堡垒报名必须落到具体联盟（统计按联盟维度算）；兵工厂/峡谷 的配置虽然也带联盟，
-  // 但区管经常要看整个分区 → 头部补一个「全部联盟」。
+  // 区管的统计/截图一律按联盟维度出：列表就是本分区下的真实联盟，**没有「全部联盟」**，
+  // 区管想看别的联盟就在选择器里切。
   // ⚠️ 曾经只在 WXML 里给堡垒报名渲染联盟选择器，而兵工厂/峡谷 的查询里又写了
   //    `if (selectedAlliance) filter.allianceId = …`，于是这两个类型被**静默**
   //    套上「第一个联盟」的过滤：界面上看不到选择器、看到的总人数只是第一个联盟的，
-  //    而且完全没有办法切换。现在选择器对这三个类型都显示。
+  //    而且完全没有办法切换。现在这三个类型都显示同一个联盟列表。
   applyAllianceOptions: function () {
-    const type = this.data.selectedRegType
-    const list = type === '堡垒报名'
-      ? this.data.alliances.slice()
-      : [Object.assign({}, ALL_ALLIANCE_OPTION)].concat(this.data.alliances)
+    const list = this.data.alliances.slice()
+    const index = this.resolveDefaultAllianceIndex(list)
     this.setData({
       allianceOptions: list,
-      allianceIndex: 0,
-      selectedAlliance: list[0] || null
+      allianceIndex: index,
+      selectedAlliance: list[index] || null
     })
+  },
+
+  // 截图/统计标题的作用域文案。区管的兵工厂/峡谷统计是按联盟出的，
+  // 标题里必须带上联盟名，否则导出的图看不出这是哪个联盟的数据。
+  scopeTitle: function (suffix) {
+    const zone = this.data.selectedZone ? this.data.selectedZone.zoneName : ''
+    const ally = this.data.selectedAlliance ? this.data.selectedAlliance.allianceName : ''
+    const head = ally ? `${zone} · ${ally}` : zone
+    return `${head} ${suffix}`.trim()
+  },
+
+  // 默认落到「区管所在联盟」，其次沿用本次会话里手动切过的联盟，最后退回第一个。
+  // 判定来源优先级：
+  //   ① 本次进页面后手动选过的（_pinnedAllianceId）——切类型/重载时不要被弹回去
+  //   ② 全局当前联盟（报名页选中过，app.setCurrentAlliance 写入）
+  //   ③ users.allianceId（区管本人绑定的联盟）
+  //   ④ storage 里「上次选择的联盟」
+  // 命中但不在本分区联盟列表里时一律忽略（避免跨分区串联盟）。
+  resolveDefaultAllianceIndex: function (list) {
+    if (!list || list.length === 0) return 0
+    const ui = app.globalData.userInfo || {}
+    const candidates = [
+      this._pinnedAllianceId,
+      app.globalData.currentAlliance && app.globalData.currentAlliance._id,
+      ui.allianceId,
+      wx.getStorageSync('lastAllianceId') || ''
+    ]
+    for (const id of candidates) {
+      if (!id) continue
+      const idx = list.findIndex(a => a._id === id)
+      if (idx >= 0) return idx
+    }
+    return 0
   },
 
   // 加载统计数据
@@ -280,8 +301,10 @@ Page({
         }
 
         const arsenalFilter = { zoneId: this.data.selectedZone._id }
-        // 「全部联盟」时不加联盟条件 → 看整个分区
-        if (!isAllAlliance(this.data.selectedAlliance)) arsenalFilter.allianceId = this.data.selectedAlliance._id
+        // 区管按联盟逐个查看（列表里没有「全部联盟」）；真的没选到联盟时才退化成整区
+        if (this.data.selectedAlliance && this.data.selectedAlliance._id) {
+          arsenalFilter.allianceId = this.data.selectedAlliance._id
+        }
         const configs = await db.getArsenalConfigs(arsenalFilter)
 
         const arsenalStats = []
@@ -324,8 +347,10 @@ Page({
         }
 
         const canyonFilter = { zoneId: this.data.selectedZone._id }
-        // 「全部联盟」时不加联盟条件 → 看整个分区
-        if (!isAllAlliance(this.data.selectedAlliance)) canyonFilter.allianceId = this.data.selectedAlliance._id
+        // 区管按联盟逐个查看（列表里没有「全部联盟」）；真的没选到联盟时才退化成整区
+        if (this.data.selectedAlliance && this.data.selectedAlliance._id) {
+          canyonFilter.allianceId = this.data.selectedAlliance._id
+        }
         const configs = await db.getCanyonConfigs(canyonFilter)
 
         const canyonStats = []
@@ -453,6 +478,9 @@ Page({
   onAllianceChange: function (e) {
     const index = e.detail.value
     const alliance = this.data.allianceOptions[index]
+
+    // 记住本次手动选择：切报名类型/重拉联盟时不要被弹回默认联盟
+    this._pinnedAllianceId = alliance ? alliance._id : ''
 
     this.setData({
       allianceIndex: index,
@@ -757,7 +785,7 @@ Page({
 
         ctx.fillStyle = '#07C160'
         ctx.font = 'bold 36px sans-serif'
-        ctx.fillText(this.data.selectedZone.zoneName + ' 兵工厂报名统计', margin, titleY)
+        ctx.fillText(this.scopeTitle('兵工厂报名统计'), margin, titleY)
 
         ctx.fillStyle = '#999999'
         ctx.font = '26px sans-serif'
@@ -919,7 +947,7 @@ Page({
 
         ctx.fillStyle = '#07C160'
         ctx.font = 'bold 36px sans-serif'
-        ctx.fillText(this.data.selectedZone.zoneName + ' 峡谷报名统计', margin, titleY)
+        ctx.fillText(this.scopeTitle('峡谷报名统计'), margin, titleY)
 
         ctx.fillStyle = '#999999'
         ctx.font = '26px sans-serif'

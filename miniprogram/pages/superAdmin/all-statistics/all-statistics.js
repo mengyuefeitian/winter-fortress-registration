@@ -975,7 +975,10 @@ Page({
       height = 225
 
       for (const stat of this.data.timeSlotStats) {
-        height += 60
+        // 40 = 绘制里标题行的步进（y += 40）。
+        // ⚠️ 这里原来写 60，与绘制步进对不上：每个时间段多算 20px，
+        //    十几个时间段就在图底部攒出几百像素空白。
+        height += 40
         if (stat.timeSlot.tag) {
           height += 35
         }

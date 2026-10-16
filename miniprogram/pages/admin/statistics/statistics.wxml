@@ -19,7 +19,7 @@
         <view class="zone-readonly">{{selectedZone ? selectedZone.zoneName : '加载中…'}}</view>
       </view>
     </view>
-    <!-- 联盟筛选：堡垒按联盟统计；兵工厂/峡谷 的配置也带联盟，可切「全部联盟」看整个分区 -->
+    <!-- 联盟筛选：堡垒/兵工厂/峡谷 都按联盟出统计，区管在这里切换要查看的联盟（没有「全部联盟」） -->
     <view class="form-row" wx:if="{{selectedRegType === '堡垒报名' || selectedRegType === '兵工厂报名' || selectedRegType === '峡谷报名'}}">
       <view class="form-col">
         <text class="form-label">联盟</text>
@@ -144,7 +144,7 @@
   <!-- 兵工厂报名统计 -->
   <view wx:if="{{selectedRegType === '兵工厂报名' && selectedZone}}" class="card">
     <view class="stats-header">
-      <view class="stats-title">{{selectedZone.zoneName}} 兵工厂报名统计</view>
+      <view class="stats-title">{{selectedZone.zoneName}} · {{selectedAlliance.allianceName}} 兵工厂报名统计</view>
     </view>
     <view class="stats-actions">
       <button class="btn btn-danger btn-sm" bindtap="clearRegistrations">清空数据</button>
@@ -195,7 +195,7 @@
   <!-- 峡谷报名统计 -->
   <view wx:if="{{selectedRegType === '峡谷报名' && selectedZone}}" class="card">
     <view class="stats-header">
-      <view class="stats-title">{{selectedZone.zoneName}} 峡谷报名统计</view>
+      <view class="stats-title">{{selectedZone.zoneName}} · {{selectedAlliance.allianceName}} 峡谷报名统计</view>
     </view>
     <view class="stats-actions">
       <button class="btn btn-danger btn-sm" bindtap="clearRegistrations">清空数据</button>
