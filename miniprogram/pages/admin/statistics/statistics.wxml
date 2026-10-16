@@ -19,11 +19,11 @@
         <view class="zone-readonly">{{selectedZone ? selectedZone.zoneName : '加载中…'}}</view>
       </view>
     </view>
-    <!-- 堡垒报名需要选择联盟 -->
-    <view class="form-row" wx:if="{{selectedRegType === '堡垒报名'}}">
+    <!-- 联盟筛选：堡垒/兵工厂/峡谷 都按联盟出统计，区管在这里切换要查看的联盟（没有「全部联盟」） -->
+    <view class="form-row" wx:if="{{selectedRegType === '堡垒报名' || selectedRegType === '兵工厂报名' || selectedRegType === '峡谷报名'}}">
       <view class="form-col">
         <text class="form-label">联盟</text>
-        <alliance-picker wx:if="{{selectedZone}}" alliances="{{alliances}}" value="{{allianceIndex}}"
+        <alliance-picker wx:if="{{selectedZone}}" alliances="{{allianceOptions}}" value="{{allianceIndex}}"
                          placeholder="请选择" bind:change="onAllianceChange" />
         <view wx:else class="picker-compact disabled">
           <text class="picker-placeholder">请先选分区</text>
@@ -144,7 +144,7 @@
   <!-- 兵工厂报名统计 -->
   <view wx:if="{{selectedRegType === '兵工厂报名' && selectedZone}}" class="card">
     <view class="stats-header">
-      <view class="stats-title">{{selectedZone.zoneName}} 兵工厂报名统计</view>
+      <view class="stats-title">{{selectedZone.zoneName}} · {{selectedAlliance.allianceName}} 兵工厂报名统计</view>
     </view>
     <view class="stats-actions">
       <button class="btn btn-danger btn-sm" bindtap="clearRegistrations">清空数据</button>
@@ -195,7 +195,7 @@
   <!-- 峡谷报名统计 -->
   <view wx:if="{{selectedRegType === '峡谷报名' && selectedZone}}" class="card">
     <view class="stats-header">
-      <view class="stats-title">{{selectedZone.zoneName}} 峡谷报名统计</view>
+      <view class="stats-title">{{selectedZone.zoneName}} · {{selectedAlliance.allianceName}} 峡谷报名统计</view>
     </view>
     <view class="stats-actions">
       <button class="btn btn-danger btn-sm" bindtap="clearRegistrations">清空数据</button>

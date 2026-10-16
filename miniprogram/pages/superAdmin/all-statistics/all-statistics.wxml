@@ -18,10 +18,11 @@
         <zone-selector value="{{selectedZone}}" zones="{{zones}}" loaded="{{true}}" bind:change="onZoneChange" />
       </view>
     </view>
-    <view class="form-row" wx:if="{{selectedRegType === '堡垒报名'}}">
+    <!-- 联盟筛选：堡垒按联盟统计；兵工厂/峡谷 的配置也带联盟，可选「全部联盟」看整区 -->
+    <view class="form-row" wx:if="{{selectedRegType === '堡垒报名' || selectedRegType === '兵工厂报名' || selectedRegType === '峡谷报名'}}">
       <view class="form-col">
         <text class="form-label">联盟</text>
-        <alliance-picker wx:if="{{selectedZone}}" alliances="{{alliances}}" value="{{allianceIndex}}"
+        <alliance-picker wx:if="{{selectedZone}}" alliances="{{allianceOptions}}" value="{{allianceIndex}}"
                          placeholder="请选择" bind:change="onAllianceChange" />
         <view wx:else class="picker-compact disabled">
           <text class="picker-placeholder">请先选分区</text>

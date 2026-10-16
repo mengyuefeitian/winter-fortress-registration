@@ -108,8 +108,6 @@ Page({
     try {
       util.showLoading('正在生成截图...')
 
-      const screenshotData = this.buildScreenshotData()
-
       // 页边距和间距配置
       const margin = 40
       const canvasWidth = 750
@@ -124,6 +122,19 @@ Page({
       const innerWidth = canvasWidth - margin * 2
       const colHeadWidth = Math.floor(innerWidth * 0.25)
       const colBodyWidth = innerWidth - colHeadWidth
+      const headMaxWidth = colHeadWidth - 24
+      const bodyMaxWidth = colBodyWidth - 16
+
+      // 先量高度再建画布：行高会随真实换行结果撑开（车身名单长时一行变两三行），
+      // 必须跟绘制用同一个 wrapText 量。见 measureScreenshot()。
+      const screenshotData = this.measureScreenshot({
+        canvasWidth: canvasWidth,
+        rowHeight: rowHeight,
+        headerHeight: headerHeight,
+        headerY: headerY,
+        headMaxWidth: headMaxWidth,
+        bodyMaxWidth: bodyMaxWidth
+      })
 
       const canvas = wx.createOffscreenCanvas({
         type: '2d',
@@ -165,7 +176,6 @@ Page({
 
       // 数据行
       let y = dataStartY
-      const headMaxWidth = colHeadWidth - 24
       for (let i = 0; i < this.data.rows.length; i++) {
         const r = this.data.rows[i]
 
@@ -185,7 +195,7 @@ Page({
         // 车头昵称 - 自动换行
         ctx.fillStyle = r.type === 'mobile' ? '#FF9800' : '#333333'
         ctx.font = `bold 22px sans-serif`
-        const headLines = this.wrapText(ctx, r.headNickName, headMaxWidth)
+        const headLines = this.wrapText(ctx, r.headNickName || '-', headMaxWidth)
         for (let j = 0; j < headLines.length; j++) {
           ctx.fillText(headLines[j], margin + 12, rowStartY + j * 26)
         }
@@ -194,7 +204,6 @@ Page({
         ctx.fillStyle = '#333333'
         ctx.font = '22px sans-serif'
         const bodyText = r.bodyList || '-'
-        const bodyMaxWidth = colBodyWidth - 16
         const bodyLines = this.wrapText(ctx, bodyText, bodyMaxWidth)
         for (let j = 0; j < bodyLines.length; j++) {
           ctx.fillText(bodyLines[j], margin + colHeadWidth + 12, rowStartY + j * 26)
@@ -268,24 +277,31 @@ Page({
     return lines
   },
 
-  buildScreenshotData: function () {
-    const topArea = 155 + 50
-    const rowHeight = 45
+  // 量出截图真实高度 —— 必须与 doSaveScreenshot 里的绘制步进**完全一致**。
+  // ⚠️ 旧实现按「字符数 ÷ 每行能放几个字」估算行数，而绘制用的是 ctx.measureText 换行：
+  //    中英混排 / 长车身名单时实际行数比估算多，画布就比内容矮，最后几行被裁掉。
+  //    这里直接借一块临时画布跑同一个 wrapText，量出多少就是多少。
+  measureScreenshot: function (opt) {
+    const canvasWidth = opt.canvasWidth
+    const rowHeight = opt.rowHeight
+    const headerHeight = opt.headerHeight
+    const headerY = opt.headerY
     const bottomMargin = 40
-    const margin = 40
-    const canvasWidth = 750
-    const innerWidth = canvasWidth - margin * 2
-    const colHeadWidth = Math.floor(innerWidth * 0.25)
-    const colBodyWidth = innerWidth - colHeadWidth
-    const headMaxWidth = colHeadWidth - 24
+
+    const measure = wx.createOffscreenCanvas({ type: '2d', width: canvasWidth, height: 200 })
+    const mctx = measure.getContext('2d')
+
     let dataHeight = 0
-    for (const r of this.data.rows) {
-      const headLines = Math.ceil(r.headNickName.length / Math.floor(headMaxWidth / 22)) || 1
-      const bodyLines = Math.ceil(r.bodyList.length / Math.floor(colBodyWidth / 22)) || 1
+    for (const r of this.data.rows || []) {
+      mctx.font = 'bold 22px sans-serif'
+      const headLines = this.wrapText(mctx, r.headNickName || '-', opt.headMaxWidth).length || 1
+      mctx.font = '22px sans-serif'
+      const bodyLines = this.wrapText(mctx, r.bodyList || '-', opt.bodyMaxWidth).length || 1
       const lineCount = Math.max(headLines, bodyLines)
-      const h = Math.max(rowHeight, lineCount * 26 + 10)
-      dataHeight += h
+      dataHeight += Math.max(rowHeight, lineCount * 26 + 10)
     }
-    return { height: topArea + dataHeight + bottomMargin }
+
+    const dataStartY = headerY + headerHeight
+    return { height: Math.max(dataStartY + dataHeight + bottomMargin, 300) }
   }
 })

@@ -53,6 +53,8 @@ Page({
     selectedZone: null,
 
     alliances: [],
+    // 联盟选择器实际渲染的列表：区管按联盟逐个查看（无「全部联盟」），可在列表里切换
+    allianceOptions: [],
     allianceIndex: 0,
     selectedAlliance: null,
 
@@ -106,6 +108,8 @@ Page({
       regTypeIndex: index,
       selectedRegType: this.data.registrationTypes[index]
     })
+    // 类型变了，可选联盟列表也要跟着变（兵工厂/峡谷 才有「全部联盟」）
+    this.applyAllianceOptions()
     this.loadStatistics()
   },
 
@@ -178,11 +182,10 @@ Page({
       this.setData({
         alliances: alliances
       })
+      // 重建选择器可选项并选中默认项（必须在 loadStatistics 之前）
+      this.applyAllianceOptions()
 
-      if (alliances.length > 0) {
-        this.setData({
-          selectedAlliance: alliances[0]
-        })
+      if (this.data.allianceOptions.length > 0) {
         this.loadStatistics()
       } else {
         util.hideLoading()
@@ -192,6 +195,56 @@ Page({
       util.hideLoading()
       util.showError('加载联盟失败')
     }
+  },
+
+  // 联盟选择器的可选项与默认选中项。
+  // 区管的统计/截图一律按联盟维度出：列表就是本分区下的真实联盟，**没有「全部联盟」**，
+  // 区管想看别的联盟就在选择器里切。
+  // ⚠️ 曾经只在 WXML 里给堡垒报名渲染联盟选择器，而兵工厂/峡谷 的查询里又写了
+  //    `if (selectedAlliance) filter.allianceId = …`，于是这两个类型被**静默**
+  //    套上「第一个联盟」的过滤：界面上看不到选择器、看到的总人数只是第一个联盟的，
+  //    而且完全没有办法切换。现在这三个类型都显示同一个联盟列表。
+  applyAllianceOptions: function () {
+    const list = this.data.alliances.slice()
+    const index = this.resolveDefaultAllianceIndex(list)
+    this.setData({
+      allianceOptions: list,
+      allianceIndex: index,
+      selectedAlliance: list[index] || null
+    })
+  },
+
+  // 截图/统计标题的作用域文案。区管的兵工厂/峡谷统计是按联盟出的，
+  // 标题里必须带上联盟名，否则导出的图看不出这是哪个联盟的数据。
+  scopeTitle: function (suffix) {
+    const zone = this.data.selectedZone ? this.data.selectedZone.zoneName : ''
+    const ally = this.data.selectedAlliance ? this.data.selectedAlliance.allianceName : ''
+    const head = ally ? `${zone} · ${ally}` : zone
+    return `${head} ${suffix}`.trim()
+  },
+
+  // 默认落到「区管所在联盟」，其次沿用本次会话里手动切过的联盟，最后退回第一个。
+  // 判定来源优先级：
+  //   ① 本次进页面后手动选过的（_pinnedAllianceId）——切类型/重载时不要被弹回去
+  //   ② 全局当前联盟（报名页选中过，app.setCurrentAlliance 写入）
+  //   ③ users.allianceId（区管本人绑定的联盟）
+  //   ④ storage 里「上次选择的联盟」
+  // 命中但不在本分区联盟列表里时一律忽略（避免跨分区串联盟）。
+  resolveDefaultAllianceIndex: function (list) {
+    if (!list || list.length === 0) return 0
+    const ui = app.globalData.userInfo || {}
+    const candidates = [
+      this._pinnedAllianceId,
+      app.globalData.currentAlliance && app.globalData.currentAlliance._id,
+      ui.allianceId,
+      wx.getStorageSync('lastAllianceId') || ''
+    ]
+    for (const id of candidates) {
+      if (!id) continue
+      const idx = list.findIndex(a => a._id === id)
+      if (idx >= 0) return idx
+    }
+    return 0
   },
 
   // 加载统计数据
@@ -248,7 +301,10 @@ Page({
         }
 
         const arsenalFilter = { zoneId: this.data.selectedZone._id }
-        if (this.data.selectedAlliance) arsenalFilter.allianceId = this.data.selectedAlliance._id
+        // 区管按联盟逐个查看（列表里没有「全部联盟」）；真的没选到联盟时才退化成整区
+        if (this.data.selectedAlliance && this.data.selectedAlliance._id) {
+          arsenalFilter.allianceId = this.data.selectedAlliance._id
+        }
         const configs = await db.getArsenalConfigs(arsenalFilter)
 
         const arsenalStats = []
@@ -291,7 +347,10 @@ Page({
         }
 
         const canyonFilter = { zoneId: this.data.selectedZone._id }
-        if (this.data.selectedAlliance) canyonFilter.allianceId = this.data.selectedAlliance._id
+        // 区管按联盟逐个查看（列表里没有「全部联盟」）；真的没选到联盟时才退化成整区
+        if (this.data.selectedAlliance && this.data.selectedAlliance._id) {
+          canyonFilter.allianceId = this.data.selectedAlliance._id
+        }
         const configs = await db.getCanyonConfigs(canyonFilter)
 
         const canyonStats = []
@@ -418,7 +477,10 @@ Page({
   // 联盟选择变化
   onAllianceChange: function (e) {
     const index = e.detail.value
-    const alliance = this.data.alliances[index]
+    const alliance = this.data.allianceOptions[index]
+
+    // 记住本次手动选择：切报名类型/重拉联盟时不要被弹回默认联盟
+    this._pinnedAllianceId = alliance ? alliance._id : ''
 
     this.setData({
       allianceIndex: index,
@@ -702,8 +764,9 @@ Page({
           if (stat.registrations.length > 0) {
             const subs = stat.registrations.filter(r => r.position === 'substitute')
             const combats = stat.registrations.filter(r => r.position === 'combat')
-            if (subs.length > 0) totalHeight += 30 + Math.ceil(subs.length / 3) * 35
+            // 与绘制顺序保持一致：参战先、替补后
             if (combats.length > 0) totalHeight += 30 + Math.ceil(combats.length / 3) * 35
+            if (subs.length > 0) totalHeight += 30 + Math.ceil(subs.length / 3) * 35
           }
           totalHeight += 25
         }
@@ -723,7 +786,7 @@ Page({
 
         ctx.fillStyle = '#07C160'
         ctx.font = 'bold 36px sans-serif'
-        ctx.fillText(this.data.selectedZone.zoneName + ' 兵工厂报名统计', margin, titleY)
+        ctx.fillText(this.scopeTitle('兵工厂报名统计'), margin, titleY)
 
         ctx.fillStyle = '#999999'
         ctx.font = '26px sans-serif'
@@ -760,24 +823,8 @@ Page({
             const colMaxW = colW - 10
             const colXs = [nameStartX, nameStartX + colW, nameStartX + colW * 2]
 
-            if (substitutes.length > 0) {
-              ctx.fillStyle = '#07C160'
-              ctx.font = 'bold 24px sans-serif'
-              ctx.fillText(`替补(${substitutes.length}):`, margin + 20, y)
-              y += 30
-
-              ctx.fillStyle = '#666666'
-              ctx.font = '24px sans-serif'
-              const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
-              for (let i = 0; i < subNames.length; i += 3) {
-                subNames.slice(i, i + 3).forEach((name, col) => {
-                  const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(substitutes[i + col]), badgeImgs)
-                  ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
-                })
-                y += 35
-              }
-            }
-
+            // ⚠️ 顺序：参战在上、替补在下（2026-10-16 用户要求）。
+            // 高度累加顺序也要跟着换，保证「算高度的公式」与「绘制步进」依然是同一套口径。
             if (combats.length > 0) {
               ctx.fillStyle = '#FA5151'
               ctx.font = 'bold 24px sans-serif'
@@ -790,6 +837,24 @@ Page({
               for (let i = 0; i < combatNames.length; i += 3) {
                 combatNames.slice(i, i + 3).forEach((name, col) => {
                   const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(combats[i + col]), badgeImgs)
+                  ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
+                })
+                y += 35
+              }
+            }
+
+            if (substitutes.length > 0) {
+              ctx.fillStyle = '#07C160'
+              ctx.font = 'bold 24px sans-serif'
+              ctx.fillText(`替补(${substitutes.length}):`, margin + 20, y)
+              y += 30
+
+              ctx.fillStyle = '#666666'
+              ctx.font = '24px sans-serif'
+              const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
+              for (let i = 0; i < subNames.length; i += 3) {
+                subNames.slice(i, i + 3).forEach((name, col) => {
+                  const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(substitutes[i + col]), badgeImgs)
                   ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
                 })
                 y += 35
@@ -864,8 +929,9 @@ Page({
           if (stat.registrations.length > 0) {
             const subs = stat.registrations.filter(r => r.position === 'substitute')
             const combats = stat.registrations.filter(r => r.position === 'combat')
-            if (subs.length > 0) totalHeight += 30 + Math.ceil(subs.length / 3) * 35
+            // 与绘制顺序保持一致：参战先、替补后
             if (combats.length > 0) totalHeight += 30 + Math.ceil(combats.length / 3) * 35
+            if (subs.length > 0) totalHeight += 30 + Math.ceil(subs.length / 3) * 35
           }
           totalHeight += 25
         }
@@ -885,7 +951,7 @@ Page({
 
         ctx.fillStyle = '#07C160'
         ctx.font = 'bold 36px sans-serif'
-        ctx.fillText(this.data.selectedZone.zoneName + ' 峡谷报名统计', margin, titleY)
+        ctx.fillText(this.scopeTitle('峡谷报名统计'), margin, titleY)
 
         ctx.fillStyle = '#999999'
         ctx.font = '26px sans-serif'
@@ -922,24 +988,8 @@ Page({
             const colMaxW = colW - 10
             const colXs = [nameStartX, nameStartX + colW, nameStartX + colW * 2]
 
-            if (substitutes.length > 0) {
-              ctx.fillStyle = '#07C160'
-              ctx.font = 'bold 24px sans-serif'
-              ctx.fillText(`替补(${substitutes.length}):`, margin + 20, y)
-              y += 30
-
-              ctx.fillStyle = '#666666'
-              ctx.font = '24px sans-serif'
-              const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
-              for (let i = 0; i < subNames.length; i += 3) {
-                subNames.slice(i, i + 3).forEach((name, col) => {
-                  const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(substitutes[i + col]), badgeImgs)
-                  ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
-                })
-                y += 35
-              }
-            }
-
+            // ⚠️ 顺序：参战在上、替补在下（2026-10-16 用户要求）。
+            // 高度累加顺序也要跟着换，保证「算高度的公式」与「绘制步进」依然是同一套口径。
             if (combats.length > 0) {
               ctx.fillStyle = '#FA5151'
               ctx.font = 'bold 24px sans-serif'
@@ -952,6 +1002,24 @@ Page({
               for (let i = 0; i < combatNames.length; i += 3) {
                 combatNames.slice(i, i + 3).forEach((name, col) => {
                   const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(combats[i + col]), badgeImgs)
+                  ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
+                })
+                y += 35
+              }
+            }
+
+            if (substitutes.length > 0) {
+              ctx.fillStyle = '#07C160'
+              ctx.font = 'bold 24px sans-serif'
+              ctx.fillText(`替补(${substitutes.length}):`, margin + 20, y)
+              y += 30
+
+              ctx.fillStyle = '#666666'
+              ctx.font = '24px sans-serif'
+              const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
+              for (let i = 0; i < subNames.length; i += 3) {
+                subNames.slice(i, i + 3).forEach((name, col) => {
+                  const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(substitutes[i + col]), badgeImgs)
                   ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
                 })
                 y += 35
