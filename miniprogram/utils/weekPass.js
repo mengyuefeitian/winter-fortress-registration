@@ -670,9 +670,37 @@ function diagnose(pageCtx) {
     })
 }
 
+/**
+ * 预热激励视频（页面 onLoad 里调一次，纯体验优化，可以随便删掉不影响功能）
+ *
+ * 为什么需要：广告实例是「首次点击才创建」的，第一次点击要等
+ * show 失败 → load → 再 show 这一圈，弱网下就是「点了半天没动静」。
+ * 页面进来时静默 load 一次，点下去能直接播。
+ *
+ * 三种情况直接跳过，一次多余请求都不发：
+ *   ① 总开关关闭 / 广告位没配（ad.warmup 内部判断）
+ *   ② 本周已经持有通行证 —— 这个页面根本不会弹广告
+ *   ③ 广告刚失败过、还在冷却期（ad.warmup 内部判断）
+ *
+ * ⚠️ 全程 try/catch + 静默失败：预热是加分项，**不能**让它影响页面加载。
+ *
+ * @param {Object} pageCtx 页面 this（必须是页面实例，不能是 app）
+ */
+function warmup(pageCtx) {
+  try {
+    if (!adConfig.ENABLED) return
+    // 本地已持有 = 本周不会再弹广告，别白拉一次素材
+    if (hasPassSync()) return
+    ad.warmup(pageCtx)
+  } catch (e) {
+    console.warn('[weekPass] 预热激励视频失败', e)
+  }
+}
+
 module.exports = {
   diagnose: diagnose,
   resetForTest: resetForTest,
+  warmup: warmup,
   getWeekStart: getWeekStart,
   getWeekEnd: getWeekEnd,
   getWeekKey: getWeekKey,
