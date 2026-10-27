@@ -13,6 +13,73 @@ function isZoneOwnedBy(zone, userId) {
   return Array.isArray(zone.adminIds) && zone.adminIds.indexOf(userId) !== -1
 }
 
+// 纯前端状态：只活在这一屏，服务端数据里没有这些字段。
+// 「分区开通」在点批准后会把 creatingZone 置 true 展开编号/名称表单，
+// 刷新列表时若整份覆盖 applications，这些状态就被抹平 → 表单自己收起来。
+const EPHEMERAL_KEYS = [
+  'creatingZone', 'inputZoneCode', 'inputZoneName',
+  'selectingZone', 'selectingAlliance', 'selectedZone',
+  'zonePickerIndex', 'alliancePickerIndex'
+]
+
+// 用刷新回来的新列表 + 界面上正在进行的临时状态合成最终列表。
+// ⚠️ 2026-10-27 用户反馈：点「批准」能看到可改的编号，但表单会自己关掉，
+//    得再点一次才能批 —— 就是这里的问题。云函数冷启动越慢越容易撞上，
+//    所以表现为「偶发、不是必现」。
+function keepFormState(freshList, prevList) {
+  const fresh = freshList || []
+  if (!prevList || prevList.length === 0) return fresh
+  const prevById = {}
+  for (const p of prevList) { if (p && p._id) prevById[p._id] = p }
+
+  return fresh.map(app => {
+    const prev = prevById[app._id]
+    if (!prev) return app
+    let merged = app
+    for (const k of EPHEMERAL_KEYS) {
+      if (prev[k] === undefined) continue
+      // 表单没展开时，编号/名称用服务端给的默认值；展开了就以用户输入为准，绝不能被盖回去
+      if ((k === 'inputZoneCode' || k === 'inputZoneName') && !prev.creatingZone) continue
+      if (merged[k] === prev[k]) continue
+      if (merged === app) merged = Object.assign({}, app)
+      merged[k] = prev[k]
+    }
+    return merged
+  })
+}
+
+// 列表定位一律优先用 _id：后台刷新可能插入/删除条目让下标漂移，
+// 沿用点按钮时的旧下标会把输入写进别人那行、甚至批错申请。
+function indexOfApp(list, dataset) {
+  const arr = list || []
+  const id = dataset && dataset.id
+  if (id) {
+    const i = arr.findIndex(x => x && x._id === id)
+    if (i >= 0) return i
+  }
+  const idx = dataset && dataset.index
+  const n = typeof idx === 'number' ? idx : parseInt(idx, 10)
+  return Number.isFinite(n) ? n : -1
+}
+
+// 云端错误的 errMsg 常常是
+//   cloud.callFunction:fail Error: errCode: -504002 functions execute fail | errMsg: ...
+// 一整串直接拼进提示，用户看到的就是「报了一大堆错误」。
+// 只留人能看懂的前半句，完整对象仍旧打到 console。
+function shortErr(err) {
+  if (!err) return '未知错误'
+  let t = typeof err === 'string' ? err : (err.message || err.errMsg || '')
+  t = String(t)
+    .replace(/^cloud\.(callFunction|database)[^:]*:\s*/i, '')
+    .replace(/Error:\s*/gi, '')
+    .replace(/errCode:\s*-?\d+/gi, ' ')
+    .replace(/\|\s*errMsg:\s*/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (!t) return '未知错误'
+  return t.length > 80 ? t.slice(0, 80) + '…' : t
+}
+
 Page({
   data: {
     applyType: null, // 筛选类型：zoneManager 或 allianceManager，null 表示全部
@@ -33,13 +100,16 @@ Page({
 
   onShow: function () {
     if (app.globalData.roleReady) {
+      // 已经有列表了 → 走静默刷新：不转圈、失败不弹窗（避免和首屏那次叠成一堆提示）
+      const hasData = (this.data.applications || []).length > 0 ||
+        (this.data.reviewedApplications || []).length > 0
       // 区管审核页面需要确保 availableZones 已加载
       if (this.data.applyType === 'allianceManager' && this.data.availableZones.length === 0) {
         this.loadAvailableZones().then(() => {
-          this.loadApplications()
+          this.loadApplications({ silent: hasData })
         })
       } else {
-        this.loadApplications()
+        this.loadApplications({ silent: hasData })
       }
     }
   },
@@ -50,7 +120,7 @@ Page({
   onPullDownRefresh: async function () {
     try {
       this.clearReviewCache()
-      await this.loadApplications()
+      await this.loadApplications({ force: true })
     } catch (e) {
       console.error('下拉刷新失败:', e)
     } finally {
@@ -154,7 +224,27 @@ Page({
   },
 
   // 加载申请列表（缓存优先：命中即秒显并后台静默刷新；解决每次进入转圈 8-10s 的云函数冷启动问题）
-  loadApplications: async function () {
+  // opts.silent —— 后台静默刷新：不转圈、失败只记日志（onShow 用）
+  // opts.force  —— 强制发起一次新请求（下拉刷新用），不吃并发合并
+  // ⚠️ 并发/时序：onShow、下拉刷新、审批收尾都会触发本函数。之前没有合并，
+  //    云函数冷启动慢的时候会有两次刷新同时在飞，后落地的旧结果会盖掉新结果，
+  //    弹窗和 loading 也会叠起来（用户看到的就是「报了一大堆错误」）。
+  loadApplications: async function (opts) {
+    const o = opts || {}
+    if (this._appLoading && !o.force) return this._appLoading
+    const seq = (this._appLoadSeq = (this._appLoadSeq || 0) + 1)
+    const run = this._loadApplicationsBody(o, seq)
+    this._appLoading = run
+    try {
+      return await run
+    } finally {
+      if (this._appLoading === run) this._appLoading = null
+    }
+  },
+
+  _loadApplicationsBody: async function (o, seq) {
+    o = o || {}
+    const quiet = !!o.silent
     const role = app.globalData.role || 'user'
     const wxdb = wx.cloud.database()
     const _ = wxdb.command
@@ -175,8 +265,9 @@ Page({
     try {
       const cached = wx.getStorageSync(cacheKey)
       if (cached && Array.isArray(cached.applications)) {
+        // 缓存里也没有表单状态 → 同样要合并，否则「从别的页面回来」也会把表单收起来
         this.setData({
-          applications: cached.applications,
+          applications: keepFormState(cached.applications, this.data.applications),
           reviewedApplications: cached.reviewedApplications || [],
           stats: cached.stats || null
         })
@@ -186,7 +277,11 @@ Page({
     } catch (e) {}
 
     // 只有「新鲜缓存」才不转圈；过期缓存仍渲染占位，但要让用户看到正在刷新
-    if (!cacheIsFresh) util.showLoading('加载申请列表...')
+    // 静默刷新（页面已有列表）也不转圈：盖住界面会让正在填的表单看起来卡死
+    // 只关自己开的那一次：并发时后到的那次调用不能把别人的 loading 关掉
+    let showedLoading = false
+    if (!cacheIsFresh && !quiet) { util.showLoading('加载申请列表...'); showedLoading = true }
+    const doneLoading = () => { if (showedLoading) { util.hideLoading(); showedLoading = false } }
 
     try {
       // 2) 列表（云函数，可能冷启动）+ 分区列表（客户端直连，无冷启动）并行发起，省掉串行耗时
@@ -201,7 +296,7 @@ Page({
 
       if (listOutcome && listOutcome.__err) {
         const err = listOutcome.__err
-        util.hideLoading()
+        doneLoading()
         const msg = (err && err.message) || ''
         let text
         if (msg.indexOf('Unknown action') >= 0) {
@@ -213,7 +308,10 @@ Page({
         }
         // ⚠️ 刷新失败必须让用户看到：否则界面停留在旧缓存，看起来像「申请根本不存在」。
         //    缓存新鲜(≤TTL)只轻提示；缓存过期/无缓存则弹窗，避免误判为「没有待审条目」。
-        if (cacheIsFresh) {
+        //    静默刷新（页面已有列表）只在控制台留一行，不打断正在操作的超管。
+        if (quiet) {
+          console.warn('[admin-review] 后台静默刷新失败:', err)
+        } else if (cacheIsFresh) {
           util.showError('列表可能不是最新，请下拉刷新')
         } else {
           util.showErrorLong(text + (servedFromCache ? '\n\n当前显示的是本地缓存，可能不是最新，请下拉刷新重试。' : ''))
@@ -221,12 +319,14 @@ Page({
         return
       }
       if (!listOutcome.result || listOutcome.result.err) {
-        util.hideLoading()
+        doneLoading()
         const errText = (listOutcome.result && listOutcome.result.err) || '未知错误'
-        if (cacheIsFresh) {
+        if (quiet) {
+          console.warn('[admin-review] 后台静默刷新返回错误:', errText)
+        } else if (cacheIsFresh) {
           util.showError('列表可能不是最新，请下拉刷新')
         } else {
-          util.showErrorLong('加载失败: ' + errText + (servedFromCache ? '\n\n当前显示的是本地缓存，可能不是最新，请下拉刷新重试。' : ''))
+          util.showErrorLong('加载失败: ' + shortErr(errText) + (servedFromCache ? '\n\n当前显示的是本地缓存，可能不是最新，请下拉刷新重试。' : ''))
         }
         return
       }
@@ -397,13 +497,19 @@ Page({
         })
       }
 
+      // ⚠️ 已被更新的一次刷新取代 → 直接丢弃，别用旧数据盖掉新数据
+      if (seq !== this._appLoadSeq) { doneLoading(); return }
+
+      // 合并界面上的临时状态（展开的表单 / 已输入的编号名称 / 选择器），
+      // 否则这一行会在用户正填的时候突然收起
       this.setData({
-        applications: applications,
+        applications: keepFormState(applications, this.data.applications),
         reviewedApplications: filteredReviewedApplications,
         stats: stats
       })
 
-      // 写入缓存（供下次进入秒显）
+      // 写入缓存（供下次进入秒显）。存「干净」的服务端数据，不存表单状态，
+      // 免得下次进页面看到上次残留的展开表单。
       try {
         wx.setStorageSync(cacheKey, {
           time: Date.now(),
@@ -413,14 +519,17 @@ Page({
         })
       } catch (e) {}
 
-      util.hideLoading()
+      doneLoading()
 
     } catch (err) {
       console.error('加载申请列表失败:', err)
-      util.hideLoading()
+      doneLoading()
+      if (seq !== this._appLoadSeq) return
       // ⚠️ 同样不能静默：命中缓存时也必须告知，否则旧列表被当成「没有待审条目」
-      const text = '加载申请列表失败: ' + (err.message || '未知错误')
-      if (cacheIsFresh) {
+      const text = '加载申请列表失败: ' + shortErr(err)
+      if (quiet) {
+        console.warn('[admin-review] 后台静默刷新失败:', text)
+      } else if (cacheIsFresh) {
         util.showError('列表可能不是最新，请下拉刷新')
       } else {
         util.showErrorLong(text + (servedFromCache ? '\n\n当前显示的是本地缓存，可能不是最新，请下拉刷新重试。' : ''))
@@ -430,7 +539,8 @@ Page({
 
   // 开始选择分区（区管申请）
   startSelectZone: function (e) {
-    const index = e.currentTarget.dataset.index
+    const index = indexOfApp(this.data.applications, e.currentTarget.dataset)
+    if (index < 0) return
     const applications = this.data.applications.map((app, i) =>
       // 保留已预填的 selectedZone（区管申请自带分区），仅在未预填时才置空
       i === index ? { ...app, selectingZone: true } : app
@@ -454,7 +564,11 @@ Page({
     const applicationId = e.currentTarget.dataset.id
     let userId = e.currentTarget.dataset.userid
     const userOpenid = e.currentTarget.dataset.useropenid
-    const index = e.currentTarget.dataset.index
+    const index = indexOfApp(this.data.applications, e.currentTarget.dataset)
+    if (index < 0) {
+      util.showInfo('这条申请已被更新，请下拉刷新后重试')
+      return
+    }
 
     // 校验 userId 是否有效
     if (!userId) {
@@ -544,13 +658,14 @@ Page({
     } catch (err) {
       util.hideLoading()
       console.error('批准失败:', err)
-      util.showError('批准失败: ' + (err.message || '未知错误'))
+      util.showErrorLong('批准失败\n' + shortErr(err))
     }
   },
 
   // 取消选择分区
   cancelSelectZone: function (e) {
-    const index = e.currentTarget.dataset.index
+    const index = indexOfApp(this.data.applications, e.currentTarget.dataset)
+    if (index < 0) return
     const applications = this.data.applications.map((app, i) =>
       i === index ? { ...app, selectingZone: false } : app
     )
@@ -559,7 +674,8 @@ Page({
 
   // 开始选择联盟（盟管申请批准流程）
   startSelectAlliance: function (e) {
-    const index = e.currentTarget.dataset.index
+    const index = indexOfApp(this.data.applications, e.currentTarget.dataset)
+    if (index < 0) return
     const applications = this.data.applications.map((app, i) =>
       i === index ? { ...app, selectingAlliance: true } : app
     )
@@ -613,7 +729,8 @@ Page({
 
   // 取消选择联盟
   cancelSelectAlliance: function (e) {
-    const index = e.currentTarget.dataset.index
+    const index = indexOfApp(this.data.applications, e.currentTarget.dataset)
+    if (index < 0) return
     const applications = this.data.applications.map((app, i) =>
       i === index ? { ...app, selectingAlliance: false } : app
     )
@@ -626,7 +743,11 @@ Page({
     const applicationId = e.currentTarget.dataset.id
     let userId = e.currentTarget.dataset.userid
     const userOpenid = e.currentTarget.dataset.useropenid
-    const index = e.currentTarget.dataset.index
+    const index = indexOfApp(this.data.applications, e.currentTarget.dataset)
+    if (index < 0) {
+      util.showInfo('这条申请已被更新，请下拉刷新后重试')
+      return
+    }
 
     // 校验 userId 是否有效（未匹配到用户资料时，按 openid 反查真实 _id）
     if (!userId) {
@@ -751,18 +872,23 @@ Page({
     } catch (err) {
       util.hideLoading()
       console.error('批准失败:', err)
-      util.showError('批准失败: ' + (err.message || '未知错误'))
+      util.showErrorLong('批准失败\n' + shortErr(err))
     }
   },
 
   // 开始创建分区（展开表单）
   startCreateZone: function (e) {
-    const index = e.currentTarget.dataset.index
-    const zoneName = e.currentTarget.dataset.zonename
-    const trimmed = zoneName ? zoneName.trim() : ''
+    const dataset = e.currentTarget.dataset
+    const index = indexOfApp(this.data.applications, dataset)
+    if (index < 0) {
+      util.showInfo('申请已更新，请下拉刷新后重试')
+      return
+    }
+    const zoneName = dataset.zonename
+    const trimmed = zoneName ? String(zoneName).trim() : ''
     let inputZoneCode, inputZoneName
 
-    // 若申请内容仅为4位数字，自动填入分区编号和名称
+    // 若申请内容仅为 1-5 位数字，自动填入分区编号和名称
     if (/^\d{1,5}$/.test(trimmed)) {
       inputZoneCode = trimmed
       inputZoneName = trimmed
@@ -774,86 +900,99 @@ Page({
     }
 
     const applications = this.data.applications.map((app, i) =>
-      i === index ? { ...app, creatingZone: true, inputZoneCode, inputZoneName } : app
+      i === index ? Object.assign({}, app, { creatingZone: true, inputZoneCode, inputZoneName }) : app
     )
     this.setData({ applications })
   },
 
   // 取消创建分区
   cancelCreateZone: function (e) {
-    const index = e.currentTarget.dataset.index
+    const index = indexOfApp(this.data.applications, e.currentTarget.dataset)
+    if (index < 0) return
     const applications = this.data.applications.map((app, i) =>
-      i === index ? { ...app, creatingZone: false } : app
+      i === index ? Object.assign({}, app, { creatingZone: false }) : app
     )
     this.setData({ applications })
   },
 
-  // 分区编号输入
+  // 分区编号输入（按 _id 定位：后台刷新会让下标漂移）
   onZoneCodeInput: function (e) {
-    const index = e.currentTarget.dataset.index
+    const index = indexOfApp(this.data.applications, e.currentTarget.dataset)
+    if (index < 0) return
     const applications = this.data.applications.map((app, i) =>
-      i === index ? { ...app, inputZoneCode: e.detail.value } : app
+      i === index ? Object.assign({}, app, { inputZoneCode: e.detail.value }) : app
     )
     this.setData({ applications })
   },
 
   // 分区名称输入
   onZoneNameInput: function (e) {
-    const index = e.currentTarget.dataset.index
+    const index = indexOfApp(this.data.applications, e.currentTarget.dataset)
+    if (index < 0) return
     const applications = this.data.applications.map((app, i) =>
-      i === index ? { ...app, inputZoneName: e.detail.value } : app
+      i === index ? Object.assign({}, app, { inputZoneName: e.detail.value }) : app
     )
     this.setData({ applications })
   },
 
   // 确认批准分区开通
+  // ⚠️ 三个坑都在这里，别再退回旧写法：
+  //   ① 重入：连点两下会并发跑两遍流程（重复建区 / 第二条报错）
+  //   ② 下标漂移：后台刷新插了新申请，旧 dataset.index 会指到别人那行
+  //   ③ 错误太长：把 err.message 整串拼进提示，用户看到「一大堆错误」却看不出死在哪一步
   confirmApproveZoneCreation: async function (e) {
-    this.clearReviewCache()
-    const applicationId = e.currentTarget.dataset.id
-    let userId = e.currentTarget.dataset.userid
-    const userOpenid = e.currentTarget.dataset.useropenid
-    const index = e.currentTarget.dataset.index
+    if (this._zoneApproving) {
+      util.showInfo('正在处理，请稍候…')
+      return
+    }
+    this._zoneApproving = true
+    let step = '定位申请'
+    try {
+      this.clearReviewCache()
+      const dataset = e.currentTarget.dataset
+      const applicationId = dataset.id
+      let userId = dataset.userid
+      const userOpenid = dataset.useropenid
+      const index = indexOfApp(this.data.applications, dataset)
 
-    // 校验 userId 是否有效
-    if (!userId) {
-      // userId 为空时，尝试从 openid 获取真实的 _id
-      if (userOpenid) {
-        util.showLoading('正在获取用户信息...')
-        try {
-          const userRecord = await db.getUserByOpenid(userOpenid)
-          if (userRecord && userRecord._id) {
-            userId = userRecord._id
-            util.hideLoading()
-          } else {
-            util.hideLoading()
-            util.showError('用户数据异常，无法找到用户记录')
-            return
-          }
-        } catch (err) {
-          util.hideLoading()
-          util.showError('获取用户信息失败：' + (err.message || '未知错误'))
-          return
-        }
-      } else {
-        util.showError('用户数据异常，无法批准')
+      if (index < 0) {
+        util.showInfo('这条申请已被更新，请下拉刷新后重试')
         return
       }
-    }
 
-    const application = this.data.applications[index]
-    const zoneCode = (application.inputZoneCode || '').trim()
-    const zoneName = (application.inputZoneName || '').trim()
+      // 校验 userId 是否有效
+      if (!userId) {
+        step = '获取申请人信息'
+        // userId 为空时，尝试从 openid 获取真实的 _id
+        if (!userOpenid) {
+          util.showError('用户数据异常，无法批准')
+          return
+        }
+        util.showLoading('正在获取用户信息...')
+        const userRecord = await db.getUserByOpenid(userOpenid)
+        if (!userRecord || !userRecord._id) {
+          util.hideLoading()
+          util.showError('用户数据异常，无法找到用户记录')
+          return
+        }
+        userId = userRecord._id
+        util.hideLoading()
+      }
 
-    if (!zoneCode) {
-      util.showInfo('请输入分区编号')
-      return
-    }
-    if (!zoneName) {
-      util.showInfo('请输入分区名称')
-      return
-    }
+      const application = this.data.applications[index]
+      const zoneCode = (application.inputZoneCode || '').trim()
+      const zoneName = (application.inputZoneName || '').trim()
 
-    try {
+      if (!zoneCode) {
+        util.showInfo('请输入分区编号')
+        return
+      }
+      if (!zoneName) {
+        util.showInfo('请输入分区名称')
+        return
+      }
+
+      step = '检查分区编号'
       util.showLoading('正在检查分区...')
 
       const normalizedCode = util.normalizeZoneCode(zoneCode)
@@ -874,7 +1013,13 @@ Page({
         //     这种情况**不能**把申请自动拒掉，要把剩下的步骤补完（幂等重试，不会重复建区）。
         //  ② 真撞号（别的分区占了）→ 自动拒绝，并告诉申请人编号已被占用。
         if (isZoneOwnedBy(existingZone, userId)) {
+          step = '补齐联盟'
           util.showLoading('正在补完开通...')
+          const got = await this.ensureAlliances(existingZone._id)
+          if (got < 12) {
+            throw new Error('分区已存在，但联盟只有 ' + got + '/12 个，请稍后再点一次「批准」补齐')
+          }
+          step = '写入审批结果'
           await this.commitZoneApproval({
             applicationId,
             index,
@@ -891,21 +1036,33 @@ Page({
       }
 
       // 分区不存在，继续创建流程
+      step = '创建分区'
       util.showLoading('正在创建分区...')
 
       // 创建分区（createZone 内部会再次检查编号是否重复）
       const zoneResult = await db.createZone(normalizedCode, zoneName, userId)
-
-      // 初始化12个联盟
-      if (zoneResult && zoneResult._id) {
-        await db.initAlliances(zoneResult._id)
+      const newZoneId = zoneResult && zoneResult._id
+      if (!newZoneId) {
+        throw new Error('分区创建未返回 zoneId（请到数据库确认是否已建出）')
       }
 
+      // 初始化 12 个联盟。
+      // ⚠️ 这一步失败不能直接判「批准失败」把整件事丢掉：分区已经建出来了，
+      //    留着申请待审核、让超管再点一次「批准」走幂等补完，比让他一头雾水好。
+      step = '初始化联盟'
+      util.showLoading('正在初始化联盟...')
+      const got = await this.ensureAlliances(newZoneId)
+      if (got < 12) {
+        throw new Error('分区已创建，但联盟只建出 ' + got + '/12 个，请再点一次「批准」补齐（不会重复建区）')
+      }
+
+      step = '写入审批结果'
+      util.showLoading('正在写入审批结果...')
       await this.commitZoneApproval({
         applicationId,
         index,
         userId,
-        zoneId: zoneResult ? zoneResult._id : '',
+        zoneId: newZoneId,
         zoneName,
         normalizedCode,
         reused: false
@@ -913,28 +1070,49 @@ Page({
 
     } catch (err) {
       util.hideLoading()
-      console.error('批准分区开通失败:', err)
-      util.showError('批准失败: ' + (err.message || '未知错误'))
+      console.error('批准分区开通失败（' + step + '）:', err)
+      util.showErrorLong('批准失败 · ' + step + '\n' + shortErr(err))
+    } finally {
+      this._zoneApproving = false
+    }
+  },
+
+  // 保证分区下的 12 个联盟齐全：只补缺的编号，不重复建
+  // 返回补齐后实际查到的联盟数量
+  ensureAlliances: async function (zoneId) {
+    if (!zoneId) return 0
+    let existing = []
+    try {
+      existing = (await db.getAlliancesByZone(zoneId, { force: true })) || []
+    } catch (e) {
+      console.warn('[admin-review] 读取分区联盟失败，按全部缺失处理:', e)
+    }
+    // 老数据可能没有 allianceIndex，此时无法判断缺哪个 → 数量够就算齐
+    const indexes = existing.map(a => Number(a.allianceIndex)).filter(n => n >= 1 && n <= 12)
+    if (indexes.length === 0 && existing.length > 0) return existing.length
+    const has = new Set(indexes)
+    const missing = []
+    for (let i = 1; i <= 12; i++) if (!has.has(i)) missing.push(i)
+    if (missing.length > 0) {
+      try {
+        await db.initAlliances(zoneId, missing)
+      } catch (e) {
+        console.warn('[admin-review] 补建联盟失败:', e)
+      }
+    }
+    try {
+      const after = (await db.getAlliancesByZone(zoneId, { force: true })) || []
+      return after.length
+    } catch (e) {
+      return existing.length + missing.length
     }
   },
 
   // 「分区开通」审批的收尾动作 —— 建区成功 与 幂等补完 两条路都走这里
+  // 前置条件：12 个联盟已经由 ensureAlliances() 补齐（不再在这里做，避免「算一半死一半」）
   commitZoneApproval: async function (opts) {
     const { applicationId, index, userId, zoneId, zoneName, normalizedCode, reused } = opts
     const reviewerId = app.globalData.openid
-
-    // 补完场景：分区是上次建的，但联盟可能没初始化完（当初就死在下一步）
-    if (reused && zoneId) {
-      let alliances = []
-      try {
-        alliances = await db.getAlliancesByZone(zoneId, { force: true })
-      } catch (e) {
-        console.warn('[admin-review] 读取分区联盟失败，跳过一次初始化校验:', e)
-      }
-      if (!alliances || alliances.length === 0) {
-        await db.initAlliances(zoneId)
-      }
-    }
 
     // 更新申请状态
     await db.reviewAdminApplication(applicationId, 'approved', reviewerId, 'admin', {
@@ -1038,7 +1216,7 @@ Page({
   rejectApplication: async function (e) {
     this.clearReviewCache()
     const applicationId = e.currentTarget.dataset.id
-    const index = e.currentTarget.dataset.index
+    const index = indexOfApp(this.data.applications, e.currentTarget.dataset)
     const application = this.data.applications[index]
     const isZoneCreation = application && application.applyType === 'zoneCreation'
 
@@ -1051,10 +1229,13 @@ Page({
           editable: true,
           maxlength: 20,
           placeholderText: '请填写拒绝原因（最多20字，将通知申请人）',
-          success: (res) => resolve(res)
+          success: (res) => resolve(res || {}),
+          // 不写 fail 的话，参数不合法时弹窗根本不出现、控制台也没有任何痕迹
+          fail: (err) => { console.warn('[admin-review] 拒绝原因弹窗调用失败:', err); resolve({}) }
         })
       })
-      if (!modal.confirm) return
+      // 用户点了取消 / 弹窗调用失败 → 什么都不做
+      if (!modal || !modal.confirm) return
       rejectReason = (modal.content || '').trim()
       // 允许留空：留空时通知回退为默认文案「分区xxxx开通申请未通过」
     } else {

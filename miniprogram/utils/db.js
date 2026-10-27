@@ -478,15 +478,19 @@ async function getZonesByCreator(creatorId, opts) {
  */
 
 // 初始化联盟配置
-async function initAlliances(zoneId) {
+async function initAlliances(zoneId, indexes) {
   const db = getDb()
   const promises = []
-  for (let i = 1; i <= 12; i++) {
+  // indexes 可选：只补指定的联盟序号（分区审批「补完」场景用，避免重复建 1-12）
+  const list = (Array.isArray(indexes) && indexes.length > 0)
+    ? indexes.filter(i => Number(i) >= 1 && Number(i) <= 12)
+    : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+  for (const i of list) {
     promises.push(db.collection('alliances').add({
       data: {
         zoneId: zoneId,
-        allianceIndex: i,
-        allianceName: `联盟${i}`,
+        allianceIndex: Number(i),
+        allianceName: `联盟${Number(i)}`,
         auditorIds: [],
         createTime: db.serverDate()
       }

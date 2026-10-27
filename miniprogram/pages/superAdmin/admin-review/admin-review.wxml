@@ -78,7 +78,7 @@
         <view class="select-actions">
           <button class="btn btn-success" bindtap="confirmApproveZoneManager"
                   data-id="{{item._id}}" data-userid="{{item.userId}}" data-useropenid="{{item.userOpenid}}" data-index="{{appIndex}}">确认</button>
-          <button class="btn btn-ghost" bindtap="cancelSelectZone" data-index="{{appIndex}}">取消</button>
+          <button class="btn btn-ghost" bindtap="cancelSelectZone" data-id="{{item._id}}" data-index="{{appIndex}}">取消</button>
         </view>
       </view>
 
@@ -112,7 +112,7 @@
         <view class="select-actions">
           <button class="btn btn-success" bindtap="confirmApproveAllianceManager"
                   data-id="{{item._id}}" data-userid="{{item.userId}}" data-useropenid="{{item.userOpenid}}" data-index="{{appIndex}}">确认</button>
-          <button class="btn btn-ghost" bindtap="cancelSelectAlliance" data-index="{{appIndex}}">取消</button>
+          <button class="btn btn-ghost" bindtap="cancelSelectAlliance" data-id="{{item._id}}" data-index="{{appIndex}}">取消</button>
         </view>
       </view>
 
@@ -129,16 +129,17 @@
         <view wx:if="{{item.creatingZone}}" class="zone-creation-form">
           <view class="creation-row">
             <text class="creation-label">分区编号</text>
-            <input class="creation-input" type="number" placeholder="如3558" maxlength="4" value="{{item.inputZoneCode}}" bindinput="onZoneCodeInput" data-index="{{appIndex}}" />
+            <!-- maxlength 必须 ≥5：分区编号支持 1-99999，写 4 会把 5 位编号吃掉一位 -->
+            <input class="creation-input" type="number" placeholder="如3558" maxlength="5" value="{{item.inputZoneCode}}" bindinput="onZoneCodeInput" data-id="{{item._id}}" data-index="{{appIndex}}" />
           </view>
           <view class="creation-row">
             <text class="creation-label">分区名称</text>
-            <input class="creation-input" placeholder="如第一区" value="{{item.inputZoneName}}" bindinput="onZoneNameInput" data-index="{{appIndex}}" />
+            <input class="creation-input" placeholder="如第一区" value="{{item.inputZoneName}}" bindinput="onZoneNameInput" data-id="{{item._id}}" data-index="{{appIndex}}" />
           </view>
           <view class="select-actions">
             <button class="btn btn-success" bindtap="confirmApproveZoneCreation"
                     data-id="{{item._id}}" data-userid="{{item.userId}}" data-useropenid="{{item.userOpenid}}" data-index="{{appIndex}}">确认创建</button>
-            <button class="btn btn-ghost" bindtap="cancelCreateZone" data-index="{{appIndex}}">取消</button>
+            <button class="btn btn-ghost" bindtap="cancelCreateZone" data-id="{{item._id}}" data-index="{{appIndex}}">取消</button>
           </view>
         </view>
       </view>
