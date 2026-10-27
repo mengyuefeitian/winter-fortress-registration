@@ -65,10 +65,10 @@
 
 ### 校验
 
-- `.workbuddy/tools/zone_approval_test.js` 扩到 **29 条断言**，新增：
+- `.workbuddy/tools/zone_approval_test.js` 扩到 **31 条断言**，新增：
   刷新后表单状态保留（3 条）、并发只发一次请求、连点只建一个分区、
   下标漂移按 `_id` 批对、联盟只建出 5/12 时提示可操作且**不置为通过**、
-  wxml 编号框 `maxlength ≥ 5`。
+  wxml 编号框 `maxlength ≥ 5`、申请 11111 时预填与建区都不被截断。
 - 四件套（全量 `node --check` / JSON / wxml / 组件注册）+ 资源体积门禁 +
   其余 7 个回归测试全绿。纯前端改动，**不需要重新部署云函数**。
 
