@@ -4,6 +4,15 @@ const util = require('../../../utils/util')
 const db = require('../../../utils/db')
 const auth = require('../../../utils/auth')
 
+// 这个分区是不是这位申请人的（creatorId / adminIds 任一命中）
+// 用途：批准「分区开通」时若发现编号已存在，先判断是不是上次批准建出来的 ——
+// 是的话要把审批补完，而不是把申请人的申请自动拒掉。
+function isZoneOwnedBy(zone, userId) {
+  if (!zone || !userId) return false
+  if (zone.creatorId === userId) return true
+  return Array.isArray(zone.adminIds) && zone.adminIds.indexOf(userId) !== -1
+}
+
 Page({
   data: {
     applyType: null, // 筛选类型：zoneManager 或 allianceManager，null 表示全部
@@ -858,16 +867,31 @@ Page({
       const existingZone = await db.getZoneByCode(normalizedCode)
 
       if (existingZone) {
-        // 分区已存在，自动拒绝并通知用户
         util.hideLoading()
+        // 编号已被占用，分两种情况处理（2026-10-27 用户踩坑的就是这里）：
+        //  ① 这个分区本来就是这位申请人的 —— 说明上一次批准已经把分区建出来了，
+        //     只是后面的「改申请状态 / 改角色」没落库（客户端 update 会「不抛错但没写进去」）。
+        //     这种情况**不能**把申请自动拒掉，要把剩下的步骤补完（幂等重试，不会重复建区）。
+        //  ② 真撞号（别的分区占了）→ 自动拒绝，并告诉申请人编号已被占用。
+        if (isZoneOwnedBy(existingZone, userId)) {
+          util.showLoading('正在补完开通...')
+          await this.commitZoneApproval({
+            applicationId,
+            index,
+            userId,
+            zoneId: existingZone._id,
+            zoneName: existingZone.zoneName || zoneName,
+            normalizedCode,
+            reused: true
+          })
+          return
+        }
         await this.autoRejectZoneCreation(applicationId, index, normalizedCode, existingZone.zoneName)
         return
       }
 
       // 分区不存在，继续创建流程
       util.showLoading('正在创建分区...')
-
-      const reviewerId = app.globalData.openid
 
       // 创建分区（createZone 内部会再次检查编号是否重复）
       const zoneResult = await db.createZone(normalizedCode, zoneName, userId)
@@ -877,43 +901,14 @@ Page({
         await db.initAlliances(zoneResult._id)
       }
 
-      // 更新申请状态
-      await db.reviewAdminApplication(applicationId, 'approved', reviewerId, 'admin', {
+      await this.commitZoneApproval({
+        applicationId,
+        index,
+        userId,
         zoneId: zoneResult ? zoneResult._id : '',
-        zoneName: zoneName
-      })
-
-      // 将申请人设为区管
-      await db.updateUserRole(userId, 'admin')
-
-      // 从待审核列表移除
-      const applications = this.data.applications.filter((_, i) => i !== index)
-      const approvedApp = this.data.applications[index]
-
-      // 添加到已审核列表
-      const reviewedApplications = [
-        {
-          ...approvedApp,
-          status: 'approved',
-          approvedRole: 'admin',
-          zoneName: zoneName,
-          formattedReviewTime: util.formatDate(new Date(), 'YYYY-MM-DD HH:mm')
-        },
-        ...this.data.reviewedApplications
-      ]
-
-      this.setData({
-        applications: applications,
-        reviewedApplications: reviewedApplications
-      })
-
-      util.hideLoading()
-      util.showSuccess('已创建分区并设为区管')
-
-      // 异步发送审核结果通知（不阻塞）
-      this.sendReviewNotify(applicationId, 'approved', {
-        zoneName: zoneName,
-        zoneCode: normalizedCode
+        zoneName,
+        normalizedCode,
+        reused: false
       })
 
     } catch (err) {
@@ -923,10 +918,78 @@ Page({
     }
   },
 
-  // 自动拒绝分区开通申请（分区已存在时）
-  autoRejectZoneCreation: async function (applicationId, index, zoneCode, existingZoneName) {
+  // 「分区开通」审批的收尾动作 —— 建区成功 与 幂等补完 两条路都走这里
+  commitZoneApproval: async function (opts) {
+    const { applicationId, index, userId, zoneId, zoneName, normalizedCode, reused } = opts
+    const reviewerId = app.globalData.openid
+
+    // 补完场景：分区是上次建的，但联盟可能没初始化完（当初就死在下一步）
+    if (reused && zoneId) {
+      let alliances = []
+      try {
+        alliances = await db.getAlliancesByZone(zoneId, { force: true })
+      } catch (e) {
+        console.warn('[admin-review] 读取分区联盟失败，跳过一次初始化校验:', e)
+      }
+      if (!alliances || alliances.length === 0) {
+        await db.initAlliances(zoneId)
+      }
+    }
+
+    // 更新申请状态
+    await db.reviewAdminApplication(applicationId, 'approved', reviewerId, 'admin', {
+      zoneId: zoneId || '',
+      zoneName: zoneName
+    })
+
+    // 将申请人设为区管
+    await db.updateUserRole(userId, 'admin')
+
+    // 写后回读校验：申请状态没落库就明确报错，别让超管误以为批好了
+    const saved = await db.getAdminApplicationById(applicationId).catch(() => null)
+    if (saved && saved.status !== 'approved') {
+      throw new Error('分区已建好，但申请状态未写入，请再点一次「批准」补完（不会重复建区）')
+    }
+
+    // 从待审核列表移除
+    const applications = this.data.applications.filter((_, i) => i !== index)
+    const approvedApp = this.data.applications[index]
+
+    // 添加到已审核列表
+    const reviewedApplications = [
+      {
+        ...approvedApp,
+        status: 'approved',
+        approvedRole: 'admin',
+        zoneId: zoneId || (approvedApp && approvedApp.zoneId) || '',
+        zoneName: zoneName,
+        formattedReviewTime: util.formatDate(new Date(), 'YYYY-MM-DD HH:mm')
+      },
+      ...this.data.reviewedApplications
+    ]
+
+    this.setData({
+      applications: applications,
+      reviewedApplications: reviewedApplications
+    })
+
+    util.hideLoading()
+    util.showSuccess(reused ? '已补完分区开通' : '已创建分区并设为区管')
+
+    // 异步发送审核结果通知（不阻塞）
+    this.sendReviewNotify(applicationId, 'approved', {
+      zoneName: zoneName,
+      zoneCode: normalizedCode
+    })
+  },
+
+  // 自动拒绝分区开通申请（分区编号已被其他分区占用）
+  // ⚠️ 形参曾叫 zoneCode，而函数体被批量替换成了 normalizedCode 却没改形参 →
+  //    点「批准」直接 ReferenceError，手机上只显示「can't find variable: n」。
+  //    改形参/改变量名时务必连函数体一起改，别只改一半。
+  autoRejectZoneCreation: async function (applicationId, index, normalizedCode, existingZoneName) {
     this.clearReviewCache()
-    const rejectReason = '分区' + normalizedCode + '已开通，开通失败'
+    const rejectReason = '编号' + normalizedCode + '已被其他分区占用'
 
     try {
       const reviewerId = app.globalData.openid
@@ -956,7 +1019,7 @@ Page({
         reviewedApplications: reviewedApplications
       })
 
-      util.showInfo('分区已存在，已自动拒绝该申请并通知申请人')
+      util.showInfo('编号已被「' + (existingZoneName || '其他分区') + '」占用，已自动拒绝该申请')
 
       // 异步发送审核结果通知（不阻塞）
       this.sendReviewNotify(applicationId, 'rejected', {
@@ -967,7 +1030,7 @@ Page({
     } catch (err) {
       console.error('自动拒绝申请失败:', err)
       // 即使自动拒绝失败，也提示管理员分区已存在
-      util.showInfo('分区编号' + zoneCode + '已存在，无法创建')
+      util.showInfo('分区编号' + normalizedCode + '已被占用，无法创建')
     }
   },
 

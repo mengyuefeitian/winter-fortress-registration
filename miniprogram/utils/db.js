@@ -352,6 +352,16 @@ async function reviewAdminApplication(applicationId, status, reviewedBy, approve
   })
 }
 
+// 按 _id 读取单条管理员申请 —— 审批「写后回读校验」用。
+// 客户端的 update 存在「不抛错但没落库」的情况（见 .workbuddy/memory 的静默失败记录），
+// 审批这类不可逆动作必须回读确认，否则会出现「超管以为批了、申请人还是普通用户」。
+async function getAdminApplicationById(applicationId) {
+  if (!applicationId) return null
+  const db = getDb()
+  const res = await db.collection('admins').doc(applicationId).get()
+  return (res && res.data) || null
+}
+
 // 通过云函数添加区管到分区（绕过 creator-only 写权限）
 async function updateZoneCreator(zoneId, userId) {
   const res = await wx.cloud.callFunction({
@@ -2141,6 +2151,7 @@ module.exports = {
   createAdminApplication,
   getPendingAdminApplications,
   reviewAdminApplication,
+  getAdminApplicationById,
   updateZoneCreator,
 
   // 分区
