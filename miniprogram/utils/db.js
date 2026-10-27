@@ -352,6 +352,16 @@ async function reviewAdminApplication(applicationId, status, reviewedBy, approve
   })
 }
 
+// 按 _id 读取单条管理员申请 —— 审批「写后回读校验」用。
+// 客户端的 update 存在「不抛错但没落库」的情况（见 .workbuddy/memory 的静默失败记录），
+// 审批这类不可逆动作必须回读确认，否则会出现「超管以为批了、申请人还是普通用户」。
+async function getAdminApplicationById(applicationId) {
+  if (!applicationId) return null
+  const db = getDb()
+  const res = await db.collection('admins').doc(applicationId).get()
+  return (res && res.data) || null
+}
+
 // 通过云函数添加区管到分区（绕过 creator-only 写权限）
 async function updateZoneCreator(zoneId, userId) {
   const res = await wx.cloud.callFunction({
@@ -468,15 +478,19 @@ async function getZonesByCreator(creatorId, opts) {
  */
 
 // 初始化联盟配置
-async function initAlliances(zoneId) {
+async function initAlliances(zoneId, indexes) {
   const db = getDb()
   const promises = []
-  for (let i = 1; i <= 12; i++) {
+  // indexes 可选：只补指定的联盟序号（分区审批「补完」场景用，避免重复建 1-12）
+  const list = (Array.isArray(indexes) && indexes.length > 0)
+    ? indexes.filter(i => Number(i) >= 1 && Number(i) <= 12)
+    : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+  for (const i of list) {
     promises.push(db.collection('alliances').add({
       data: {
         zoneId: zoneId,
-        allianceIndex: i,
-        allianceName: `联盟${i}`,
+        allianceIndex: Number(i),
+        allianceName: `联盟${Number(i)}`,
         auditorIds: [],
         createTime: db.serverDate()
       }
@@ -2141,6 +2155,7 @@ module.exports = {
   createAdminApplication,
   getPendingAdminApplications,
   reviewAdminApplication,
+  getAdminApplicationById,
   updateZoneCreator,
 
   // 分区
