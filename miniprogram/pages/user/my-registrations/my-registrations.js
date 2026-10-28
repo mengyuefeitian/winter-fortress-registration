@@ -76,6 +76,8 @@ Page({
   },
 
   onLoad: function () {
+    // 预热激励视频（纯优化：点「看视频」时素材已就绪，失败不影响任何流程）
+    weekPass.warmup(this)
     this.waitForRoleReady()
   },
 

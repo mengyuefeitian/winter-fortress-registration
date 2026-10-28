@@ -20,6 +20,8 @@ Page({
   },
 
   onLoad: function (options) {
+    // 预热激励视频（纯优化：点「看视频」时素材已就绪，失败不影响任何流程）
+    weekPass.warmup(this)
     this._allianceId = (options && options.allianceId) || ''
     this._members = []
     this._scale = 1

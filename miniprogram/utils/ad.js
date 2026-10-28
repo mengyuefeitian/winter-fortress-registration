@@ -78,6 +78,52 @@ function getRewardedAd(pageCtx) {
 }
 
 /**
+ * 预热：只建实例 + 静默 load，**不 show**
+ *
+ * 官方示例是「页面 onLoad 里 createRewardedVideoAd」，这样第一次点「看视频」时素材已就绪。
+ * 我们是懒建（首次 requirePass 才 create），于是第一次点击要先 show 失败、再 load 重试，
+ * 弱网下能明显感觉到「点了半天才出来」。这里补上预热，把这段空档消掉。
+ *
+ * ⚠️ 预热失败**绝不能**影响任何流程：只打日志，不进冷却、不回调页面。
+ *    真正的失败仍由 showRewarded 的 show → load → show 重试链负责兜底。
+ *
+ * @param {Object} pageCtx 页面 this
+ */
+function warmup(pageCtx) {
+  if (!enabled() || !hasAdUnit(adConfig.REWARDED_AD_UNIT)) return
+  if (!pageCtx) return
+  // 刚确认过拉不到（广告位故障 / 无填充）：冷却期内别再打一次，免得每次都白等
+  if (isUnavailable()) return
+
+  const ad = getRewardedAd(pageCtx)
+  if (!ad) return
+
+  // 预热阶段的 error 没有「本次展示」可言，单独挂一个只记日志的处理器。
+  // 不复用 ad.__errorHandler —— 那是展示中的回调，会把预热失败误判成展示失败。
+  try {
+    if (!ad.__warmErrorHandler) {
+      ad.__warmErrorHandler = function (err) {
+        console.warn('[ad] 预热加载失败（不影响使用，点击时会重试）', err)
+      }
+      ad.onError(ad.__warmErrorHandler)
+    }
+  } catch (e) {
+    // 低版本基础库差异，忽略即可
+  }
+
+  try {
+    const p = ad.load()
+    if (p && typeof p.catch === 'function') {
+      p.catch(function (err) {
+        console.warn('[ad] 预热加载失败（不影响使用，点击时会重试）', err)
+      })
+    }
+  } catch (e) {
+    console.warn('[ad] 预热异常', e)
+  }
+}
+
+/**
  * 观看激励视频换取奖励
  *
  * 回调语义（调用方必须两个都传，尤其是 onFail）：
@@ -124,6 +170,15 @@ function showRewarded(opts) {
     if (ad.__errorHandler) ad.offError(ad.__errorHandler)
   } catch (e) {
     // 低版本基础库没有 offClose，忽略即可（下面用一次性标记兜底去重）
+  }
+  // 预热阶段挂的「只记日志」处理器也要解掉，否则一次失败会打两条 warn
+  try {
+    if (ad.__warmErrorHandler) {
+      ad.offError(ad.__warmErrorHandler)
+      ad.__warmErrorHandler = null
+    }
+  } catch (e) {
+    // 同上，忽略
   }
 
   let settled = false // 一次性结算，防止重复回调
@@ -292,6 +347,7 @@ module.exports = {
   enabled: enabled,
   showRewarded: showRewarded,
   getRewardedAd: getRewardedAd,
+  warmup: warmup,
   probeAd: probeAd,
   resetUnavailable: resetUnavailable
 }
