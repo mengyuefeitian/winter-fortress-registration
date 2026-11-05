@@ -1,7 +1,7 @@
 <!--pages/user/updates/updates.wxml-->
 <!-- 功能介绍：版本列表（二级菜单），点击某个版本看该版本的详细说明 -->
 <view class="page">
-  <view class="upd-tip">点击版本复制说明页链接，粘贴到浏览器即可查看</view>
+  <view class="upd-tip">点击版本查看完整功能介绍</view>
 
   <view class="upd-card">
     <view
@@ -18,7 +18,7 @@
           <text class="upd-date">{{item.date}}</text>
         </view>
         <text class="upd-title">{{item.title}}</text>
-        <text class="upd-summary">{{item.summary}}</text>
+        <view class="upd-summary">{{item.summary}}</view>
       </view>
       <text class="upd-arrow">›</text>
     </view>

@@ -1,0 +1,38 @@
+<!--pages/user/updates-detail/updates-detail.wxml-->
+<!-- 功能介绍：版本详情（站内），列表里被截断的摘要在这里完整展示 -->
+<view class="page">
+  <view wx:if="{{release}}" class="detail-card">
+    <view class="detail-header">
+      <view class="detail-head">
+        <text class="detail-version">V{{release.version}}</text>
+        <text class="detail-date">{{release.date}}</text>
+      </view>
+      <text class="detail-title">{{release.title}}</text>
+      <text class="detail-summary">{{release.summary}}</text>
+    </view>
+
+    <view
+      class="detail-section"
+      wx:for="{{release.content}}"
+      wx:for-item="section"
+      wx:key="heading"
+    >
+      <text class="detail-heading" wx:if="{{section.heading}}">{{section.heading}}</text>
+      <text class="detail-text">{{section.text}}</text>
+    </view>
+  </view>
+
+  <view
+    wx:if="{{release && release.hasWebPage}}"
+    class="detail-link"
+    bindtap="copyWebLink"
+    hover-class="detail-link-hover"
+  >
+    <text class="detail-link-text">复制官网说明页链接，在浏览器查看</text>
+    <text class="detail-link-arrow">›</text>
+  </view>
+
+  <view wx:if="{{notFound}}" class="detail-empty">
+    <text class="detail-empty-text">没有找到这个版本的说明</text>
+  </view>
+</view>
