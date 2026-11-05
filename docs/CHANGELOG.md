@@ -75,8 +75,18 @@
 - 四件套 + 资源门禁 + 其余 9 个回归测试全绿。
 
 > ⚠️ **线上生效前必须重新部署云函数** `manageArsenal`、`clearRegistrations`
-> （右键「上传并部署：云端安装依赖」）。新集合由 `manageArsenal.ensureCollections()`
-> 自动创建，也可在云开发控制台手动建。未部署前配置 / 报名会报「集合不存在」。
+> （右键「上传并部署：云端安装依赖」）。
+>
+> ⚠️ **两个新集合建议手动建**：云开发控制台 → 数据库 → 新建
+> `snowfireConfigs` / `snowfireRegistrations`，权限均选「仅创建者可写，所有人可读」
+> （与 `arsenalConfigs` / `canyonConfigs` 一致：写入走云函数服务端，列表是客户端直查）。
+>
+> `manageArsenal` 的 `ensureCollections()` **只在该云函数首次被调用时**尝试创建集合
+> （不是部署时、不是打开小程序时；`collectionsEnsured` 是模块级变量，冷启动后每实例跑一次），
+> 且会吞掉所有异常、也没有 `typeof db.createCollection === 'function'` 保护，可能静默失败。
+> 配置 / 报名列表是客户端直查、不经过云函数，所以光打开页面不会触发创建，
+> 未建集合时会直接报「集合不存在」；要触发得先走一次 `createConfig`（点「添加配置」）
+> 或其他云函数 action。手动建最稳，不用赌自动创建是否成功。
 
 ---
 
