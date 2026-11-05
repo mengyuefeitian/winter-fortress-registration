@@ -30,6 +30,22 @@ async function getAllRecords(collection, whereCondition = {}) {
   return allData
 }
 
+// 清理某类活动（兵工厂/峡谷/雪域）的过期配置及其报名记录。
+// 三种范围（按联盟 / 按分区 / 全量）共用这一份，避免新增活动类型时漏掉某条清理路径。
+async function clearExpiredActivity(cfgCollection, regCollection, whereCondition, todayObj) {
+  const ids = (await getAllRecords(cfgCollection, whereCondition))
+    .filter(cfg => !cfg.status || cfg.status === 'inactive' || isDateExpired(cfg.date, todayObj))
+    .map(c => c._id)
+  const cleared = { configs: 0, registrations: 0 }
+  if (ids.length > 0) {
+    const regRes = await db.collection(regCollection).where({ configId: _.in(ids) }).remove()
+    cleared.registrations = regRes.stats.removed
+    const cfgRes = await db.collection(cfgCollection).where({ _id: _.in(ids) }).remove()
+    cleared.configs = cfgRes.stats.removed
+  }
+  return cleared
+}
+
 // 验证调用者是否为 admin 或 superAdmin
 async function verifyAdminRole(openid) {
   const userRes = await db.collection('users').where({ openid }).get()
@@ -449,7 +465,9 @@ async function clearExpiredByAlliance(allianceId) {
     arsenalConfigs: 0,
     arsenalRegistrations: 0,
     canyonConfigs: 0,
-    canyonRegistrations: 0
+    canyonRegistrations: 0,
+    snowfireConfigs: 0,
+    snowfireRegistrations: 0
   }
 
   console.log('开始清空联盟数据, allianceId:', allianceId, '今天:', today)
@@ -523,6 +541,13 @@ async function clearExpiredByAlliance(allianceId) {
     results.canyonConfigs = cnConfigResult.stats.removed
   }
 
+  // 雪域战火：与兵工厂/峡谷同样的过期口径
+  const snowfireCleared = await clearExpiredActivity(
+    'snowfireConfigs', 'snowfireRegistrations', { allianceId: allianceId }, todayObj
+  )
+  results.snowfireConfigs = snowfireCleared.configs
+  results.snowfireRegistrations = snowfireCleared.registrations
+
   // 4. 清理孤立的报名记录（报名记录对应的timeSlotId不存在或已删除）
   // 方法：直接查询所有报名记录，找出那些 timeSlotId 不在时间段列表中的
   const allRegistrations = await getAllRecords('registrations', { allianceId: allianceId })
@@ -581,7 +606,7 @@ async function clearExpiredByAlliance(allianceId) {
   return {
     success: true,
     data: results,
-    message: `已清空：堡垒报名 ${results.registrations} 条，时间段 ${results.timeSlots} 个，兵工厂报名 ${results.arsenalRegistrations} 条，峡谷报名 ${results.canyonRegistrations} 条，孤立报名 ${results.orphanRegistrations} 条`
+    message: `已清空：堡垒报名 ${results.registrations} 条，时间段 ${results.timeSlots} 个，兵工厂报名 ${results.arsenalRegistrations} 条，峡谷报名 ${results.canyonRegistrations} 条，雪域报名 ${results.snowfireRegistrations} 条，孤立报名 ${results.orphanRegistrations} 条`
   }
 }
 
@@ -598,7 +623,9 @@ async function clearExpiredByZone(zoneId) {
     arsenalConfigs: 0,
     arsenalRegistrations: 0,
     canyonConfigs: 0,
-    canyonRegistrations: 0
+    canyonRegistrations: 0,
+    snowfireConfigs: 0,
+    snowfireRegistrations: 0
   }
 
   console.log('开始清空分区数据, zoneId:', zoneId, '今天:', today)
@@ -758,6 +785,13 @@ async function clearExpiredByZone(zoneId) {
       }).remove()
       results.canyonConfigs = cnConfigResult.stats.removed
     }
+
+    // 雪域战火：按分区清理（配置带 zoneId）
+    const snowfireCleared = await clearExpiredActivity(
+      'snowfireConfigs', 'snowfireRegistrations', { zoneId: zoneId }, todayObj
+    )
+    results.snowfireConfigs = snowfireCleared.configs
+    results.snowfireRegistrations = snowfireCleared.registrations
   }
 
   // 3. 清空该分区下的官职配置和报名数据
@@ -829,7 +863,7 @@ async function clearExpiredByZone(zoneId) {
   return {
     success: true,
     data: results,
-    message: `已清空：堡垒报名 ${results.registrations} 条，时间段 ${results.timeSlots} 个，兵工厂报名 ${results.arsenalRegistrations} 条，峡谷报名 ${results.canyonRegistrations} 条，官职报名 ${results.positionRegistrations} 条，官职配置 ${results.positionConfigs} 个，孤立数据 ${results.orphanRegistrations + results.orphanPositionRegistrations} 条`
+    message: `已清空：堡垒报名 ${results.registrations} 条，时间段 ${results.timeSlots} 个，兵工厂报名 ${results.arsenalRegistrations} 条，峡谷报名 ${results.canyonRegistrations} 条，雪域报名 ${results.snowfireRegistrations} 条，官职报名 ${results.positionRegistrations} 条，官职配置 ${results.positionConfigs} 个，孤立数据 ${results.orphanRegistrations + results.orphanPositionRegistrations} 条`
   }
 }
 
@@ -847,6 +881,8 @@ async function clearExpiredAll() {
     arsenalRegistrations: 0,
     canyonConfigs: 0,
     canyonRegistrations: 0,
+    snowfireConfigs: 0,
+    snowfireRegistrations: 0,
     battleConfigs: 0,
     battleRegistrations: 0,
     allianceActivity: 0
@@ -1001,6 +1037,13 @@ async function clearExpiredAll() {
     results.canyonConfigs = cnConfigResult.stats.removed
   }
 
+  // 雪域战火：全量清理
+  const snowfireCleared = await clearExpiredActivity(
+    'snowfireConfigs', 'snowfireRegistrations', {}, todayObj
+  )
+  results.snowfireConfigs = snowfireCleared.configs
+  results.snowfireRegistrations = snowfireCleared.registrations
+
   // 4. 清空所有过期国战配置和报名数据
   const allBattleConfigs = await getAllRecords('battleConfigs')
   console.log('查询到国战配置数量:', allBattleConfigs.length)
@@ -1040,7 +1083,7 @@ async function clearExpiredAll() {
   return {
     success: true,
     data: results,
-    message: `已清空全部数据：堡垒报名 ${results.registrations} 条，时间段 ${results.timeSlots} 个，兵工厂报名 ${results.arsenalRegistrations} 条，峡谷报名 ${results.canyonRegistrations} 条，官职报名 ${results.positionRegistrations} 条，官职配置 ${results.positionConfigs} 个，国战报名 ${results.battleRegistrations} 条，国战配置 ${results.battleConfigs} 个，联盟活跃 ${results.allianceActivity} 条，孤立数据 ${results.orphanRegistrations + results.orphanPositionRegistrations} 条`
+    message: `已清空全部数据：堡垒报名 ${results.registrations} 条，时间段 ${results.timeSlots} 个，兵工厂报名 ${results.arsenalRegistrations} 条，峡谷报名 ${results.canyonRegistrations} 条，雪域报名 ${results.snowfireRegistrations} 条，官职报名 ${results.positionRegistrations} 条，官职配置 ${results.positionConfigs} 个，国战报名 ${results.battleRegistrations} 条，国战配置 ${results.battleConfigs} 个，联盟活跃 ${results.allianceActivity} 条，孤立数据 ${results.orphanRegistrations + results.orphanPositionRegistrations} 条`
   }
 }
 

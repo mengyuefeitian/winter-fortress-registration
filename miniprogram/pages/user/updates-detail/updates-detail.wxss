@@ -1,0 +1,122 @@
+/* pages/user/updates-detail/updates-detail.wxss */
+page {
+  background-color: #fafbfc;
+}
+
+.page {
+  min-height: 100vh;
+  padding: 16px 16px 32px;
+  box-sizing: border-box;
+}
+
+/* ---------- 版本头部 + 正文 ---------- */
+.detail-card {
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(26, 26, 46, 0.04);
+  padding: 18px 16px 22px;
+  box-sizing: border-box;
+}
+
+.detail-header {
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f3f4f7;
+}
+
+.detail-head {
+  display: flex;
+  align-items: baseline;
+}
+
+.detail-version {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.detail-date {
+  font-size: 12px;
+  color: #a8b0bd;
+  margin-left: 10px;
+}
+
+.detail-title {
+  display: block;
+  margin-top: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #4A90D9;
+}
+
+.detail-summary {
+  display: block;
+  margin-top: 10px;
+  font-size: 13px;
+  color: #8b94a3;
+  line-height: 1.7;
+}
+
+.detail-section {
+  margin-top: 20px;
+}
+
+.detail-heading {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+  padding-left: 9px;
+  border-left: 3px solid #4A90D9;
+  line-height: 1.3;
+}
+
+.detail-text {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #4a5261;
+  line-height: 1.8;
+  word-break: break-all;
+}
+
+/* ---------- 官网说明页入口（可选） ---------- */
+.detail-link {
+  margin-top: 16px;
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(26, 26, 46, 0.04);
+  padding: 15px 16px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.detail-link-hover {
+  background-color: #f7f8fa;
+}
+
+.detail-link-text {
+  flex: 1;
+  font-size: 13px;
+  color: #4A90D9;
+}
+
+.detail-link-arrow {
+  font-size: 20px;
+  color: #c8ccd4;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* ---------- 空态 ---------- */
+.detail-empty {
+  padding: 80px 0;
+  display: flex;
+  justify-content: center;
+}
+
+.detail-empty-text {
+  font-size: 13px;
+  color: #b3bac6;
+}

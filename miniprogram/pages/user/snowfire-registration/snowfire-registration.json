@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "雪域战火报名",
+  "usingComponents": {
+    "float-reminder": "/components/float-reminder/float-reminder",
+    "account-nickname": "/components/account-nickname/account-nickname",
+    "alliance-picker": "/components/alliance-picker/alliance-picker"
+  }
+}
