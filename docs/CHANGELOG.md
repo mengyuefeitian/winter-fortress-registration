@@ -18,6 +18,68 @@
 
 ---
 
+## v1.20.0（新增「雪域战火」全链路：50 人报名不被 20 条截断）
+
+**需求**：新增第三种联盟活动「雪域战火」，与兵工厂 / 峡谷会战同构，唯一区别是容量
+从「30 参战 + 10 替补」扩到「**30 参战 + 20 替补 = 50 人**」。用户特别强调两处不能被
+微信客户端单次 `get()` 的 20 条静默截断：报名名单、统计人数与截图。
+
+### 改法
+
+**配置侧**
+
+- 三份同构配置页（`auditor` / `admin` / `superAdmin` 的 `arsenal-config`）的活动类型
+  从「兵工厂 / 峡谷会战」二值扩成三值，新增「雪域战火」，军团 1/2 与原有规则不变。
+- 时间点新增 `12:30`、`15:00`，三类活动共用一份按先后排好的 `TIME_OPTIONS`；
+  `timeValue` 存 `'HH:MM'` 字符串，`orderBy` / `localeCompare` 排序天然正确。
+- 控制台入口标题「兵工厂&峡谷」→「**兵工厂&峡谷&雪域**」，两个旧报名页的帮助提示、
+  `utils/auth.js` 与超管首页的注释口径同步。
+- ⚠️ 活动类型改用 `TYPE_KEY_BY_LABEL` + `ACTIVITY_DEFS` **两张查表**驱动创建 / 删除 / 加载，
+  不再写 `=== '兵工厂' ? 'arsenal' : 'canyon'` 这种二值三元；以后加第四种活动只改表。
+
+**数据层与云函数（50 人的关键）**
+
+- 新增集合 `snowfireConfigs` / `snowfireRegistrations`，`db.js` 补齐 9 个雪域 API，
+  `scripts/db-init.js` 登记集合清单。
+- `manageArsenal` 的 `DEFAULT_CAPACITY` 改成按类型容量表 `CAPACITY_BY_TYPE`：
+  `arsenal` / `canyon` 仍是 30+10，`snowfire` 是 30+20；新增 `capacityOf(activityType, config)`
+  **优先读配置文档里的 `capacity`**，没写才按类型回落 —— 存量配置不受影响。
+  集合映射改 `COLLECTIONS_BY_TYPE` 查表，报名不再报「无效的活动类型」。
+- `createRegistration` 在事务内用 **`count()`** 统计参战 / 替补人数判名额，
+  本来就不受客户端 20 条上限影响；真正会截断的是「拉名单」。
+- `db.js` 新增 `fetchAllByPage()`（`skip + limit(20)` 循环）：雪域报名列表、
+  本人报名记录、统计页 `includeRegistrations` 全走它；`getSnowfireStats()` 人数走 `count()`。
+  ⚠️ 其中唯一一处裸 `get()` 只查「当前用户在这一场的报名」用于判重，天然不超 20 条，
+  已加注释说明不是漏改，且与 `getArsenalStats` / `getCanyonStats` 口径一致。
+- `clearRegistrations` 按联盟 / 按分区 / 全量三条清理路径都补上雪域，避免「清空数据」漏清。
+
+**页面**
+
+- 新建 `pages/user/snowfire-registration/`（由峡谷报名页派生，样式复用兵工厂 WXSS），
+  容量 30/20，满位字段统一 `isCombatFull` / `isSubstituteFull`；`app.json` 注册，
+  首页未登录 / 已登录两块各加入口，说明文案「**联盟活动报名**」。
+- 三处统计页（`admin/statistics`、`superAdmin/all-statistics`、`auditor/statistics`）
+  都新增「雪域报名」类型：全量遍历 `registrations`（无 `slice(0,20)`），
+  截图复制峡谷分支的高度公式 —— 参战 `#FA5151` 在上、替补 `#07C160` 在下，
+  画布创建时按 30+20 的真实人数给最终高度、`destHeight === 画布高度`、只导出一次。
+- 「我的报名」新增雪域战火区块，四列样式与兵工厂一致，按 `config.zoneId` 过滤当前分区，
+  支持取消报名。
+
+### 测试
+
+- 新增 `.workbuddy/tools/snowfire_activity_test.js`（**65 条断言**）：真实执行
+  `fetchAllByPage()` / `getSnowfireStats()`，mock 客户端单次 `get()` 硬上限 20 条，
+  造 30 参战 + 20 替补，断言返回完整 50 条、分页 `gets === 3`、`count()` 得 30/20/50，
+  对照组裸 `get()` 只拿到 20 条；另断言三份配置页、报名页、首页入口文案、
+  三处统计页、我的报名、清理云函数、容量表与 50 人截图高度。
+- 四件套 + 资源门禁 + 其余 9 个回归测试全绿。
+
+> ⚠️ **线上生效前必须重新部署云函数** `manageArsenal`、`clearRegistrations`
+> （右键「上传并部署：云端安装依赖」）。新集合由 `manageArsenal.ensureCollections()`
+> 自动创建，也可在云开发控制台手动建。未部署前配置 / 报名会报「集合不存在」。
+
+---
+
 ## v1.19.1（激励视频预热：首次点击不用再等重试）
 
 **背景**：官方示例是在页面 `onLoad` 里 `createRewardedVideoAd` 并预热，我们一直是**懒建**
