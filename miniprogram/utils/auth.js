@@ -94,7 +94,7 @@ function canManageSuperAdmin(role) {
   return role === 'superAdmin'
 }
 
-// 检查是否可以管理活动（兵工厂&峡谷）
+// 检查是否可以管理活动（兵工厂&峡谷&雪域）
 function canManageActivity(role) {
   return role === 'auditor' || role === 'admin' || role === 'superAdmin'
 }

@@ -16,6 +16,8 @@
  *    - arsenalRegistrations
  *    - canyonConfigs
  *    - canyonRegistrations
+ *    - snowfireConfigs
+ *    - snowfireRegistrations
  * 4. 为每个集合添加索引（参考 cloudbaserc.json）
  *
  * 5. 添加超级管理员手机号：
@@ -38,7 +40,9 @@ const COLLECTIONS = [
   'arsenalConfigs',
   'arsenalRegistrations',
   'canyonConfigs',
-  'canyonRegistrations'
+  'canyonRegistrations',
+  'snowfireConfigs',
+  'snowfireRegistrations'
 ]
 
 // 创建集合的函数（在小程序端执行）

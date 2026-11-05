@@ -183,5 +183,56 @@
         </view>
       </view>
     </view>
+
+    <!-- 雪域报名统计 -->
+    <view wx:if="{{selectedRegType === '雪域报名'}}">
+      <view wx:if="{{snowfireStats.length === 0}}" class="empty-state">
+        <view class="empty-text">暂无数据</view>
+      </view>
+
+      <view wx:else>
+        <!-- 汇总数据 -->
+        <view class="stats-summary">
+          <view class="summary-item">
+            <view class="summary-value">{{snowfireTotal}}</view>
+            <view class="summary-label">总报名人数</view>
+          </view>
+          <view class="summary-item">
+            <view class="summary-value">{{snowfireStats.length}}</view>
+            <view class="summary-label">活动配置</view>
+          </view>
+        </view>
+
+        <!-- 雪域详情列表 -->
+        <view class="time-slot-list">
+          <view wx:for="{{snowfireStats}}" wx:key="*this" class="time-slot-card">
+            <view class="slot-header">
+              <view class="slot-time">
+                <text class="config-title">{{item.activityTypeLabel}}</text>
+                <text class="slot-tag">{{item.config.date}}</text>
+              </view>
+              <view class="slot-status">
+                {{item.count}}人报名
+              </view>
+            </view>
+            <view class="slot-date">时间: {{item.config.timeValue}}  军团: {{item.config.corps}}</view>
+
+            <!-- 报名人员列表 -->
+            <view wx:if="{{item.registrations.length > 0}}" class="registration-list">
+              <view wx:for="{{item.registrations}}" wx:for-item="reg" wx:for-index="regIdx" wx:key="_id" class="registration-item">
+                <view class="reg-order">{{regIdx + 1}}</view>
+                <view class="reg-name">
+                  <template is="furnaceBadge" data="{{has: reg.furnaceHas, icon: reg.furnaceIcon, ring: reg.furnaceRing}}" />
+                  <text>{{reg.nickName}}</text>
+                </view>
+                <view class="reg-position {{reg.position === 'combat' ? 'combat' : 'substitute'}}">
+                  {{reg.position === 'combat' ? '参战' : '替补'}}
+                </view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
   </view>
 </view>

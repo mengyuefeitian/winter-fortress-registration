@@ -39,7 +39,7 @@ Page({
     remainingSlots: 0,
 
     // 报名类型选择
-    registrationTypes: ['堡垒报名', '兵工厂报名', '峡谷报名'],
+    registrationTypes: ['堡垒报名', '兵工厂报名', '峡谷报名', '雪域报名'],
     regTypeIndex: 0,
     selectedRegType: '堡垒报名',
 
@@ -52,8 +52,10 @@ Page({
     canyonConfigs: [],
     canyonStats: [],
     canyonTotal: 0,
+    snowfireStats: [],
+    snowfireTotal: 0,
 
-    ACTIVITY_TYPE_LABELS: { 'arsenal': '兵工厂', 'canyon': '峡谷会战' }
+    ACTIVITY_TYPE_LABELS: { 'arsenal': '兵工厂', 'canyon': '峡谷会战', 'snowfire': '雪域战火' }
   },
 
   onLoad: function (options) {
@@ -181,7 +183,9 @@ Page({
           arsenalStats: [],
           arsenalTotal: 0,
           canyonStats: [],
-          canyonTotal: 0
+          canyonTotal: 0,
+          snowfireStats: [],
+          snowfireTotal: 0
         })
 
       } else if (this.data.selectedRegType === '兵工厂报名') {
@@ -226,7 +230,9 @@ Page({
           fullSlots: 0,
           remainingSlots: 0,
           canyonStats: [],
-          canyonTotal: 0
+          canyonTotal: 0,
+          snowfireStats: [],
+          snowfireTotal: 0
         })
 
       } else if (this.data.selectedRegType === '峡谷报名') {
@@ -272,6 +278,53 @@ Page({
           remainingSlots: 0,
           arsenalStats: [],
           arsenalTotal: 0
+        })
+
+      } else if (this.data.selectedRegType === '雪域报名') {
+        // 雪域报名统计
+        const wxdb = wx.cloud.database()
+        const allianceRes = await wxdb.collection('alliances').doc(this.data.allianceId).get()
+        const alliance = allianceRes.data
+
+        this.setData({
+          allianceName: alliance ? alliance.allianceName : '未知联盟'
+        })
+
+        if (!alliance) {
+          util.hideLoading()
+          return
+        }
+
+        const configs = await db.getSnowfireConfigs({ allianceId: this.data.allianceId })
+
+        const snowfireStats = []
+        let snowfireTotal = 0
+
+        for (const config of configs) {
+          const stats = await db.getSnowfireStats(config._id, { includeRegistrations: true })
+          const regs = (stats.registrations || []).sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
+          await ga.decorate(regs)
+          snowfireStats.push({
+            config: config,
+            activityTypeLabel: this.data.ACTIVITY_TYPE_LABELS[config.activityType] || config.activityType,
+            registrations: regs,
+            count: stats.count || 0
+          })
+          snowfireTotal += stats.count || 0
+        }
+
+        this.setData({
+          snowfireConfigs: configs,
+          snowfireStats: snowfireStats,
+          snowfireTotal: snowfireTotal,
+          stats: [],
+          totalRegistrations: 0,
+          fullSlots: 0,
+          remainingSlots: 0,
+          arsenalStats: [],
+          arsenalTotal: 0,
+          canyonStats: [],
+          canyonTotal: 0
         })
 
       }
@@ -369,6 +422,12 @@ Page({
           return
         }
         await this.saveCanyonScreenshot()
+      } else if (regType === '雪域报名') {
+        if (this.data.snowfireStats.length === 0) {
+          util.showInfo('暂无数据可截图')
+          return
+        }
+        await this.saveSnowfireScreenshot()
       }
     } catch (err) {
       util.hideLoading()
@@ -483,6 +542,10 @@ Page({
 
   saveCanyonScreenshot: async function () {
     await this.saveActivityScreenshot(this.data.canyonStats, this.data.canyonTotal, '峡谷')
+  },
+
+  saveSnowfireScreenshot: async function () {
+    await this.saveActivityScreenshot(this.data.snowfireStats, this.data.snowfireTotal, '雪域')
   },
 
   saveActivityScreenshot: async function (stats, total, label) {

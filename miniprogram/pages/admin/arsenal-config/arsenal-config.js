@@ -6,10 +6,19 @@ const auth = require('../../../utils/auth')
 const cache = require('../../../utils/cache')
 
 // 活动类型和军团选项常量
-const ACTIVITY_TYPE_OPTIONS = ['兵工厂', '峡谷会战']
+const ACTIVITY_TYPE_OPTIONS = ['兵工厂', '峡谷会战', '雪域战火']
 const CORPS_OPTIONS = ['军团1', '军团2']
-// 时间选项
-const TIME_OPTIONS = ['12:00', '19:00', '20:30', '22:00']
+// 时间选项（雪域战火新增 12:30 / 15:00，三类活动共用同一份，按时间先后排）
+const TIME_OPTIONS = ['12:00', '12:30', '15:00', '19:00', '20:30', '22:00']
+
+// 活动类型定义：中文标签 → 存储标识；存储标识 → 增/删函数与展示名。
+// ⚠️ 新增活动类型只改这两张表，别再写 === '兵工厂' ? 'arsenal' : 'canyon' 这种二值三元。
+const TYPE_KEY_BY_LABEL = { '兵工厂': 'arsenal', '峡谷会战': 'canyon', '雪域战火': 'snowfire' }
+const ACTIVITY_DEFS = {
+  arsenal: { label: '兵工厂', create: 'createArsenalConfig', remove: 'deleteArsenalConfig' },
+  canyon: { label: '峡谷会战', create: 'createCanyonConfig', remove: 'deleteCanyonConfig' },
+  snowfire: { label: '雪域战火', create: 'createSnowfireConfig', remove: 'deleteSnowfireConfig' }
+}
 
 Page({
   data: {
@@ -311,14 +320,10 @@ Page({
         zoneName: this.data.selectedZone.zoneName || '',
         allianceId: this.data.selectedAlliance._id,
         allianceName: this.data.selectedAlliance.allianceName || '',
-        activityType: this.data.selectedActivityType === '兵工厂' ? 'arsenal' : 'canyon'
+        activityType: TYPE_KEY_BY_LABEL[this.data.selectedActivityType]
       }
 
-      if (this.data.selectedActivityType === '兵工厂') {
-        await db.createArsenalConfig(configData)
-      } else {
-        await db.createCanyonConfig(configData)
-      }
+      await db[ACTIVITY_DEFS[TYPE_KEY_BY_LABEL[this.data.selectedActivityType]].create](configData)
 
       util.hideLoading()
       util.showSuccess('添加成功')
@@ -328,6 +333,7 @@ Page({
         cache.invalidate('cfg_arsenal_' + arAddZoneId)
         cache.invalidate('arsenal_' + arAddZoneId)
         cache.invalidate('canyon_' + arAddZoneId)
+        cache.invalidate('snowfire_' + arAddZoneId)
       }
 
       // 重置选择
@@ -359,11 +365,7 @@ Page({
       util.showLoading('正在删除...')
 
       const config = this.data.configs[index]
-      if (config.activityType === 'arsenal') {
-        await db.deleteArsenalConfig(configId)
-      } else {
-        await db.deleteCanyonConfig(configId)
-      }
+      await db[ACTIVITY_DEFS[config.activityType].remove](configId)
 
       const configs = this.data.configs.filter((_, i) => i !== index)
 
@@ -379,6 +381,7 @@ Page({
         cache.invalidate('cfg_arsenal_' + arDelZoneId)
         cache.invalidate('arsenal_' + arDelZoneId)
         cache.invalidate('canyon_' + arDelZoneId)
+        cache.invalidate('snowfire_' + arDelZoneId)
       }
 
     } catch (err) {
@@ -398,16 +401,17 @@ Page({
 
       if (!silent) this.setData({ loading: true })
 
-      const [arsenalConfigs, canyonConfigs] = await Promise.all([
+      const [arsenalConfigs, canyonConfigs, snowfireConfigs] = await Promise.all([
         db.getArsenalConfigs({ allianceId: this.data.selectedAlliance._id }),
-        db.getCanyonConfigs({ allianceId: this.data.selectedAlliance._id })
+        db.getCanyonConfigs({ allianceId: this.data.selectedAlliance._id }),
+        db.getSnowfireConfigs({ allianceId: this.data.selectedAlliance._id })
       ])
 
       // 合并并按日期时间排序
-      const allConfigs = [...arsenalConfigs, ...canyonConfigs]
+      const allConfigs = [...arsenalConfigs, ...canyonConfigs, ...snowfireConfigs]
         .map(config => ({
           ...config,
-          activityTypeLabel: config.activityType === 'arsenal' ? '兵工厂' : '峡谷会战'
+          activityTypeLabel: ACTIVITY_DEFS[config.activityType] ? ACTIVITY_DEFS[config.activityType].label : config.activityType
         }))
         .sort((a, b) => {
           const dateCompare = (a.date || '').localeCompare(b.date || '')

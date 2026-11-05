@@ -8,14 +8,38 @@ cloud.init({
 const db = cloud.database()
 const _ = db.command
 
-// 容量默认配置
-const DEFAULT_CAPACITY = {
-  combat: 30,
-  substitute: 10
+// 各活动类型的容量。
+// 雪域战火是 30 参战 + 20 替补 = 50 人，其余两类维持 30 + 10。
+// ⚠️ 报名校验一律走 capacityOf()：优先读配置文档里的 capacity，
+//    没有才回落到本表 —— 这样存量配置（已写入 30/10）行为不变，新配置按类型生效。
+const CAPACITY_BY_TYPE = {
+  arsenal: { combat: 30, substitute: 10 },
+  canyon: { combat: 30, substitute: 10 },
+  snowfire: { combat: 30, substitute: 20 }
+}
+const DEFAULT_CAPACITY = CAPACITY_BY_TYPE.arsenal
+
+function capacityOf(activityType, config) {
+  const c = config && config.capacity
+  if (c && Number.isFinite(c.combat) && Number.isFinite(c.substitute)) {
+    return { combat: c.combat, substitute: c.substitute }
+  }
+  return CAPACITY_BY_TYPE[activityType] || DEFAULT_CAPACITY
+}
+
+// 活动类型 → 集合名（新增类型只需在这里加一行 + 加进 ARSENAL_COLLECTIONS）
+const COLLECTIONS_BY_TYPE = {
+  arsenal: { config: 'arsenalConfigs', registration: 'arsenalRegistrations' },
+  canyon: { config: 'canyonConfigs', registration: 'canyonRegistrations' },
+  snowfire: { config: 'snowfireConfigs', registration: 'snowfireRegistrations' }
 }
 
 // 确保所需集合存在（云函数端可创建集合）
-const ARSENAL_COLLECTIONS = ['arsenalConfigs', 'arsenalRegistrations', 'canyonConfigs', 'canyonRegistrations']
+const ARSENAL_COLLECTIONS = [
+  'arsenalConfigs', 'arsenalRegistrations',
+  'canyonConfigs', 'canyonRegistrations',
+  'snowfireConfigs', 'snowfireRegistrations'
+]
 
 async function ensureCollections() {
   for (const name of ARSENAL_COLLECTIONS) {
@@ -38,13 +62,9 @@ async function ensureCollections() {
 
 // 活动类型对应的集合名称映射
 function getCollectionNames(activityType) {
-  if (activityType === 'arsenal') {
-    return { config: 'arsenalConfigs', registration: 'arsenalRegistrations' }
-  }
-  if (activityType === 'canyon') {
-    return { config: 'canyonConfigs', registration: 'canyonRegistrations' }
-  }
-  throw new Error('无效的活动类型')
+  const names = COLLECTIONS_BY_TYPE[activityType]
+  if (!names) throw new Error('无效的活动类型')
+  return names
 }
 
 let collectionsEnsured = false
@@ -202,10 +222,8 @@ async function createConfig(data) {
       allianceId: allianceId || null,
       allianceName: allianceName || '',
       creatorId: userId,
-      capacity: {
-        combat: DEFAULT_CAPACITY.combat,
-        substitute: DEFAULT_CAPACITY.substitute
-      },
+      // 容量随活动类型写入配置文档，报名校验时优先读它（雪域 30/20，其余 30/10）
+      capacity: capacityOf(activityType),
       status: 'active',
       createTime: db.serverDate()
     }
@@ -322,7 +340,6 @@ async function createRegistration(data) {
   }
 
   const collections = getCollectionNames(activityType)
-  const capacity = DEFAULT_CAPACITY
 
   // 使用事务确保原子性
   const transaction = await db.startTransaction()
@@ -336,6 +353,10 @@ async function createRegistration(data) {
       await transaction.rollback()
       throw new Error('配置不存在或已失效')
     }
+
+    // 容量以配置文档为准，没有该字段才按活动类型回落
+    // （雪域战火 30 参战 + 20 替补，总计 50 人）
+    const capacity = capacityOf(activityType, config)
 
     // 2. 统计当前参战/替补人数
     const combatCountRes = await transaction.collection(collections.registration).where({
@@ -537,6 +558,7 @@ async function getStats(data) {
 
   const combatCount = combatCountRes.total
   const substituteCount = substituteCountRes.total
+  const capacity = capacityOf(activityType)
 
   // 查询报名记录：
   // - includeRegistrations=true: 查所有记录（统计页）
@@ -555,7 +577,8 @@ async function getStats(data) {
       allRegs = allRegs.concat(res.data)
       if (res.data.length < batchSize) break
       skip += batchSize
-      if (skip > 200) break
+      // 与客户端 db.js 保持同一上限；50 人配置远够用，别在这里截断
+      if (skip > 500) break
     }
   } else if (userId) {
     userRegs = (await db.collection(collectionName).where({
@@ -571,8 +594,8 @@ async function getStats(data) {
       totalRegistered: totalRes.total,
       combatCount: combatCount,
       substituteCount: substituteCount,
-      combatRemaining: DEFAULT_CAPACITY.combat - combatCount,
-      substituteRemaining: DEFAULT_CAPACITY.substitute - substituteCount,
+      combatRemaining: capacity.combat - combatCount,
+      substituteRemaining: capacity.substitute - substituteCount,
       // 兼容前端不同页面的字段名
       combat: combatCount,
       substitute: substituteCount,

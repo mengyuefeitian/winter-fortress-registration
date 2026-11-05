@@ -868,12 +868,19 @@ async function getTimeSlotsByIds(timeSlotIds) {
   return result
 }
 
-// 批量根据ID获取兵营/峡谷活动配置（返回 id → config 的 Map）
+// 活动类型 → 配置集合（新增活动类型时只需在这里加一行）
+const ACTIVITY_CONFIG_COLLECTIONS = {
+  arsenal: 'arsenalConfigs',
+  canyon: 'canyonConfigs',
+  snowfire: 'snowfireConfigs'
+}
+
+// 批量根据ID获取兵营/峡谷/雪域活动配置（返回 id → config 的 Map）
 async function getArsenalConfigsByIds(configIds, activityType) {
   if (!configIds || configIds.length === 0) return {}
   const db = getDb()
   const _ = db.command
-  const collectionName = activityType === 'canyon' ? 'canyonConfigs' : 'arsenalConfigs'
+  const collectionName = ACTIVITY_CONFIG_COLLECTIONS[activityType] || 'arsenalConfigs'
   const uniqueIds = [...new Set(configIds)]
   const result = {}
   const chunkSize = 10
@@ -1697,8 +1704,8 @@ async function getBattleRegistrationCount(configId) {
  * 兵营/峡谷报名相关操作
  */
 
-// 兵营/峡谷活动类型常量
-const ARSENAL_ACTIVITY_TYPES = ['arsenal', 'canyon']
+// 兵营/峡谷/雪域活动类型常量
+const ARSENAL_ACTIVITY_TYPES = ['arsenal', 'canyon', 'snowfire']
 
 // 创建兵营配置
 async function createArsenalConfig(data) {
@@ -2007,6 +2014,146 @@ async function getCanyonStats(configId, options = {}) {
 }
 
 /**
+ * 雪域战火（snowfire）
+ *
+ * 与兵工厂 / 峡谷会战同构，区别只有容量：30 参战 + 20 替补 = 50 人。
+ * ⚠️ 客户端单次 get() 只返回 20 条（静默截断），所以凡是「取全部报名记录」的地方
+ *    一律走 fetchAllByPage() 的 skip + limit 循环，绝不能写裸 .get()；
+ *    人数用 count() 精确取；截图按 registrations 全量绘制、画布高度按人数累加。
+ */
+
+// 分页拉全量：客户端 20 条上限的绕法（雪域链路统一用这一个）
+async function fetchAllByPage(wxdb, collection, where, orderField, orderDir) {
+  let allData = []
+  let skip = 0
+  const batchSize = 20
+  while (true) {
+    let query = wxdb.collection(collection).where(where)
+    if (orderField) query = query.orderBy(orderField, orderDir || 'asc')
+    const res = await query.skip(skip).limit(batchSize).get()
+    allData = allData.concat(res.data)
+    if (res.data.length < batchSize) break
+    skip += batchSize
+    if (skip > 500) break
+  }
+  return allData
+}
+
+// 创建雪域配置
+async function createSnowfireConfig(data) {
+  const res = await wx.cloud.callFunction({
+    name: 'manageArsenal',
+    data: {
+      action: 'createConfig',
+      data: { ...data, activityType: 'snowfire' }
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '创建雪域配置失败')
+  }
+  return res.result
+}
+
+// 获取雪域配置列表（权限已改为所有人可读，直接查询）
+async function getSnowfireConfigs(filters = {}) {
+  const db = getDb()
+  const query = { status: 'active' }
+  if (filters.zoneId) query.zoneId = filters.zoneId
+  if (filters.allianceId) query.allianceId = filters.allianceId
+  if (filters.date) query.date = filters.date
+  if (filters.creatorId) query.creatorId = filters.creatorId
+  const res = await db.collection('snowfireConfigs').where(query).orderBy('date', 'asc').orderBy('timeValue', 'asc').limit(100).get()
+  return res.data
+}
+
+// 删除雪域配置
+async function deleteSnowfireConfig(configId) {
+  const res = await wx.cloud.callFunction({
+    name: 'manageArsenal',
+    data: {
+      action: 'deleteConfig',
+      data: { configId, activityType: 'snowfire' }
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '删除雪域配置失败')
+  }
+  return res.result
+}
+
+// 创建雪域报名记录
+async function createSnowfireRegistration(data) {
+  const res = await wx.cloud.callFunction({
+    name: 'manageArsenal',
+    data: {
+      action: 'createRegistration',
+      data: { ...data, activityType: 'snowfire' }
+    }
+  })
+  if (!res.result || !res.result.success) {
+    const rawErr = (res.result && res.result.error) || '雪域战火报名失败'
+    throw new Error(friendlyErrorMsg(rawErr))
+  }
+  return res.result
+}
+
+// 获取雪域配置的报名列表（分页取全量，50 人不会被截成 20 人）
+async function getSnowfireRegistrations(configId) {
+  return fetchAllByPage(getDb(), 'snowfireRegistrations', { configId, status: 'active' }, 'createTime', 'asc')
+}
+
+// 取消雪域报名
+async function cancelSnowfireRegistration(registrationId) {
+  const res = await wx.cloud.callFunction({
+    name: 'manageArsenal',
+    data: {
+      action: 'cancelRegistration',
+      data: { registrationId, activityType: 'snowfire' }
+    }
+  })
+  if (!res.result || !res.result.success) {
+    throw new Error((res.result && res.result.error) || '取消雪域报名失败')
+  }
+  return res.result
+}
+
+// 获取用户的雪域报名记录（分页取全量）
+async function getSnowfireRegistrationsByUser(userId) {
+  return fetchAllByPage(getDb(), 'snowfireRegistrations', { userId, status: 'active' }, 'createTime', 'desc')
+}
+
+// 获取雪域统计数据：人数走 count()，人员名单分页取全量
+// 返回结构与 getArsenalStats / getCanyonStats 完全一致，统计页可直接复用
+async function getSnowfireStats(configId, options = {}) {
+  const wxdb = getDb()
+  const base = { configId, status: 'active' }
+  const [combatRes, substituteRes, myRes] = await Promise.all([
+    wxdb.collection('snowfireRegistrations').where(Object.assign({}, base, { position: 'combat' })).count(),
+    wxdb.collection('snowfireRegistrations').where(Object.assign({}, base, { position: 'substitute' })).count(),
+    // 这里查的是「当前用户在这一场里的报名」，只用于判断是否已报名，天然不会超过 20 条，
+    // 所以保留裸 get()，与 getArsenalStats / getCanyonStats 口径一致。
+    // ⚠️ 全量人员名单不在这里，走下面的 fetchAllByPage()，别把这两者混为一谈。
+    options.userId
+      ? wxdb.collection('snowfireRegistrations').where(Object.assign({}, base, { userId: options.userId })).get()
+      : Promise.resolve({ data: [] })
+  ])
+  const combatCount = combatRes.total
+  const substituteCount = substituteRes.total
+  const totalCount = combatCount + substituteCount
+  const allRegs = options.includeRegistrations
+    ? await fetchAllByPage(wxdb, 'snowfireRegistrations', base)
+    : []
+  return {
+    combatCount,
+    substituteCount,
+    count: totalCount,
+    totalRegistered: totalCount,
+    myRegistrations: myRes.data || [],
+    registrations: allRegs
+  }
+}
+
+/**
  * 熊坑报名（bearPit）
  *
  * 一个联盟一张「看板」：cloudfunctions/bearPit 负责读写 bearPitBoards 文档并整体重排座位。
@@ -2259,7 +2406,7 @@ module.exports = {
   // 意见反馈
   createFeedback,
 
-  // 兵营/峡谷配置
+  // 兵营/峡谷/雪域配置
   ARSENAL_ACTIVITY_TYPES,
   createArsenalConfig,
   getArsenalConfigs,
@@ -2267,6 +2414,9 @@ module.exports = {
   createCanyonConfig,
   getCanyonConfigs,
   deleteCanyonConfig,
+  createSnowfireConfig,
+  getSnowfireConfigs,
+  deleteSnowfireConfig,
 
   // 兵营报名
   createArsenalRegistration,
@@ -2280,9 +2430,16 @@ module.exports = {
   cancelCanyonRegistration,
   getCanyonRegistrationsByUser,
 
-  // 兵营/峡谷统计
+  // 雪域战火报名
+  createSnowfireRegistration,
+  getSnowfireRegistrations,
+  cancelSnowfireRegistration,
+  getSnowfireRegistrationsByUser,
+
+  // 兵营/峡谷/雪域统计
   getArsenalStats,
   getCanyonStats,
+  getSnowfireStats,
 
   // 熊坑报名
   getBearPitBoard,

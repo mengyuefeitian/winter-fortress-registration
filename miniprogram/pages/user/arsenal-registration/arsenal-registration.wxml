@@ -13,7 +13,7 @@
 
   <!-- 提示信息 -->
   <view wx:if="{{showTip}}" class="info-tip">
-    <text class="info-tip-text">联盟管理员可以在控制台中[兵工厂&峡谷]中创建好配置，用户即可选择对应活动进行报名。</text>
+    <text class="info-tip-text">联盟管理员可以在控制台中[兵工厂&峡谷&雪域]中创建好配置，用户即可选择对应活动进行报名。</text>
   </view>
 
   <!-- 未登录提示 -->

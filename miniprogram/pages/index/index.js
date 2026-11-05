@@ -487,6 +487,14 @@ Page({
     })
   },
 
+  // 雪域战火报名
+  goToSnowfireRegistration: function () {
+    if (!this.ensureLogin()) return
+    wx.navigateTo({
+      url: '/pages/user/snowfire-registration/snowfire-registration'
+    })
+  },
+
   // 熊坑报名
   goToBearPit: function () {
     if (!this.ensureLogin()) return

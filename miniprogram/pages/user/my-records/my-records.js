@@ -15,6 +15,7 @@ Page({
     positionRegistrations: [],
     arsenalRegistrations: [],
     canyonRegistrations: [],
+    snowfireRegistrations: [],
     battleRegistrations: [],
 
     loaded: false
@@ -96,6 +97,7 @@ Page({
       positionRegistrations: myCached.positionRegistrations || [],
       arsenalRegistrations: myCached.arsenalRegistrations || [],
       canyonRegistrations: myCached.canyonRegistrations || [],
+      snowfireRegistrations: myCached.snowfireRegistrations || [],
       battleRegistrations: myCached.battleRegistrations || []
     })
   },
@@ -121,19 +123,21 @@ Page({
           positionRegistrations: [],
           arsenalRegistrations: [],
           canyonRegistrations: [],
+          snowfireRegistrations: [],
           battleRegistrations: [],
           loaded: true
         })
         return
       }
 
-      // 并行拉取堡垒、官职、兵工厂、峡谷、国战报名记录（均为按 userId 取本人数据，非分区扫描）
-      const [registrations, positionRegistrations, arsenalRegistrations, canyonRegistrations, battleRegistrations] =
+      // 并行拉取堡垒、官职、兵工厂、峡谷、雪域、国战报名记录（均为按 userId 取本人数据，非分区扫描）
+      const [registrations, positionRegistrations, arsenalRegistrations, canyonRegistrations, snowfireRegistrations, battleRegistrations] =
         await Promise.all([
           db.getRegistrationsByUser(userId),
           db.getPositionRegistrationsByUser(userId),
           db.getArsenalRegistrationsByUser(userId),
           db.getCanyonRegistrationsByUser(userId),
+          db.getSnowfireRegistrationsByUser(userId),
           db.getBattleRegistrationsByUser(userId)
         ])
 
@@ -202,13 +206,15 @@ Page({
         ? processedRegistrations.filter(r => r.zoneId === currentZoneId)
         : []
 
-      // 批量获取兵工厂/峡谷配置（仅拉取用户已报名的 configId，不拉全量）
+      // 批量获取兵工厂/峡谷/雪域配置（仅拉取用户已报名的 configId，不拉全量）
       const arsenalConfigIds = arsenalRegistrations.map(r => r.configId).filter(Boolean)
       const canyonConfigIds = canyonRegistrations.map(r => r.configId).filter(Boolean)
+      const snowfireConfigIds = snowfireRegistrations.map(r => r.configId).filter(Boolean)
 
-      const [arsenalConfigMap, canyonConfigMap] = await Promise.all([
+      const [arsenalConfigMap, canyonConfigMap, snowfireConfigMap] = await Promise.all([
         db.getArsenalConfigsByIds(arsenalConfigIds, 'arsenal'),
-        db.getArsenalConfigsByIds(canyonConfigIds, 'canyon')
+        db.getArsenalConfigsByIds(canyonConfigIds, 'canyon'),
+        db.getArsenalConfigsByIds(snowfireConfigIds, 'snowfire')
       ])
 
       // 兵工厂报名：按 config.zoneId 过滤当前分区
@@ -253,6 +259,27 @@ Page({
             })
         : []
 
+      // 雪域战火报名：按 config.zoneId 过滤当前分区
+      const processedSnowfire = currentZoneId
+        ? snowfireRegistrations
+            .filter(reg => {
+              const cfg = snowfireConfigMap[reg.configId]
+              return cfg && cfg.zoneId === currentZoneId
+            })
+            .map(reg => {
+              const config = snowfireConfigMap[reg.configId]
+              return {
+                ...reg,
+                type: 'snowfire',
+                date: config ? config.date : '',
+                time: config ? config.timeValue : '',
+                corps: config ? config.corps : '',
+                activityType: config ? config.activityType : 'snowfire',
+                activityLabel: '雪域战火'
+              }
+            })
+        : []
+
       // 批量获取国战配置（仅拉取用户已报名的 configId，不拉全量）
       const battleConfigIds = battleRegistrations.map(r => r.configId).filter(Boolean)
       const battleConfigMap = await db.getBattleConfigsByIds(battleConfigIds)
@@ -280,6 +307,7 @@ Page({
         positionRegistrations: processedPositionRegistrations,
         arsenalRegistrations: processedArsenal,
         canyonRegistrations: processedCanyon,
+        snowfireRegistrations: processedSnowfire,
         battleRegistrations: processedBattle,
         loaded: true
       })
@@ -290,6 +318,7 @@ Page({
         positionRegistrations: processedPositionRegistrations,
         arsenalRegistrations: processedArsenal,
         canyonRegistrations: processedCanyon,
+        snowfireRegistrations: processedSnowfire,
         battleRegistrations: processedBattle,
         timestamp: Date.now()
       }
@@ -391,6 +420,26 @@ Page({
     }
   },
 
+  // 取消雪域战火报名
+  cancelSnowfireRegistration: async function (e) {
+    const registrationId = e.currentTarget.dataset.id
+
+    const confirm = await util.showConfirm('确认取消', '确定要取消这条雪域战火报名记录吗？')
+    if (!confirm) return
+
+    try {
+      util.showLoading('正在取消...')
+      await db.cancelSnowfireRegistration(registrationId)
+      await this.loadMyRegistrations()
+      util.hideLoading()
+      util.showSuccess('取消成功')
+      this.invalidateCache()
+    } catch (err) {
+      util.hideLoading()
+      util.showError('取消失败')
+    }
+  },
+
   // 取消国战报名
   cancelBattleRegistration: async function (e) {
     const registrationId = e.currentTarget.dataset.id
@@ -426,6 +475,10 @@ Page({
 
   goToCanyon: function () {
     wx.navigateTo({ url: '/pages/user/canyon-registration/canyon-registration' })
+  },
+
+  goToSnowfire: function () {
+    wx.navigateTo({ url: '/pages/user/snowfire-registration/snowfire-registration' })
   },
 
   goToBattle: function () {

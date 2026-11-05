@@ -62,7 +62,7 @@ function measureActivityHeight(stats) {
 Page({
   data: {
     // 报名类型选择
-    registrationTypes: ['堡垒报名', '兵工厂报名', '峡谷报名', '官职报名'],
+    registrationTypes: ['堡垒报名', '兵工厂报名', '峡谷报名', '雪域报名', '官职报名'],
     regTypeIndex: 0,
     selectedRegType: '堡垒报名',
 
@@ -93,7 +93,9 @@ Page({
     // 峡谷报名数据
     canyonConfigs: [],
     canyonStats: [],
-    canyonTotal: 0
+    canyonTotal: 0,
+    snowfireStats: [],
+    snowfireTotal: 0
   },
 
   onLoad: function () {
@@ -272,7 +274,9 @@ Page({
           arsenalStats: [],
           arsenalTotal: 0,
           canyonStats: [],
-          canyonTotal: 0
+          canyonTotal: 0,
+          snowfireStats: [],
+          snowfireTotal: 0
         })
 
       } else if (this.data.selectedRegType === '兵工厂报名') {
@@ -290,7 +294,7 @@ Page({
         const arsenalStats = []
         let arsenalTotal = 0
 
-        const ACTIVITY_TYPE_LABELS = { 'arsenal': '兵工厂', 'canyon': '峡谷会战' }
+        const ACTIVITY_TYPE_LABELS = { 'arsenal': '兵工厂', 'canyon': '峡谷会战', 'snowfire': '雪域战火' }
 
         for (const config of configs) {
           const stats = await db.getArsenalStats(config._id, { includeRegistrations: true })
@@ -316,7 +320,9 @@ Page({
           positionStats: [],
           positionTotal: 0,
           canyonStats: [],
-          canyonTotal: 0
+          canyonTotal: 0,
+          snowfireStats: [],
+          snowfireTotal: 0
         })
 
       } else if (this.data.selectedRegType === '峡谷报名') {
@@ -334,7 +340,7 @@ Page({
         const canyonStats = []
         let canyonTotal = 0
 
-        const ACTIVITY_TYPE_LABELS = { 'arsenal': '兵工厂', 'canyon': '峡谷会战' }
+        const ACTIVITY_TYPE_LABELS = { 'arsenal': '兵工厂', 'canyon': '峡谷会战', 'snowfire': '雪域战火' }
 
         for (const config of configs) {
           const stats = await db.getCanyonStats(config._id, { includeRegistrations: true })
@@ -361,6 +367,52 @@ Page({
           positionTotal: 0,
           arsenalStats: [],
           arsenalTotal: 0
+        })
+
+      } else if (this.data.selectedRegType === '雪域报名') {
+        // 雪域报名统计
+        if (!this.data.selectedZone) {
+          util.hideLoading()
+          return
+        }
+
+        // 「全部联盟」时不加联盟条件 → 看整个分区（与加选择器之前的行为一致）
+        const snowfireFilter = { zoneId: this.data.selectedZone._id }
+        if (!isAllAlliance(this.data.selectedAlliance)) snowfireFilter.allianceId = this.data.selectedAlliance._id
+        const configs = await db.getSnowfireConfigs(snowfireFilter)
+
+        const snowfireStats = []
+        let snowfireTotal = 0
+
+        const ACTIVITY_TYPE_LABELS = { 'arsenal': '兵工厂', 'snowfire': '雪域战火' }
+
+        for (const config of configs) {
+          const stats = await db.getSnowfireStats(config._id, { includeRegistrations: true })
+          const regs = (stats.registrations || []).sort((a, b) => (a.position === 'substitute' ? -1 : 1) - (b.position === 'substitute' ? -1 : 1))
+          await ga.decorate(regs)
+          snowfireStats.push({
+            config: config,
+            activityTypeLabel: ACTIVITY_TYPE_LABELS[config.activityType] || config.activityType,
+            registrations: regs,
+            count: stats.count || 0
+          })
+          snowfireTotal += stats.count || 0
+        }
+
+        this.setData({
+          snowfireConfigs: configs,
+          snowfireStats: snowfireStats,
+          snowfireTotal: snowfireTotal,
+          timeSlotStats: [],
+          totalRegistrations: 0,
+          fullSlots: 0,
+          remainingSlots: 0,
+          positionStats: [],
+          positionTotal: 0,
+          arsenalStats: [],
+          arsenalTotal: 0,
+          canyonStats: [],
+          canyonTotal: 0
         })
 
       } else {
@@ -435,7 +487,9 @@ Page({
           arsenalStats: [],
           arsenalTotal: 0,
           canyonStats: [],
-          canyonTotal: 0
+          canyonTotal: 0,
+          snowfireStats: [],
+          snowfireTotal: 0
         })
       }
 
@@ -804,6 +858,110 @@ Page({
 
         let y = 195
         for (const stat of this.data.canyonStats) {
+          ctx.fillStyle = '#333333'
+          ctx.font = 'bold 28px sans-serif'
+          ctx.fillText(`${stat.activityTypeLabel} - ${stat.config.corps} (${stat.count}人)`, margin, y)
+          y += 40
+
+          ctx.fillStyle = '#A6A6A6'
+          ctx.font = '24px sans-serif'
+          ctx.fillText(`日期: ${stat.config.date}  时间: ${stat.config.timeValue}`, margin + 20, y)
+          y += 40
+
+          if (stat.registrations.length > 0) {
+            const substitutes = stat.registrations.filter(r => r.position === 'substitute')
+            const combats = stat.registrations.filter(r => r.position === 'combat')
+
+            // ⚠️ 顺序：参战在上、替补在下（2026-10-16 用户要求）
+            if (combats.length > 0) {
+              ctx.fillStyle = '#FA5151'
+              ctx.font = 'bold 24px sans-serif'
+              ctx.fillText(`参战(${combats.length}):`, margin + 20, y)
+              y += 30
+
+              ctx.fillStyle = '#666666'
+              ctx.font = '24px sans-serif'
+              const combatNames = combats.map((r, i) => `${i + 1}.${r.nickName}`)
+              const nameStartX = margin + 20
+              const colW = Math.floor((canvasWidth - nameStartX - margin) / 3)
+              const colMaxW = colW - 10
+              const colXs = [nameStartX, nameStartX + colW, nameStartX + colW * 2]
+              for (let i = 0; i < combatNames.length; i += 3) {
+                combatNames.slice(i, i + 3).forEach((name, col) => {
+                  const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(combats[i + col]), badgeImgs)
+                  ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
+                })
+                y += 35
+              }
+            }
+
+            if (substitutes.length > 0) {
+              ctx.fillStyle = '#07C160'
+              ctx.font = 'bold 24px sans-serif'
+              ctx.fillText(`替补(${substitutes.length}):`, margin + 20, y)
+              y += 30
+
+              ctx.fillStyle = '#666666'
+              ctx.font = '24px sans-serif'
+              const subNames = substitutes.map((r, i) => `${i + 1}.${r.nickName}`)
+              const nameStartX = margin + 20
+              const colW = Math.floor((canvasWidth - nameStartX - margin) / 3)
+              const colMaxW = colW - 10
+              const colXs = [nameStartX, nameStartX + colW, nameStartX + colW * 2]
+              for (let i = 0; i < subNames.length; i += 3) {
+                subNames.slice(i, i + 3).forEach((name, col) => {
+                  const bw = ga.drawBadge(ctx, colXs[col], y - 8, ga.BADGE_SIZE, specOf(substitutes[i + col]), badgeImgs)
+                  ctx.fillText(truncateText(ctx, name, colMaxW - bw), colXs[col] + bw, y)
+                })
+                y += 35
+              }
+            }
+          }
+
+          y += 25
+        }
+      } else if (this.data.selectedRegType === '雪域报名') {
+        if (!this.data.selectedZone || this.data.snowfireStats.length === 0) {
+          util.hideLoading()
+          util.showInfo('暂无数据可截图')
+          return
+        }
+
+        const margin = 40
+        const canvasWidth = 750
+        const totalHeight = measureActivityHeight(this.data.snowfireStats)
+
+        // 同兵工厂：必须重建画布，且导出高度 = 画布高度
+        canvas = wx.createOffscreenCanvas({ type: '2d', width: canvasWidth, height: totalHeight })
+        ctx = canvas.getContext('2d')
+        exportHeight = totalHeight
+
+        ctx.fillStyle = '#FFFFFF'
+        ctx.fillRect(0, 0, canvasWidth, totalHeight)
+
+        // 预加载熔炉等级素材（火晶图 + 火炉图），加载失败会自动降级为程序化绘制
+        const badgeImgs = await ga.preloadBadges(canvas, collectSpecs(this.data.snowfireStats))
+
+        ctx.fillStyle = '#07C160'
+        ctx.font = 'bold 32px sans-serif'
+        ctx.fillText(this.data.selectedZone.zoneName + ' 雪域报名统计', margin, 50)
+
+        ctx.fillStyle = '#999999'
+        ctx.font = '24px sans-serif'
+        ctx.fillText(util.formatDate(new Date(), 'YY/MM/DD HH:mm'), margin, 90)
+
+        ctx.fillStyle = '#333333'
+        ctx.font = 'bold 28px sans-serif'
+        ctx.fillText(`总人数: ${this.data.snowfireTotal}`, margin, 130)
+
+        ctx.strokeStyle = '#E8E8E8'
+        ctx.beginPath()
+        ctx.moveTo(margin, 155)
+        ctx.lineTo(canvasWidth - margin, 155)
+        ctx.stroke()
+
+        let y = 195
+        for (const stat of this.data.snowfireStats) {
           ctx.fillStyle = '#333333'
           ctx.font = 'bold 28px sans-serif'
           ctx.fillText(`${stat.activityTypeLabel} - ${stat.config.corps} (${stat.count}人)`, margin, y)
